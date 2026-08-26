@@ -393,6 +393,7 @@ class TuinPlayerData : Inventory
 	double ClassAmmoRemainder[32];
 	int ClassAmmoCount;
 	int LastCampaignMapNumber;
+	bool SuppressNextMapCatchup;
 	int Vitality;
 	int Strength;
 	int Luck;

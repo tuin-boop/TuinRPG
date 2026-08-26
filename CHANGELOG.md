@@ -1,5 +1,8 @@
 # Changelog
 
+- Made John completely non-solid so players, monsters and projectiles can pass through him without losing shop interaction.
+- Prevented Doom's native E1M8-E3M8 boss-death action from ending the episode behind TuinRPG's back; John now remains responsible for the inventory-preserving transition, including when loading an already-promoted finale save.
+- John's E1M8-E3M8 episode bridges no longer trigger late-start catch-up rewards on the destination map; player level, stat/perk points, arsenal and ammo now carry across unchanged.
 - Fixed Rogue ambushes expiring before slow fist and custom melee animations reached their damage frame. The ambush is now consumed by the first damaging hit, while same-tic shotgun pellets retain the multiplier.
 - Reduced Shadow Veil's cooldown to 15 seconds and expanded weapon-mod melee detection for fists, brass knuckles, unarmed weapons, and correctly flagged melee weapons. Rogue fist ambushes now deal x20 damage (x30 with the capstone), with separate finale-boss safeguards.
 - Changed Shadow Veil to remain active indefinitely until broken and strengthened invisibility by continuously clearing monster targets, attack states, remembered enemies, and sound targets while affected monsters wander.

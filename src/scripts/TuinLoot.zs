@@ -122,7 +122,7 @@ class TuinJohnShopNPC : Actor
 		Height 56;
 		Scale 0.9375;
 		Mass 1000;
-		+SOLID
+		-SOLID
 		+FRIENDLY
 		+NOTARGET
 		+NOBLOOD

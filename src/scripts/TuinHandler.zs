@@ -969,6 +969,14 @@ class TuinRPGHandler : EventHandler
 		if (previousMap <= 0 && data.LastCampaignMapNumber > 0 && data.LastCampaignMapNumber != mapNumber)
 			previousMap = data.LastCampaignMapNumber;
 		data.LastCampaignMapNumber = mapNumber;
+		// John's episode bridge is continuous campaign progression, not a fresh
+		// late start or console warp. Preserve the build without awarding levels,
+		// stat/perk points, reward weapons, or their accompanying ammo refill.
+		if (data.SuppressNextMapCatchup)
+		{
+			data.SuppressNextMapCatchup = false;
+			return;
+		}
 		if (!CVInt('tuin_late_start_catchup', 1) || !(gameinfo.gametype & GAME_DoomChex)) return;
 
 		int baseLevel = ProgressiveBaseLevel();
@@ -1618,6 +1626,17 @@ class TuinRPGHandler : EventHandler
 	bool PromoteFinaleBossActor(Actor candidate, bool announce = true)
 	{
 		if (!candidate) return false;
+		bool trueFinale = IsIconicEpisodeBoss(candidate);
+		// Do this even when loading a save in which the actor was already promoted.
+		// Otherwise an older in-progress E2M8/E3M8 save can retain Doom's native
+		// episode-ending trigger and bypass John's inventory-preserving transition.
+		if (trueFinale)
+		{
+			candidate.bBOSSDEATH = false;
+			if (level.MapName ~== "E1M8") candidate.bE1M8BOSS = false;
+			else if (level.MapName ~== "E2M8") candidate.bE2M8BOSS = false;
+			else if (level.MapName ~== "E3M8") candidate.bE3M8BOSS = false;
+		}
 		let data = GetMonsterData(candidate);
 		if (!data || data.MonsterRarity >= 6) return false;
 
@@ -1632,14 +1651,10 @@ class TuinRPGHandler : EventHandler
 		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) *
 			(1.0 + (data.MonsterLevel - 1) * 0.08) * RarityXPMultiplier(6) + 0.5));
 		data.AffixFlags = RollFinaleBossAffixes(candidate, playerProgress);
-		bool trueFinale = IsIconicEpisodeBoss(candidate);
 		data.GeneratedName = String.Format(trueFinale ? "%s, THE FINAL %s" : "%s, THE DREAD %s",
 			PickLegendaryName(), PickNameSuffix()).MakeUpper();
 		data.ResetSignatureAttack();
 		data.AppliedGlowRarity = -1;
-		// These actors normally end their Doom episode from A_BossDeath. John owns
-		// that transition on E1M8-E3M8 so inventory can continue into the next episode.
-		if (IsIconicEpisodeBoss(candidate)) candidate.bBOSSDEATH = false;
 		candidate.A_SetHealth(data.ScaledMaxHealth);
 		data.UpdateRarityGlow();
 		FinaleBoss = candidate;
@@ -2669,6 +2684,12 @@ class TuinRPGHandler : EventHandler
 			{
 				string destination = EpisodeTravelDestination;
 				EpisodeTravelDestination = "";
+				for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+				{
+					if (!playerInGame[playerNumber]) continue;
+					let playerData = EnsurePlayerData(playerNumber);
+					if (playerData) playerData.SuppressNextMapCatchup = true;
+				}
 				level.ChangeLevel(destination, 0, CHANGELEVEL_KEEPFACING | CHANGELEVEL_NOINTERMISSION | CHANGELEVEL_PRERAISEWEAPON);
 				return;
 			}
