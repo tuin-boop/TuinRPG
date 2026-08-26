@@ -1,0 +1,318 @@
+OptionValue "TuinLevelModes"
+{
+	0, "Progressive"
+	1, "Random"
+}
+
+OptionValue "TuinDifficultyModes"
+{
+	0, "Easy"
+	1, "Normal"
+	2, "Hard"
+	3, "Crazy"
+}
+
+OptionValue "TuinMenuTimeModes"
+{
+	0, "Pause game"
+	1, "Slow motion (10%)"
+	2, "Do not pause"
+}
+
+OptionValue "TuinHealthBarModes"
+{
+	0, "Classic targeted bar"
+	1, "Overhead monster bars"
+	2, "Both styles"
+	3, "Off"
+}
+
+AddOptionMenu "OptionsMenu"
+{
+	Submenu "Tuin RPG Options", "TuinRPGOptions"
+}
+
+AddListMenu "MainMenu"
+{
+	Position 97, 160
+	TextItem "TUIN RPG", "T", "TuinRPGOptions"
+}
+
+OptionMenu "TuinRPGOptions"
+{
+	Title "TUIN RPG OPTIONS"
+	StaticText "CORE", 1
+	Option "Enable Tuin RPG", "tuin_enabled", "OnOff"
+	Option "Tuin RPG difficulty", "tuin_difficulty", "TuinDifficultyModes"
+	StaticText "Easy: 2 buffs | Normal: 3 | Hard: 5 | Crazy: 8", 1
+	StaticText "Takes effect on the next map or after Reroll", 1
+	Slider "Flashlight range", "tuin_flashlight_range", 128, 1024, 32
+	Slider "Flashlight brightness", "tuin_flashlight_intensity", 0.25, 2.0, 0.05, 2
+	Submenu "Minimap options", "TuinRPGMinimapOptions"
+	StaticText " "
+	StaticText "MONSTER LEVELING", 1
+	Option "Level mode", "tuin_monster_level_mode", "TuinLevelModes"
+	Slider "Minimum monster level", "tuin_monster_min_level", 1, 100, 1
+	Slider "Maximum monster level", "tuin_monster_max_level", 1, 100, 1
+	Slider "Level variance", "tuin_monster_level_variance", 0, 15, 1
+	Slider "Health gained per level", "tuin_health_scale", 0.0, 0.20, 0.0025, 4
+	Slider "Damage gained per level", "tuin_damage_scale", 0.0, 0.10, 0.001, 3
+	StaticText " "
+	StaticText "RARITY AND AFFIXES", 1
+	Option "Rare monsters", "tuin_rarity_enabled", "OnOff"
+	Slider "Uncommon chance (%)", "tuin_rarity_uncommon_chance", 0.0, 100.0, 0.5, 1
+	Slider "Rare chance (%)", "tuin_rarity_rare_chance", 0.0, 100.0, 0.5, 1
+	Slider "Elite chance (%)", "tuin_rarity_elite_chance", 0.0, 100.0, 0.5, 1
+	Slider "Legendary chance (%)", "tuin_rarity_legendary_chance", 0.0, 100.0, 0.5, 1
+	Slider "Mythic chance (%)", "tuin_rarity_mythic_chance", 0.0, 100.0, 0.5, 1
+	Option "Rare+ monster glows", "tuin_rarity_glow_enabled", "OnOff"
+	Slider "Rare glow radius", "tuin_rare_glow_radius", 16, 128, 8
+	Slider "Elite glow radius", "tuin_elite_glow_radius", 20, 192, 8
+	Slider "Legendary glow radius", "tuin_legendary_glow_radius", 24, 256, 8
+	Slider "Mythic glow radius", "tuin_mythic_glow_radius", 32, 320, 8
+	Submenu "Finale boss options", "TuinRPGFinaleBossOptions"
+	Submenu "Signature attack tuning", "TuinRPGSignatureOptions"
+	Submenu "Weapon loot tuning", "TuinRPGWeaponLootOptions"
+	StaticText "1.0 means 1%; 100 means guaranteed", 1
+	StaticText "Use Reroll after manual chance changes", 1
+	Command "Reroll living monsters now", "netevent tuin_reroll_monsters"
+	Command "Testing preset: all Mythic", "netevent tuin_all_mythic"
+	Command "Reset rarity defaults", "netevent tuin_reset_rarity"
+	Submenu "Affix effect tuning", "TuinRPGAffixOptions"
+	StaticText " "
+	StaticText "PLAYER RPG", 1
+	Option "Player leveling", "tuin_player_leveling", "OnOff"
+	Option "Late-start/warp catch-up", "tuin_late_start_catchup", "OnOff"
+	Slider "Catch-up bonus levels", "tuin_catchup_bonus_levels", 0, 10, 1
+	Slider "Base XP requirement", "tuin_xp_base", 25, 500, 25
+	Slider "XP curve exponent", "tuin_xp_exponent", 1.0, 2.5, 0.1, 1
+	StaticText "Later starts gain levels, points, 3 Rare+ weapons and ammo", 1
+	Submenu "Ammo progression", "TuinRPGAmmoOptions"
+	Submenu "Character screen", "TuinRPGCharacter"
+	StaticText " "
+	StaticText "HUD", 1
+	Option "Monster health-bar style", "tuin_healthbar_mode", "TuinHealthBarModes"
+	Option "Show monster name", "tuin_healthbar_show_name", "OnOff"
+	Option "Show monster level", "tuin_healthbar_show_level", "OnOff"
+	Option "Show exact HP", "tuin_healthbar_show_exact", "OnOff"
+	Option "Show monster rarity", "tuin_healthbar_show_rarity", "OnOff"
+	Option "Show monster affixes", "tuin_healthbar_show_affixes", "OnOff"
+	Slider "HUD size", "tuin_hud_scale", 1.0, 3.0, 0.25, 2
+	Slider "Health bar distance", "tuin_healthbar_distance", 128, 8192, 128
+	Slider "Health bar width", "tuin_healthbar_width", 160, 720, 20
+	Slider "Overhead-bar distance", "tuin_overhead_healthbar_distance", 256, 4096, 128
+	Slider "Maximum overhead bars", "tuin_overhead_healthbar_maximum", 1, 32, 1
+	Slider "Overhead-bar size", "tuin_overhead_healthbar_scale", 0.75, 2.0, 0.05, 2
+	Option "XP popup", "tuin_xp_popup", "OnOff"
+	Option "Floating damage numbers", "tuin_damage_numbers", "OnOff"
+	Slider "Damage-number size", "tuin_damage_number_scale", 0.75, 2.5, 0.05, 2
+	Option "Player XP HUD", "tuin_player_hud", "OnOff"
+	Class "TuinRPGOptionsMenu"
+}
+
+OptionMenu "TuinRPGAmmoOptions"
+{
+	Title "AMMO PROGRESSION"
+	Option "Level-scaled ammo", "tuin_ammo_scaling_enabled", "OnOff"
+	Slider "Capacity per level (%)", "tuin_ammo_capacity_per_level", 0.0, 5.0, 0.25, 2
+	Slider "Pickup amount per level (%)", "tuin_ammo_pickup_per_level", 0.0, 5.0, 0.25, 2
+	Slider "Maximum capacity multiplier", "tuin_ammo_capacity_max_multiplier", 1.0, 4.0, 0.1, 2
+	Slider "Maximum pickup multiplier", "tuin_ammo_pickup_max_multiplier", 1.0, 3.0, 0.05, 2
+	StaticText "Uses the greater of player level and map progression", 1
+	StaticText "Supports custom weapon-mod ammunition; backpacks stack", 1
+}
+
+OptionMenu "TuinRPGFinaleBossOptions"
+{
+	Title "FINALE BOSS"
+	Option "Finale boss encounter", "tuin_finale_boss_enabled", "OnOff"
+	Slider "Promotion at kills (%)", "tuin_finale_boss_threshold", 50, 99, 1
+	Slider "Minimum map monsters", "tuin_finale_boss_min_monsters", 1, 100, 1
+	Slider "Boss glow radius", "tuin_boss_glow_radius", 48, 384, 8
+	Slider "Episode-finale Godly chance (%)", "tuin_boss_godly_weapon_chance", 0, 100, 1, 0
+	Slider "Regular level Boss Godly chance (%)", "tuin_native_boss_godly_chance", 0, 25, 0.5, 1
+	StaticText "Boss power grows with the highest active player level", 1
+	Slider "Early boss health multiplier", "tuin_boss_early_health_multiplier", 1.5, 6.0, 0.25, 2
+	Slider "Early boss damage multiplier", "tuin_boss_early_damage_multiplier", 1.0, 2.5, 0.1, 2
+	Slider "Full boss power at player level", "tuin_boss_full_power_level", 10, 60, 1
+	Slider "Boss armored reduction", "tuin_boss_armored_reduction", 0.0, 0.5, 0.05, 2
+	Option "John's end-level shop", "tuin_john_shop_enabled", "OnOff"
+	Option "Monster coin drops", "tuin_coins_enabled", "OnOff"
+	Slider "Base coin-drop chance (%)", "tuin_coin_drop_chance", 0, 100, 1
+	StaticText "Promotes one eligible survivor once per map", 1
+	StaticText "E1M8/E2M8/E3M8 iconic Bosses guarantee Godly", 1
+	StaticText "Other promoted/native Bosses default to 5% Godly", 1
+	Command "Testing: promote a finale boss now", "netevent tuin_test_finale_boss"
+	Command "Testing: spawn John and give 500 coins", "netevent tuin_test_john_shop"
+}
+
+OptionMenu "TuinRPGMinimapOptions"
+{
+	Title "TUIN RPG MINIMAP"
+	Option "Enable minimap", "tuin_minimap_enabled", "OnOff"
+	Option "Rotate with player", "tuin_minimap_rotate", "OnOff"
+	Option "Show level statistics", "tuin_minimap_show_stats", "OnOff"
+	Option "Show normal monsters", "tuin_minimap_show_normal_monsters", "OnOff"
+	Option "Show discovered weapon drops", "tuin_minimap_show_weapon_drops", "OnOff"
+	Slider "Map size", "tuin_minimap_size", 140, 520, 20
+	Slider "Map range", "tuin_minimap_range", 512, 4096, 128
+	Slider "Background opacity", "tuin_minimap_opacity", 0.20, 1.00, 0.05, 2
+	Slider "Horizontal position", "tuin_minimap_horizontal", 0.0, 1.0, 0.02, 2
+	Slider "Vertical position", "tuin_minimap_vertical", 0.0, 1.0, 0.02, 2
+	Slider "Discovery distance", "tuin_minimap_discovery_distance", 512, 8192, 256
+	StaticText "Special monsters stay marked at their last seen position", 1
+	StaticText "N toggles the minimap", 1
+}
+
+OptionMenu "TuinRPGSignatureOptions"
+{
+	Title "SIGNATURE ATTACKS"
+	Option "Legendary/Mythic attacks", "tuin_signature_attacks_enabled", "OnOff"
+	Slider "Legendary cooldown (seconds)", "tuin_legendary_attack_cooldown", 2.0, 30.0, 0.5, 1
+	Slider "Mythic cooldown (seconds)", "tuin_mythic_attack_cooldown", 2.0, 30.0, 0.5, 1
+	Slider "Warning time (tics)", "tuin_signature_attack_windup", 8, 70, 1
+	StaticText "Gold/violet flash warns before an attack", 1
+	StaticText "Bosses and summoners are excluded", 1
+}
+
+OptionMenu "TuinRPGWeaponLootOptions"
+{
+	Title "WEAPON LOOT"
+	StaticText "Press Q to open; Q/click/Enter equips", 1
+	StaticText "Escape or right-click cancels", 1
+	Option "Weapon variant drops", "tuin_weapon_drops_enabled", "OnOff"
+	Slider "Base drop chance (%)", "tuin_weapon_drop_chance", 0.0, 10.0, 0.25, 2
+	Slider "Drop lifetime (seconds)", "tuin_weapon_drop_lifetime", 15, 600, 15
+	Slider "Maximum inspection distance", "tuin_weapon_inspect_distance", 128, 2048, 32
+	Slider "Automatic nearby inspection", "tuin_weapon_near_inspect_distance", 64, 320, 16
+	StaticText "Normal default: 1.5%; rarity improves odds", 1
+	StaticText "Any monster can very rarely drop Mythic gear", 1
+	Command "Testing: drop Mythic current weapon", "netevent tuin_test_weapon_drop"
+	Command "Reset weapon loot to normal", "netevent tuin_reset_weapon_loot"
+	Submenu "Open Arsenal", "TuinRPGArsenal"
+}
+
+OptionMenu "TuinRPGWeaponWheel"
+{
+	Class "TuinRPGWeaponWheelMenu"
+}
+
+OptionMenu "TuinRPGAffixOptions"
+{
+	Title "TUIN RPG AFFIXES"
+	Slider "Swift FastChase interval", "tuin_affix_swift_chase_interval", 1, 10, 1
+	Slider "Swift target lock (tics)", "tuin_affix_swift_lock_tics", 35, 1050, 35
+	Slider "Swift sight range", "tuin_affix_swift_sight_range", 128, 8192, 128
+	Slider "Armored reduction", "tuin_affix_armored_reduction", 0.0, 0.80, 0.05, 2
+	Slider "Regeneration per second", "tuin_affix_regen_percent", 0.001, 0.10, 0.005, 3
+	Slider "Berserker multiplier", "tuin_affix_berserker_multiplier", 1.0, 3.0, 0.10, 2
+	Slider "Vampiric healing", "tuin_affix_vampiric_percent", 0.0, 1.0, 0.05, 2
+	Slider "Explosive damage/level", "tuin_affix_explosive_damage_per_level", 0.0, 10.0, 0.5, 1
+	Slider "Explosive radius", "tuin_affix_explosive_radius", 32, 256, 8
+	Slider "Poison duration (seconds)", "tuin_affix_poison_duration", 1, 20, 1
+	Slider "Poison base damage/second", "tuin_affix_poison_base_damage", 0, 20, 1
+	Slider "Poison damage/level", "tuin_affix_poison_damage_per_level", 0, 2, 0.1, 1
+	Slider "Healer base healing/second", "tuin_affix_healer_base", 0, 25, 1
+	Slider "Support aura radius", "tuin_affix_support_radius", 128, 2048, 64
+	Slider "Warding damage reduction", "tuin_affix_warding_reduction", 0, 0.5, 0.05, 2
+}
+
+OptionMenu "TuinRPGCharacter"
+{
+	Title "TUIN RPG"
+	Position -80
+	Submenu "CLASS AND PERKS", "TuinRPGPerkHub"
+	StaticText "First point chooses a class; later points buy perks", 1
+	StaticText " "
+	Command "VITALITY +  (+5 maximum HP)", "netevent tuin_spend_vitality"
+	Command "STRENGTH +  (+2% damage)", "netevent tuin_spend_strength"
+	Command "LUCK +  (chance for bonus XP)", "netevent tuin_spend_luck"
+	Command "AGILITY +  (+2% firing speed)", "netevent tuin_spend_agility"
+	Command "ENDURANCE +  (-1% damage taken)", "netevent tuin_spend_endurance"
+	StaticText " "
+	Submenu "ARSENAL - weapon variants", "TuinRPGArsenal"
+	Option "Menu time behavior", "tuin_menu_time_mode", "TuinMenuTimeModes"
+	Class "TuinRPGCharacterMenu"
+}
+
+OptionMenu "TuinRPGClassChoice"
+{
+	Title "CHOOSE YOUR CLASS"
+	StaticText "Costs 1 perk point - class choice is permanent", 1
+	StaticText " "
+	Command "TANK", "netevent tuin_choose_class 1"
+	StaticText "50% less damage taken | 40% less damage dealt | +40% ammo", 1
+	Command "HEALER", "netevent tuin_choose_class 2"
+	StaticText "Heal team 5/2 sec | 25% less damage dealt | +25% ammo", 1
+	Command "DAMAGE DEALER", "netevent tuin_choose_class 3"
+	StaticText "+30% damage | 25% lower maximum health | 10% more damage taken", 1
+	Command "DOOM GUY", "netevent tuin_choose_class 4"
+	StaticText "+10% damage | 10% protection | regenerate 1 HP/10 sec", 1
+	Command "ROGUE", "netevent tuin_choose_class 5"
+	StaticText "20% lower HP | stand still to veil | x4 ambush, x20 fists", 1
+}
+
+OptionMenu "TuinRPGPerkHub"
+{
+	Title "CLASS AND PERKS"
+	Submenu "Choose permanent class", "TuinRPGClassChoice"
+	Submenu "Spend later perk points", "TuinRPGPerks"
+	StaticText " "
+	StaticText "Earn one perk point every 5 levels", 1
+	StaticText "All ranked perks have 3 ranks", 1
+}
+
+OptionMenu "TuinRPGPerks"
+{
+	Title "SPEND PERK POINTS"
+	StaticText "GENERAL PERKS - 3 RANKS EACH", 1
+	Command "VITAL CORE", "netevent tuin_buy_perk 1"
+	StaticText "+10 maximum health per rank", 1
+	Command "SCAVENGER", "netevent tuin_buy_perk 2"
+	StaticText "+10% ammunition gained per rank", 1
+	Command "KILLER INSTINCT", "netevent tuin_buy_perk 3"
+	StaticText "+2% critical chance per rank", 1
+	Command "IRON SKIN", "netevent tuin_buy_perk 4"
+	StaticText "3% less damage taken per rank", 1
+	Command "BLOOD DRINKER", "netevent tuin_buy_perk 5"
+	StaticText "Leech 1% of damage per rank", 1
+	StaticText " "
+	StaticText "CLASS PERKS", 1
+	Command "CLASS TRAINING", "netevent tuin_buy_perk 6"
+	StaticText "Tank: +3% protection/rank | Healer: +1 healing/rank", 1
+	StaticText "Dealer: +3% damage/rank | Doom Guy: faster regeneration", 1
+	StaticText "Rogue: enters Shadow Veil 0.25 sec faster per rank", 1
+	Command "CLASS CAPSTONE", "netevent tuin_buy_perk 7"
+	StaticText "Requires level 20 and Class Training II", 1
+	StaticText "Tank: Last Stand | Healer: doubled healing", 1
+	StaticText "Dealer: 2.5x crits | Doom Guy: heal 3 per kill", 1
+	StaticText "Rogue: x6 ranged / x30 fist ambush", 1
+}
+
+OptionMenu "TuinRPGArsenal"
+{
+	Title "TUIN RPG ARSENAL"
+	StaticText "UP/DOWN: inspect collected weapons", 1
+	StaticText "Picking up a replacement drops the old variant", 1
+	Class "TuinRPGArsenalMenu"
+}
+
+OptionMenu "TuinRPGJohnShop"
+{
+	Title "JOHN'S END-LEVEL SHOP"
+	Position 38
+	StaticText "UP/DOWN TO BROWSE - ENTER TO BUY", 1
+	StaticText " "
+	Command "MEDKIT +25 HEALTH                         10 COINS", "netevent tuin_shop_buy 1"
+	Command "PARTIAL AMMO REFILL (+25% EACH)           15 COINS", "netevent tuin_shop_buy 2"
+	Command "FULL AMMO REFILL                          40 COINS", "netevent tuin_shop_buy 3"
+	Command "ARMOR PLATES +25                          20 COINS", "netevent tuin_shop_buy 4"
+	Command "BACKPACK                                  50 COINS", "netevent tuin_shop_buy 5"
+	Command "RANDOM MISSING STANDARD WEAPON            80 COINS", "netevent tuin_shop_buy 6"
+	Command "RARE VARIANT OF AN OWNED WEAPON          120 COINS", "netevent tuin_shop_buy 7"
+	StaticText " "
+	Command "TALK TO JOHN", "netevent tuin_shop_talk"
+	Command "ASK JOHN FOR A TUIN RPG TIP", "netevent tuin_shop_tip"
+	Command "ASK JOHN ABOUT DOOM AND CLASSIC GAMES", "netevent tuin_shop_fact"
+	Class "TuinRPGJohnShopMenu"
+}

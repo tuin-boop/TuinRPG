@@ -1,0 +1,7 @@
+version "4.10"
+
+#include "scripts/TuinLoot.zs"
+#include "scripts/TuinData.zs"
+#include "scripts/TuinHandler.zs"
+#include "scripts/TuinMinimap.zs"
+#include "scripts/TuinMenu.zs"

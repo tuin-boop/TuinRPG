@@ -1,0 +1,21 @@
+Sprite TCINA0, 1254, 1254
+{
+	Offset 627, 1254
+	Patch "graphics/TuinCoin.png", 0, 0
+}
+
+Sprite JOHNA0, 37, 56
+{
+	Offset 18, 56
+	Patch "graphics/TuinJohnSprite.png", 0, 0
+}
+
+// Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
+// 70x59 menu units it is centered above the stock menu choices.
+Graphic M_DOOM, 1115, 941
+{
+	Offset -496, 0
+	XScale 16
+	YScale 16
+	Patch "graphics/TuinMenuTitle.png", 0, 0
+}

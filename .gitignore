@@ -1,0 +1,5 @@
+.codex-tests/
+*.log
+*.ini
+Thumbs.db
+.DS_Store
