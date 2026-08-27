@@ -7,6 +7,7 @@
 - Reworked progressive monster levels into hybrid scaling: map progression remains primary, but under-levelled enemies partially catch up to the highest active player based on difficulty. Elite, Legendary and Mythic enemies receive additional level pressure and ordinary monsters retain occasional challenge surges.
 - Strengthened all four visible difficulty profiles while preserving custom slider values and migrating the prior stock profile values.
 - Replaced John's incompatible missing/variant weapon purchases with a 150-coin owned-weapon gamble: 80% Uncommon, 12% Rare, 5% Elite, 2% Legendary and 1% Mythic. Godly remains Boss-exclusive.
+- Removed the probability advertisement beneath John's gamble entry to keep the shop interface clean.
 - Expanded special-monster naming from small generic lists to 32 prefixes, 24 titles and 20 legendary names, plus family-specific Doom names for Imps, former humans, Demons, floating horrors, Hell nobles, Revenants, arachnids, Mancubi and Arch-viles.
 - Fixed internal coin grants awarding one unintended extra coin when creating a player's first coin stack.
 
