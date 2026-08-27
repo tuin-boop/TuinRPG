@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.2
+
+- Added the adaptive Hell Director. At 25%, 50% and 75% map completion it measures party damage taken during that stage and, when the run is going smoothly, upgrades one living monster to Elite, Legendary or Mythic.
+- Added a configurable rare Assassin Imp event during successful high-tier Director checks. It appears near an older player trail position as a fast, translucent Mythic ambusher, while invalid or cramped spawn positions safely fall back to upgrading an existing monster.
+- Reworked progressive monster levels into hybrid scaling: map progression remains primary, but under-levelled enemies partially catch up to the highest active player based on difficulty. Elite, Legendary and Mythic enemies receive additional level pressure and ordinary monsters retain occasional challenge surges.
+- Strengthened all four visible difficulty profiles while preserving custom slider values and migrating the prior stock profile values.
+- Replaced John's incompatible missing/variant weapon purchases with a 150-coin owned-weapon gamble: 80% Uncommon, 12% Rare, 5% Elite, 2% Legendary and 1% Mythic. Godly remains Boss-exclusive.
+- Expanded special-monster naming from small generic lists to 32 prefixes, 24 titles and 20 legendary names, plus family-specific Doom names for Imps, former humans, Demons, floating horrors, Hell nobles, Revenants, arachnids, Mancubi and Arch-viles.
+- Fixed internal coin grants awarding one unintended extra coin when creating a player's first coin stack.
+
 - Made John completely non-solid so players, monsters and projectiles can pass through him without losing shop interaction.
 - Prevented Doom's native E1M8-E3M8 boss-death action from ending the episode behind TuinRPG's back; John now remains responsible for the inventory-preserving transition, including when loading an already-promoted finale save.
 - John's E1M8-E3M8 episode bridges no longer trigger late-start catch-up rewards on the destination map; player level, stat/perk points, arsenal and ammo now carry across unchanged.

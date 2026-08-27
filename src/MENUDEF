@@ -57,6 +57,10 @@ OptionMenu "TuinRPGOptions"
 	Slider "Level variance", "tuin_monster_level_variance", 0, 15, 1
 	Slider "Health gained per level", "tuin_health_scale", 0.0, 0.20, 0.0025, 4
 	Slider "Damage gained per level", "tuin_damage_scale", 0.0, 0.10, 0.001, 3
+	Option "Adaptive Hell Director", "tuin_director_enabled", "OnOff"
+	StaticText "At 25/50/75% kills, easy runs awaken stronger enemies", 1
+	Slider "Director minimum map monsters", "tuin_director_min_monsters", 8, 50, 1
+	Slider "Rare Assassin Imp chance (%)", "tuin_director_assassin_chance", 0.0, 25.0, 1.0, 1
 	StaticText " "
 	StaticText "RARITY AND AFFIXES", 1
 	Option "Rare monsters", "tuin_rarity_enabled", "OnOff"
@@ -308,8 +312,8 @@ OptionMenu "TuinRPGJohnShop"
 	Command "FULL AMMO REFILL                          40 COINS", "netevent tuin_shop_buy 3"
 	Command "ARMOR PLATES +25                          20 COINS", "netevent tuin_shop_buy 4"
 	Command "BACKPACK                                  50 COINS", "netevent tuin_shop_buy 5"
-	Command "RANDOM MISSING STANDARD WEAPON            80 COINS", "netevent tuin_shop_buy 6"
-	Command "RARE VARIANT OF AN OWNED WEAPON          120 COINS", "netevent tuin_shop_buy 7"
+	Command "GAMBLE: RANDOM OWNED-WEAPON VARIANT      150 COINS", "netevent tuin_shop_buy 6"
+	StaticText "20% RARE+ | 1% MYTHIC | GODLY STAYS BOSS-ONLY", 1
 	StaticText " "
 	Command "TALK TO JOHN", "netevent tuin_shop_talk"
 	Command "ASK JOHN FOR A TUIN RPG TIP", "netevent tuin_shop_tip"

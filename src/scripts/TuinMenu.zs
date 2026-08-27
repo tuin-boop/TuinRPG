@@ -12,34 +12,36 @@ class TuinRPGOptionsMenu : OptionMenu
 	{
 		let cv = CVar.FindCVar('tuin_difficulty_profile_applied');
 		if (cv) cv.SetInt(mode);
+		let scaling = CVar.FindCVar('tuin_scaling_migrated_121');
+		if (scaling) scaling.SetBool(true);
 	}
 
 	static void ApplyVisibleProfile(int mode)
 	{
 		if (mode == 0)
 		{
-			SetFloatCVar('tuin_health_scale', 0.0175); SetFloatCVar('tuin_damage_scale', 0.010);
+			SetFloatCVar('tuin_health_scale', 0.025); SetFloatCVar('tuin_damage_scale', 0.012);
 			SetFloatCVar('tuin_rarity_uncommon_chance', 8.0); SetFloatCVar('tuin_rarity_rare_chance', 4.0);
 			SetFloatCVar('tuin_rarity_elite_chance', 1.5); SetFloatCVar('tuin_rarity_legendary_chance', 0.50);
 			SetFloatCVar('tuin_rarity_mythic_chance', 0.25);
 		}
 		else if (mode == 1)
 		{
-			SetFloatCVar('tuin_health_scale', 0.025); SetFloatCVar('tuin_damage_scale', 0.014);
+			SetFloatCVar('tuin_health_scale', 0.045); SetFloatCVar('tuin_damage_scale', 0.020);
 			SetFloatCVar('tuin_rarity_uncommon_chance', 11.0); SetFloatCVar('tuin_rarity_rare_chance', 5.0);
 			SetFloatCVar('tuin_rarity_elite_chance', 2.0); SetFloatCVar('tuin_rarity_legendary_chance', 0.75);
 			SetFloatCVar('tuin_rarity_mythic_chance', 0.35);
 		}
 		else if (mode == 3)
 		{
-			SetFloatCVar('tuin_health_scale', 0.075); SetFloatCVar('tuin_damage_scale', 0.027);
+			SetFloatCVar('tuin_health_scale', 0.100); SetFloatCVar('tuin_damage_scale', 0.040);
 			SetFloatCVar('tuin_rarity_uncommon_chance', 21.0); SetFloatCVar('tuin_rarity_rare_chance', 10.0);
 			SetFloatCVar('tuin_rarity_elite_chance', 3.5); SetFloatCVar('tuin_rarity_legendary_chance', 1.50);
 			SetFloatCVar('tuin_rarity_mythic_chance', 0.75);
 		}
 		else
 		{
-			SetFloatCVar('tuin_health_scale', 0.050); SetFloatCVar('tuin_damage_scale', 0.020);
+			SetFloatCVar('tuin_health_scale', 0.070); SetFloatCVar('tuin_damage_scale', 0.028);
 			SetFloatCVar('tuin_rarity_uncommon_chance', 15.0); SetFloatCVar('tuin_rarity_rare_chance', 7.0);
 			SetFloatCVar('tuin_rarity_elite_chance', 2.5); SetFloatCVar('tuin_rarity_legendary_chance', 1.00);
 			SetFloatCVar('tuin_rarity_mythic_chance', 0.50);

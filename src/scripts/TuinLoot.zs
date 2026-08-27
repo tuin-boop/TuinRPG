@@ -136,3 +136,21 @@ class TuinJohnShopNPC : Actor
 		Stop;
 	}
 }
+
+// A rare adaptive-director ambusher. It deliberately reuses the stock Imp
+// states so it remains readable in Doom and compatible with gore/voxel packs.
+class TuinAssassinImp : DoomImp
+{
+	Default
+	{
+		Tag "Assassin Imp";
+		Health 120;
+		Speed 14;
+		PainChance 96;
+		Scale 0.90;
+		RenderStyle "Translucent";
+		Alpha 0.68;
+		+SHADOW
+		+AMBUSH
+	}
+}

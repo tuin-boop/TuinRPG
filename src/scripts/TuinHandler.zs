@@ -17,6 +17,11 @@ class TuinRPGHandler : EventHandler
 	TuinJohnShopNPC JohnMerchant;
 	int EpisodeTravelTics;
 	int AppliedDifficultyMode;
+	bool MonsterLevelsSynchronized;
+	int DirectorCheckpoint;
+	int DirectorDamageTaken[TUIN_MAX_PLAYERS];
+	Vector3 DirectorTrailPosition[TUIN_MAX_PLAYERS];
+	bool DirectorTrailValid[TUIN_MAX_PLAYERS];
 	int EpisodeTravelPlayer;
 	string EpisodeTravelDestination;
 	bool UseHeld[TUIN_MAX_PLAYERS];
@@ -106,6 +111,17 @@ class TuinRPGHandler : EventHandler
 	clearscope static double DifficultyRarityChanceFactor()
 	{
 		return 1.0;
+	}
+
+	clearscope static double DifficultyPlayerLevelInfluence()
+	{
+		switch (DifficultyMode())
+		{
+		case 0: return 0.25;
+		case 1: return 0.50;
+		case 3: return 0.80;
+		default: return 0.65;
+		}
 	}
 
 	clearscope static double DifficultyHealthPowerFactor()
@@ -612,7 +628,7 @@ class TuinRPGHandler : EventHandler
 		ammo.Amount = max(1, int(ammo.Amount * multiplier + 0.5));
 	}
 
-	int RollMonsterLevel()
+	int RollMonsterLevel(int rarity = 0)
 	{
 		int minLevel = max(1, CVInt('tuin_monster_min_level', 1));
 		int maxLevel = max(minLevel, CVInt('tuin_monster_max_level', 40));
@@ -620,7 +636,17 @@ class TuinRPGHandler : EventHandler
 		if (mode == 1) return Random[TuinRPGLevel](minLevel, maxLevel);
 		int variance = max(0, CVInt('tuin_monster_level_variance', 3));
 		int baseLevel = ProgressiveBaseLevel();
-		return clamp(baseLevel + Random[TuinRPGLevel](-variance, variance), minLevel, maxLevel);
+		int playerLevel = HighestActivePlayerLevel();
+		if (playerLevel > baseLevel)
+			baseLevel += int((playerLevel - baseLevel) * DifficultyPlayerLevelInfluence() + 0.5);
+		int rolledLevel = baseLevel + Random[TuinRPGLevel](-variance, variance);
+		// Elite+ enemies naturally sit a little above the local pack, and a small
+		// surge roll creates occasional high-level threats without scaling every
+		// monster directly to the player.
+		if (rarity >= 3) rolledLevel += rarity - 2;
+		if (Random[TuinRPGLevel](0, 99) < 12)
+			rolledLevel += Random[TuinRPGLevel](1, max(2, variance));
+		return clamp(rolledLevel, minLevel, maxLevel);
 	}
 
 	clearscope static string RarityName(int rarity)
@@ -1221,7 +1247,13 @@ class TuinRPGHandler : EventHandler
 		{
 			pawn.GiveInventory('TuinCoinPickup', 1);
 			coins = Inventory(pawn.FindInventory('TuinCoinPickup'));
-			if (coins) coins.A_RemoveLight('TuinCoinGlow');
+			if (coins)
+			{
+				// GiveInventory creates the stack with one item; clear that bootstrap
+				// amount so grants award exactly the requested number of coins.
+				coins.Amount = 0;
+				coins.A_RemoveLight('TuinCoinGlow');
+			}
 		}
 		if (coins) coins.Amount = min(coins.MaxAmount, coins.Amount + amount);
 	}
@@ -1241,32 +1273,16 @@ class TuinRPGHandler : EventHandler
 		return added;
 	}
 
-	class<Weapon> PickMissingShopWeapon(Actor pawn)
+	int RollJohnGambleQuality()
 	{
-		Array<class<Weapon> > baseChoices;
-		if (gameinfo.gametype & GAME_DoomChex)
-		{
-			baseChoices.Push('Shotgun'); baseChoices.Push('SuperShotgun'); baseChoices.Push('Chaingun');
-			baseChoices.Push('RocketLauncher'); baseChoices.Push('PlasmaRifle'); baseChoices.Push('BFG9000'); baseChoices.Push('Chainsaw');
-		}
-		else if (gameinfo.gametype & GAME_Heretic)
-		{
-			baseChoices.Push('Crossbow'); baseChoices.Push('Blaster'); baseChoices.Push('SkullRod');
-			baseChoices.Push('PhoenixRod'); baseChoices.Push('Mace'); baseChoices.Push('Gauntlets');
-		}
-		else if (gameinfo.gametype & GAME_Strife)
-		{
-			baseChoices.Push('StrifeCrossbow'); baseChoices.Push('AssaultGun'); baseChoices.Push('MiniMissileLauncher');
-			baseChoices.Push('FlameThrower'); baseChoices.Push('Mauler');
-		}
-		Array<class<Weapon> > missing;
-		for (int i = 0; i < baseChoices.Size(); i++)
-		{
-			class<Weapon> resolved = (class<Weapon>)(Actor.GetReplacement(baseChoices[i]));
-			if (!resolved) resolved = baseChoices[i];
-			if (!pawn.FindInventory(resolved)) missing.Push(resolved);
-		}
-		return missing.Size() ? missing[Random[TuinRPGJohn](0, missing.Size() - 1)] : null;
+		// Godly remains Boss-exclusive. A gamble always returns at least Uncommon,
+		// with a 20% combined chance to reach Rare or better.
+		int roll = Random[TuinRPGJohn](0, 999);
+		if (roll < 10) return 5;   // Mythic: 1%
+		if (roll < 30) return 4;   // Legendary: 2%
+		if (roll < 80) return 3;   // Elite: 5%
+		if (roll < 200) return 2;  // Rare: 12%
+		return 1;                  // Uncommon: 80%
 	}
 
 	void BuyJohnItem(int playerNumber, int itemNumber)
@@ -1282,8 +1298,7 @@ class TuinRPGHandler : EventHandler
 		case 3: cost = 40; break;
 		case 4: cost = 20; break;
 		case 5: cost = 50; break;
-		case 6: cost = 80; break;
-		case 7: cost = 120; break;
+		case 6: cost = 150; break;
 		default: return;
 		}
 		if (CoinBalance(pawn) < cost)
@@ -1342,25 +1357,19 @@ class TuinRPGHandler : EventHandler
 		}
 		else if (itemNumber == 6)
 		{
-			class<Weapon> weaponType = PickMissingShopWeapon(pawn);
-			if (!weaponType) data.ShopDialogue = "John: I have no missing standard weapon for your current game.";
-			else
-			{
-				pawn.GiveInventory(weaponType, 1);
-				RefillAmmo(pawn, false);
-				data.ShopDialogue = String.Format("John: One %s. Handle it responsibly—or don't.", WeaponBaseName(weaponType));
-				success = true;
-			}
-		}
-		else if (itemNumber == 7)
-		{
 			class<Weapon> weaponType = PickOwnedWeapon(pawn);
-			if (!weaponType) data.ShopDialogue = "John: Bring me a weapon before asking me to improve one.";
+			if (!weaponType) data.ShopDialogue = "John: Bring me a weapon before gambling on an upgrade.";
 			else
 			{
-				SpawnRolledWeaponDrop((pawn.Pos.x, pawn.Pos.y, pawn.FloorZ + 8.0), weaponType, max(1, data.PlayerLevel), 2);
-				data.ShopDialogue = "John: Rare variant delivered at your feet. Press E to inspect it.";
-				success = true;
+				int quality = RollJohnGambleQuality();
+				let reward = SpawnRolledWeaponDrop((pawn.Pos.x, pawn.Pos.y, pawn.FloorZ + 8.0),
+					weaponType, max(1, data.PlayerLevel), quality);
+				if (reward)
+				{
+					data.ShopDialogue = String.Format("John: The wheel says %s. Press E to inspect your %s.",
+						WeaponQualityName(quality), WeaponBaseName(weaponType));
+					success = true;
+				}
 			}
 		}
 
@@ -1486,41 +1495,105 @@ class TuinRPGHandler : EventHandler
 
 	string PickNamePrefix()
 	{
-		switch (Random[TuinRPGNames](0, 14))
+		switch (Random[TuinRPGNames](0, 31))
 		{
 		case 0: return "Blood"; case 1: return "Bone"; case 2: return "Hell";
 		case 3: return "Ash"; case 4: return "Void"; case 5: return "Skull";
 		case 6: return "Flesh"; case 7: return "Black"; case 8: return "Infernal";
 		case 9: return "Burning"; case 10: return "Cursed"; case 11: return "Doom";
-		case 12: return "Night"; case 13: return "Iron"; default: return "Death";
+		case 12: return "Night"; case 13: return "Iron"; case 14: return "Death";
+		case 15: return "Grim"; case 16: return "Rot"; case 17: return "Plague";
+		case 18: return "Dread"; case 19: return "Blight"; case 20: return "Grave";
+		case 21: return "Rage"; case 22: return "Venom"; case 23: return "Storm";
+		case 24: return "Chaos"; case 25: return "Sin"; case 26: return "War";
+		case 27: return "Corpse"; case 28: return "Rust"; case 29: return "Soul";
+		case 30: return "Murder"; default: return "Brimstone";
 		}
 	}
 
 	string PickNameSuffix()
 	{
-		switch (Random[TuinRPGNames](0, 13))
+		switch (Random[TuinRPGNames](0, 23))
 		{
 		case 0: return "Reaper"; case 1: return "Butcher"; case 2: return "Tyrant";
 		case 3: return "Hunter"; case 4: return "Stalker"; case 5: return "Warden";
 		case 6: return "Destroyer"; case 7: return "Keeper"; case 8: return "Eater";
 		case 9: return "Lord"; case 10: return "Bringer"; case 11: return "Spawn";
-		case 12: return "Slayer"; default: return "Devourer";
+		case 12: return "Slayer"; case 13: return "Devourer"; case 14: return "Tormentor";
+		case 15: return "Desecrator"; case 16: return "Ravager"; case 17: return "Harvester";
+		case 18: return "Executioner"; case 19: return "Defiler"; case 20: return "Warmonger";
+		case 21: return "Prowler"; case 22: return "Scourge"; default: return "Bane";
 		}
+	}
+
+	string PickFamilySuffix(Actor monster)
+	{
+		int roll = Random[TuinRPGNames](0, 5);
+		if (monster is 'DoomImp')
+		{
+			switch (roll) { case 0: return "Emberclaw"; case 1: return "Firetongue"; case 2: return "Cinder Imp";
+			case 3: return "Hellclaw"; case 4: return "Ashspitter"; default: return "Flamefiend"; }
+		}
+		if (monster is 'ZombieMan' || monster is 'ShotgunGuy' || monster is 'ChaingunGuy' || monster is 'WolfensteinSS')
+		{
+			switch (roll) { case 0: return "Deadeye"; case 1: return "Rotgunner"; case 2: return "Grave Trooper";
+			case 3: return "Hell Rifleman"; case 4: return "Corpse Soldier"; default: return "Blood Sergeant"; }
+		}
+		if (monster is 'Demon')
+		{
+			switch (roll) { case 0: return "Fang"; case 1: return "Goremaw"; case 2: return "Flesh Hound";
+			case 3: return "Hell Hound"; case 4: return "Bonegnawer"; default: return "Ripper"; }
+		}
+		if (monster is 'Cacodemon' || monster is 'PainElemental' || monster is 'LostSoul')
+		{
+			switch (roll) { case 0: return "Dread Eye"; case 1: return "Soulmaw"; case 2: return "Hell Gazer";
+			case 3: return "Skullstorm"; case 4: return "Void Orb"; default: return "Doom Eye"; }
+		}
+		if (monster is 'BaronOfHell' || monster is 'HellKnight')
+		{
+			switch (roll) { case 0: return "Horned Lord"; case 1: return "Hell Prince"; case 2: return "Brimstone Knight";
+			case 3: return "Greenflame"; case 4: return "Hoof of Doom"; default: return "Abyssal Baron"; }
+		}
+		if (monster is 'Revenant')
+		{
+			switch (roll) { case 0: return "Bone Archer"; case 1: return "Gravewalker"; case 2: return "Skullfist";
+			case 3: return "Death Missile"; case 4: return "Crypt Stalker"; default: return "Rattlebones"; }
+		}
+		if (monster is 'Arachnotron' || monster is 'SpiderMastermind')
+		{
+			switch (roll) { case 0: return "Web Tyrant"; case 1: return "Steel Widow"; case 2: return "Brainstalker";
+			case 3: return "Plasma Weaver"; case 4: return "Iron Spider"; default: return "Mindcrawler"; }
+		}
+		if (monster is 'Fatso')
+		{
+			switch (roll) { case 0: return "Flamebelly"; case 1: return "Corpse Cannon"; case 2: return "Blubberfiend";
+			case 3: return "Hell Bombardier"; case 4: return "Goremouth"; default: return "Siege Brute"; }
+		}
+		if (monster is 'Archvile')
+		{
+			switch (roll) { case 0: return "Pyre Sage"; case 1: return "Corpsecaller"; case 2: return "Flame Priest";
+			case 3: return "Ash Prophet"; case 4: return "Grave Burner"; default: return "Hell Shaman"; }
+		}
+		return PickNameSuffix();
 	}
 
 	string PickLegendaryName()
 	{
-		switch (Random[TuinRPGNames](0, 7))
+		switch (Random[TuinRPGNames](0, 19))
 		{
 		case 0: return "Gorath"; case 1: return "Azrak"; case 2: return "Malgar";
 		case 3: return "Vulkan"; case 4: return "Korvax"; case 5: return "Zarith";
-		case 6: return "Drogath"; default: return "Nexar";
+		case 6: return "Drogath"; case 7: return "Nexar"; case 8: return "Vharok";
+		case 9: return "Mordrath"; case 10: return "Krazul"; case 11: return "Belgor";
+		case 12: return "Xareth"; case 13: return "Vorgrim"; case 14: return "Thulgar";
+		case 15: return "Nihlath"; case 16: return "Skarvek"; case 17: return "Rhazak";
+		case 18: return "Ozul"; default: return "Kharon";
 		}
 	}
 
-	string GenerateMonsterName(int rarity)
+	string GenerateMonsterName(Actor monster, int rarity)
 	{
-		string suffix = PickNameSuffix();
+		string suffix = PickFamilySuffix(monster);
 		if (rarity >= 4) return String.Format("%s THE %s", PickLegendaryName(), suffix).MakeUpper();
 		return String.Format("%s %s", PickNamePrefix(), suffix);
 	}
@@ -1833,8 +1906,8 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!CVInt('tuin_enabled', 1) || !IsValidMonster(mo) || GetMonsterData(mo)) return;
 		int originalHealth = max(1, mo.Health);
-		int monsterLevel = RollMonsterLevel();
 		int rarity = RollRarity();
+		int monsterLevel = RollMonsterLevel(rarity);
 		double healthMultiplier = (1.0 + (monsterLevel - 1) * max(0.0, CVFloat('tuin_health_scale', 0.05)) * DifficultyHealthLevelFactor()) * RarityHealthMultiplier(rarity);
 		double damageMultiplier = (1.0 + (monsterLevel - 1) * max(0.0, CVFloat('tuin_damage_scale', 0.02)) * DifficultyDamageLevelFactor()) * RarityDamageMultiplier(rarity);
 		int scaledHealth = max(1, int(originalHealth * healthMultiplier + 0.5));
@@ -1850,7 +1923,7 @@ class TuinRPGHandler : EventHandler
 		data.UniqueID = NextMonsterID;
 		data.LastPlayerNumber = -1;
 		data.XPValue = max(1, int((5.0 + sqrt(originalHealth) * 2.5) * (1.0 + (monsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
-		data.GeneratedName = rarity > 0 ? GenerateMonsterName(rarity) : mo.GetTag(mo.GetClassName());
+		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
 		data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
 		mo.A_SetHealth(scaledHealth);
 		data.ResetSignatureAttack();
@@ -1869,7 +1942,7 @@ class TuinRPGHandler : EventHandler
 		data.ScaledMaxHealth = scaledHealth;
 		data.DamageMultiplier = damageMultiplier;
 		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) * (1.0 + (data.MonsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
-		data.GeneratedName = rarity > 0 ? GenerateMonsterName(rarity) : mo.GetTag(mo.GetClassName());
+		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
 		data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
 		data.RegenClock = 0;
 		data.SwiftClock = 0;
@@ -1879,6 +1952,145 @@ class TuinRPGHandler : EventHandler
 		mo.A_SetHealth(max(1, int(scaledHealth * healthFraction + 0.5)));
 		data.UpdateRarityGlow();
 		data.ResetSignatureAttack();
+	}
+
+	void ApplyOrdinaryMonsterScale(Actor mo, TuinMonsterData data, int monsterLevel, int rarity, bool rerollAffixes)
+	{
+		if (!IsValidMonster(mo) || !data || data.OriginalMaxHealth <= 0 || rarity >= 6) return;
+		double healthFraction = clamp(double(mo.Health) / max(1, data.ScaledMaxHealth), 0.0, 1.0);
+		monsterLevel = clamp(monsterLevel, max(1, CVInt('tuin_monster_min_level', 1)),
+			max(1, CVInt('tuin_monster_max_level', 40)));
+		double healthMultiplier = (1.0 + (monsterLevel - 1) * max(0.0,
+			CVFloat('tuin_health_scale', 0.05))) * RarityHealthMultiplier(rarity);
+		double damageMultiplier = (1.0 + (monsterLevel - 1) * max(0.0,
+			CVFloat('tuin_damage_scale', 0.02))) * RarityDamageMultiplier(rarity);
+		data.MonsterLevel = monsterLevel;
+		data.MonsterRarity = rarity;
+		data.ScaledMaxHealth = max(1, int(data.OriginalMaxHealth * healthMultiplier + 0.5));
+		data.DamageMultiplier = damageMultiplier;
+		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) *
+			(1.0 + (monsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
+		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
+		if (rerollAffixes) data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
+		data.RegenClock = 0;
+		data.SwiftClock = 0;
+		data.GlowClock = 0;
+		data.AppliedGlowRarity = -1;
+		data.SwiftLockedTarget = null;
+		mo.A_SetHealth(max(1, int(data.ScaledMaxHealth * healthFraction + 0.5)));
+		data.UpdateRarityGlow();
+		data.ResetSignatureAttack();
+	}
+
+	void SynchronizeLivingMonsterLevels()
+	{
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor monster;
+		while (monster = Actor(iterator.Next()))
+		{
+			let data = GetMonsterData(monster);
+			if (!IsValidMonster(monster) || !data || data.MonsterRarity >= 6) continue;
+			int anchoredLevel = RollMonsterLevel(data.MonsterRarity);
+			if (anchoredLevel > data.MonsterLevel)
+				ApplyOrdinaryMonsterScale(monster, data, anchoredLevel, data.MonsterRarity, false);
+		}
+	}
+
+	bool UpgradeDirectorMonster(Actor monster, int targetRarity, bool assassin = false)
+	{
+		let data = GetMonsterData(monster);
+		if (!IsValidMonster(monster) || !data || data.MonsterRarity >= 6) return false;
+		targetRarity = clamp(max(targetRarity, data.MonsterRarity), 3, 5);
+		int targetLevel = max(data.MonsterLevel, RollMonsterLevel(targetRarity) + (assassin ? 2 : 1));
+		ApplyOrdinaryMonsterScale(monster, data, targetLevel, targetRarity, true);
+		if (assassin) data.GeneratedName = String.Format("%s THE TRAIL ASSASSIN", PickLegendaryName()).MakeUpper();
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
+			string warning = assassin ? "HELL DIRECTOR: A MYTHIC ASSASSIN FOUND YOUR TRAIL" :
+				String.Format("HELL DIRECTOR: %s AWAKENED", data.GeneratedName.MakeUpper());
+			SetLootNotification(playerNumber, warning, targetRarity);
+			players[playerNumber].mo.A_Log(warning);
+		}
+		return true;
+	}
+
+	bool TrySpawnDirectorAssassin()
+	{
+		int chosenPlayer = -1;
+		int choices = 0;
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber] || !players[playerNumber].mo || !DirectorTrailValid[playerNumber]) continue;
+			double dx = players[playerNumber].mo.Pos.x - DirectorTrailPosition[playerNumber].x;
+			double dy = players[playerNumber].mo.Pos.y - DirectorTrailPosition[playerNumber].y;
+			if (dx * dx + dy * dy < 192.0 * 192.0) continue;
+			choices++;
+			if (Random[TuinRPGDirector](1, choices) == 1) chosenPlayer = playerNumber;
+		}
+		if (chosenPlayer < 0) return false;
+
+		Vector3 origin = DirectorTrailPosition[chosenPlayer];
+		for (int attempt = 0; attempt < 8; attempt++)
+		{
+			double angle = Random[TuinRPGDirector](0, 359);
+			double radius = attempt == 0 ? 0.0 : 32.0 + attempt * 8.0;
+			Vector3 position = (origin.x + cos(angle) * radius, origin.y + sin(angle) * radius, origin.z);
+			Actor assassin = Actor.Spawn('TuinAssassinImp', position, NO_REPLACE);
+			if (!assassin) continue;
+			if (!assassin.TestMobjLocation())
+			{
+				assassin.Destroy();
+				continue;
+			}
+			if (!GetMonsterData(assassin)) InitializeMonster(assassin);
+			if (UpgradeDirectorMonster(assassin, 5, true)) return true;
+			assassin.Destroy();
+		}
+		return false;
+	}
+
+	void UpdateHellDirector()
+	{
+		if (!CVInt('tuin_director_enabled', 1) || DirectorCheckpoint >= 3 ||
+			level.total_monsters < max(8, CVInt('tuin_director_min_monsters', 12))) return;
+		int threshold = (DirectorCheckpoint + 1) * 25;
+		if (level.killed_monsters * 100 < level.total_monsters * threshold) return;
+		DirectorCheckpoint++;
+
+		int damageTaken = 0;
+		int healthBudget = 0;
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			damageTaken += DirectorDamageTaken[playerNumber];
+			DirectorDamageTaken[playerNumber] = 0;
+			if (playerInGame[playerNumber] && players[playerNumber].mo)
+				healthBudget += max(1, players[playerNumber].mo.GetMaxHealth(true));
+		}
+		if (healthBudget <= 0) return;
+		double pressure = damageTaken * 100.0 / healthBudget;
+		int targetRarity;
+		if (pressure <= 20.0) targetRarity = 5;
+		else if (pressure <= 50.0) targetRarity = 4;
+		else if (pressure <= 85.0) targetRarity = 3;
+		else return;
+
+		double assassinChance = clamp(CVFloat('tuin_director_assassin_chance', 8.0), 0.0, 25.0);
+		if (targetRarity >= 4 && FRandom[TuinRPGDirector](0.0, 100.0) < assassinChance && TrySpawnDirectorAssassin()) return;
+
+		Actor candidate;
+		int candidateCount = 0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor monster;
+		while (monster = Actor(iterator.Next()))
+		{
+			let data = GetMonsterData(monster);
+			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bDORMANT || monster.bBOSS ||
+				monster.bBOSSDEATH || !data || data.MonsterRarity >= targetRarity || IsIconicEpisodeBoss(monster)) continue;
+			candidateCount++;
+			if (Random[TuinRPGDirector](1, candidateCount) == 1) candidate = monster;
+		}
+		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);
 	}
 
 	void RerollLivingMonsters(int requestingPlayer)
@@ -2069,10 +2281,44 @@ class TuinRPGHandler : EventHandler
 		migrated.SetBool(true);
 	}
 
+	void MigrateScalingDefaults()
+	{
+		let migrated = CVar.FindCVar('tuin_scaling_migrated_121');
+		if (!migrated || migrated.GetBool()) return;
+		let health = CVar.FindCVar('tuin_health_scale');
+		let damage = CVar.FindCVar('tuin_damage_scale');
+		double oldHealth;
+		double oldDamage;
+		double newHealth;
+		double newDamage;
+		switch (DifficultyMode())
+		{
+		case 0: oldHealth = 0.0175; oldDamage = 0.010; newHealth = 0.025; newDamage = 0.012; break;
+		case 1: oldHealth = 0.025; oldDamage = 0.014; newHealth = 0.045; newDamage = 0.020; break;
+		case 3: oldHealth = 0.075; oldDamage = 0.027; newHealth = 0.100; newDamage = 0.040; break;
+		default: oldHealth = 0.050; oldDamage = 0.020; newHealth = 0.070; newDamage = 0.028; break;
+		}
+		// Preserve deliberate custom slider values; only migrate a known old profile.
+		if (health && damage && abs(health.GetFloat() - oldHealth) < 0.0001 &&
+			abs(damage.GetFloat() - oldDamage) < 0.0001)
+		{
+			health.SetFloat(newHealth);
+			damage.SetFloat(newDamage);
+		}
+		migrated.SetBool(true);
+	}
+
 	override void NewGame()
 	{
 		PreviousLoadedCampaignMap = 0;
 		CurrentLoadedCampaignMap = 0;
+		MonsterLevelsSynchronized = false;
+		DirectorCheckpoint = 0;
+		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+		{
+			DirectorDamageTaken[i] = 0;
+			DirectorTrailValid[i] = false;
+		}
 		for (int i = 0; i < TUIN_MAX_PLAYERS; i++) CatchupHandled[i] = false;
 		MigrateBalanceDefaults();
 		MigrateRarityDefaults();
@@ -2082,6 +2328,7 @@ class TuinRPGHandler : EventHandler
 		MigrateExpandedAffixDefaults();
 		MigrateNativeBossGodlyDefault();
 		MigrateBossGodlyDefaults();
+		MigrateScalingDefaults();
 	}
 
 	override void WorldLoaded(WorldEvent e)
@@ -2091,6 +2338,13 @@ class TuinRPGHandler : EventHandler
 			FinaleBossPromoted = false;
 			FinaleBoss = null;
 			JohnMerchant = null;
+			MonsterLevelsSynchronized = false;
+			DirectorCheckpoint = 0;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+			{
+				DirectorDamageTaken[i] = 0;
+				DirectorTrailValid[i] = false;
+			}
 			PreviousLoadedCampaignMap = CurrentLoadedCampaignMap;
 			CurrentLoadedCampaignMap = level.LevelNum;
 			if (CurrentLoadedCampaignMap <= 0) CurrentLoadedCampaignMap = max(1, MapsVisited + 1);
@@ -2104,6 +2358,7 @@ class TuinRPGHandler : EventHandler
 		MigrateExpandedAffixDefaults();
 		MigrateNativeBossGodlyDefault();
 		MigrateBossGodlyDefaults();
+		MigrateScalingDefaults();
 		AppliedDifficultyMode = DifficultyMode();
 		if (!e.IsSaveGame) MapsVisited++;
 	}
@@ -2179,6 +2434,8 @@ class TuinRPGHandler : EventHandler
 		if (e.Thing.player)
 		{
 			int hurtPlayer = e.Thing.PlayerNumber();
+			if (hurtPlayer >= 0 && hurtPlayer < TUIN_MAX_PLAYERS)
+				DirectorDamageTaken[hurtPlayer] = min(1000000, DirectorDamageTaken[hurtPlayer] + e.Damage);
 			let hurtData = GetPlayerData(e.Thing);
 			if (hurtData && hurtData.PlayerClass == 5)
 			{
@@ -2751,6 +3008,21 @@ class TuinRPGHandler : EventHandler
 				}
 			}
 		}
+		if (!MonsterLevelsSynchronized)
+		{
+			SynchronizeLivingMonsterLevels();
+			MonsterLevelsSynchronized = true;
+		}
+		if (level.Time <= 1 || (level.Time % 105) == 0)
+		{
+			for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+			{
+				if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
+				DirectorTrailPosition[playerNumber] = players[playerNumber].mo.Pos;
+				DirectorTrailValid[playerNumber] = true;
+			}
+		}
+		UpdateHellDirector();
 	}
 
 	override void NetworkProcess(ConsoleEvent e)
