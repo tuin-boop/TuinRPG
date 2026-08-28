@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.15
+
+- Replaced Rogue's mandatory stand-still activation with a configurable active Shadow Veil ability, bound to `V` by default.
+- Shadow Veil now lasts six seconds, permits movement and use actions, and ends on attack, damage, expiry, or manual cancellation.
+- Criticals and kills reduce Shadow Veil's cooldown; Ambush kills refund more, while standing still optionally doubles passive recovery.
+- Rogue Class Training now extends Veil duration and reduces its base cooldown in addition to granting critical chance.
+- Raised Bleeding from 2% to 4% of scaled maximum health per second and made forced Ambush criticals trigger all critical-hit effects correctly.
+
 ## 0.6.14
 
 - Rebalanced support affixes: Warding now protects allies only; Healer retains full ally healing but self-heals at 25%, and damage suppresses self-healing for two seconds.

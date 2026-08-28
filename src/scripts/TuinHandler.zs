@@ -208,9 +208,20 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
-	clearscope static int RogueChargeRequired(TuinPlayerData data)
+	clearscope static int RogueCooldownDuration(TuinPlayerData data)
 	{
-		return max(18, 53 - (data ? data.PerkClassMastery : 0) * 9);
+		return max(210, 525 - (data ? data.PerkClassMastery : 0) * 70);
+	}
+
+	clearscope static int RogueVeilDuration(TuinPlayerData data)
+	{
+		return 210 + (data ? data.PerkClassMastery : 0) * 70;
+	}
+
+	void ReduceRogueCooldown(TuinPlayerData data, int tics)
+	{
+		if (!data || data.PlayerClass != 5 || tics <= 0) return;
+		data.RogueCooldownTics = max(0, data.RogueCooldownTics - tics);
 	}
 
 	TuinPlayerData EnsurePlayerData(int playerNumber)
@@ -366,7 +377,7 @@ class TuinRPGHandler : EventHandler
 		data.RogueVeiled = false;
 		data.RogueVeilTics = 0;
 		data.RogueStillTics = 0;
-		data.RogueCooldownTics = 525;
+		data.RogueCooldownTics = RogueCooldownDuration(data);
 		// Preserve the ambush until the weapon reaches its actual damage frame.
 		// Slow custom fists often connect well after the attack button is pressed.
 		if (preserveAmbush) data.RogueAmbushGraceTics = 70;
@@ -431,6 +442,7 @@ class TuinRPGHandler : EventHandler
 		data.RogueVeilTics = 0;
 		data.RogueStillTics = 0;
 		data.RogueAmbushHitTime = -1;
+		data.RogueCooldownCritTime = -1;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
 		MaintainRogueDisengagement(playerNumber, pawn);
@@ -448,31 +460,32 @@ class TuinRPGHandler : EventHandler
 			data.RogueStillTics = 0;
 			data.RogueAmbushGraceTics = 0;
 			data.RogueAmbushHitTime = -1;
+			data.RogueCooldownCritTime = -1;
 		}
 		if (data.PlayerClass != 5)
 		{
 			if (data.RogueVeiled) BreakRogueVeil(playerNumber, data);
 			return;
 		}
-		if (data.RogueCooldownTics > 0) data.RogueCooldownTics--;
-		if (data.RogueAmbushGraceTics > 0) data.RogueAmbushGraceTics--;
 		bool attacking = (players[playerNumber].cmd.buttons & (BT_ATTACK | BT_ALTATTACK)) != 0;
 		bool using = (players[playerNumber].cmd.buttons & BT_USE) != 0;
 		bool moving = abs(pawn.Vel.x) + abs(pawn.Vel.y) > 0.25;
+		if (data.RogueCooldownTics > 0)
+		{
+			data.RogueCooldownTics--;
+			// Patient Rogues still gain an advantage, but standing still is never required.
+			if (!moving && !attacking && !using) data.RogueCooldownTics--;
+		}
+		if (data.RogueAmbushGraceTics > 0) data.RogueAmbushGraceTics--;
 		if (data.RogueVeiled)
 		{
+			data.RogueVeilTics++;
 			MaintainRogueDisengagement(playerNumber, pawn);
 			if (attacking) BreakRogueVeil(playerNumber, data, true);
-			else if (using) BreakRogueVeil(playerNumber, data);
+			else if (data.RogueVeilTics >= RogueVeilDuration(data)) BreakRogueVeil(playerNumber, data);
 			return;
 		}
-		if (data.RogueCooldownTics > 0 || attacking || using || moving)
-		{
-			data.RogueStillTics = 0;
-			return;
-		}
-		data.RogueStillTics++;
-		if (data.RogueStillTics >= RogueChargeRequired(data)) ActivateRogueVeil(playerNumber, pawn, data);
+		data.RogueStillTics = 0;
 	}
 
 	void ChoosePlayerClass(int playerNumber, int chosenClass)
@@ -2777,7 +2790,7 @@ class TuinRPGHandler : EventHandler
 				int attacker = data.BleedPlayerNumber;
 				Actor source = attacker >= 0 && attacker < TUIN_MAX_PLAYERS && playerInGame[attacker] ?
 					players[attacker].mo : null;
-				int damage = min(victim.Health, max(1, int(max(1, data.ScaledMaxHealth) * 0.02 + 0.5)));
+				int damage = min(victim.Health, max(1, int(max(1, data.ScaledMaxHealth) * 0.04 + 0.5)));
 				SpawnDamageNumber(attacker, victim, damage, false, true);
 				ApplyingBonusDamage = true;
 				victim.DamageMobj(source, source, damage, 'TuinBleed', DMG_FORCED);
@@ -2816,7 +2829,6 @@ class TuinRPGHandler : EventHandler
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
 		bool wasCritical = false;
-		bool rolledCritical = false;
 		let sourceMonsterData = MonsterDataFromSource(e.DamageSource, e.Inflictor);
 		if (sourceMonsterData)
 		{
@@ -2889,7 +2901,6 @@ class TuinRPGHandler : EventHandler
 				{
 					multiplier *= playerData.PlayerClass == 3 && playerData.PerkCapstone ? 2.5 : 2.0;
 					wasCritical = true;
-					rolledCritical = true;
 					CriticalPopupTics[attacker] = 18;
 				}
 				if (variantIndex >= 0)
@@ -2919,10 +2930,16 @@ class TuinRPGHandler : EventHandler
 			int totalDamage = baseDamage + max(0, bonusDamage);
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
 			let attackData = EnsurePlayerData(attacker);
+			if (wasCritical && attackData && attackData.PlayerClass == 5 &&
+				attackData.RogueCooldownCritTime != level.Time)
+			{
+				attackData.RogueCooldownCritTime = level.Time;
+				ReduceRogueCooldown(attackData, 35);
+			}
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
-			if (rolledCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
+			if (wasCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
 				ApplyRogueBleed(attacker, victimData);
 			let leechData = attackData;
 			if (leechData && leechData.PerkBloodDrinker > 0 && players[attacker].mo && players[attacker].mo.Health > 0)
@@ -2993,6 +3010,15 @@ class TuinRPGHandler : EventHandler
 			if (variantIndex >= 0)
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
+			if (playerData && playerData.PlayerClass == 5)
+			{
+				// Every kill refunds three seconds. An Ambush kill refunds five total,
+				// with another three seconds at Class Training rank III.
+				int cooldownRefund = 105;
+				if (playerData.RogueAmbushHitTime == level.Time)
+					cooldownRefund += 70 + (playerData.PerkClassMastery >= 3 ? 105 : 0);
+				ReduceRogueCooldown(playerData, cooldownRefund);
+			}
 			if (playerData && playerData.PlayerClass == 4 && playerData.PerkCapstone && players[killer].mo &&
 				players[killer].mo.Health > 0)
 				players[killer].mo.A_SetHealth(min(players[killer].mo.GetMaxHealth(true), players[killer].mo.Health + 3));
@@ -3454,6 +3480,26 @@ class TuinRPGHandler : EventHandler
 			EventHandler.SendInterfaceEvent(e.Player, "tuin_toggle_minimap_silent");
 			return;
 		}
+		if (e.Name ~== "tuin_rogue_shadow_veil")
+		{
+			let rogueData = EnsurePlayerData(e.Player);
+			let pawn = players[e.Player].mo;
+			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
+			{
+				SetLootNotification(e.Player, "SHADOW VEIL REQUIRES THE ROGUE CLASS", 0);
+				return;
+			}
+			if (rogueData.RogueVeiled)
+			{
+				BreakRogueVeil(e.Player, rogueData);
+				SetLootNotification(e.Player, "SHADOW VEIL CANCELLED", 0);
+			}
+			else if (rogueData.RogueCooldownTics <= 0)
+				ActivateRogueVeil(e.Player, pawn, rogueData);
+			else
+				SetLootNotification(e.Player, String.Format("SHADOW VEIL: %.1f SEC", rogueData.RogueCooldownTics / 35.0), 0);
+			return;
+		}
 		if (e.Name ~== "tuin_give_levels")
 		{
 			GiveTestLevels(e.Player, e.Args[0] > 0 ? e.Args[0] : 1);
@@ -3808,7 +3854,8 @@ class TuinRPGHandler : EventHandler
 		int statusColor;
 		if (data.RogueVeiled)
 		{
-			status = "SHADOW VEIL ACTIVE  -  AMBUSH READY";
+			status = String.Format("SHADOW VEIL ACTIVE  %.1f SEC  -  AMBUSH READY",
+				max(0, RogueVeilDuration(data) - data.RogueVeilTics) / 35.0);
 			statusColor = Font.CR_PURPLE;
 		}
 		else if (data.RogueCooldownTics > 0)
@@ -3816,15 +3863,9 @@ class TuinRPGHandler : EventHandler
 			status = String.Format("SHADOW VEIL COOLDOWN  %.1f SEC", data.RogueCooldownTics / 35.0);
 			statusColor = Font.CR_RED;
 		}
-		else if (data.RogueStillTics > 0)
-		{
-			status = String.Format("ENTERING SHADOW  %d%%", min(100,
-				data.RogueStillTics * 100 / RogueChargeRequired(data)));
-			statusColor = Font.CR_GOLD;
-		}
 		else
 		{
-			status = "SHADOW VEIL READY  -  STAND STILL";
+			status = "SHADOW VEIL READY  -  USE ROGUE ABILITY";
 			statusColor = Font.CR_GREEN;
 		}
 		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
