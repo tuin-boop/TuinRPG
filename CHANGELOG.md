@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.5
+
+- Normal-level promoted bosses now reach at least player level +1.
+- Promoted bosses originating below Hell Knight base health use a 200-HP health-calculation floor and reserve one affix slot for full ordinary Armor, reducing damage by 50% by default.
+- Bosses originating from Hell Knights or stronger actors do not receive forced Armor, while iconic episode bosses retain their separate hand-balanced rules.
+
 ## 0.6.4
 
 - Replaced John's dialogue portrait with the new square framed artwork and corrected its display aspect ratio.

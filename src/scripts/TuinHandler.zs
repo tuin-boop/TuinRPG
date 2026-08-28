@@ -1922,12 +1922,14 @@ class TuinRPGHandler : EventHandler
 		let data = GetMonsterData(candidate);
 		if (!data || data.MonsterRarity >= 6) return false;
 
-		data.MonsterRarity = 6;
-		data.MonsterLevel = max(1, data.MonsterLevel + 1);
 		int playerProgress = HighestActivePlayerLevel();
+		data.MonsterRarity = 6;
+		data.MonsterLevel = clamp(max(data.MonsterLevel + 1, playerProgress + 1), 1,
+			max(1, CVInt('tuin_monster_max_level', 40)));
 		double levelHealth = 1.0 + (data.MonsterLevel - 1) * max(0.0, CVFloat('tuin_health_scale', 0.05)) * DifficultyHealthLevelFactor();
 		double levelDamage = 1.0 + (data.MonsterLevel - 1) * max(0.0, CVFloat('tuin_damage_scale', 0.02)) * DifficultyDamageLevelFactor();
-		data.ScaledMaxHealth = max(data.OriginalMaxHealth, int(data.OriginalMaxHealth * levelHealth *
+		int bossHealthBase = FinaleBossHealthBase(candidate, data.OriginalMaxHealth);
+		data.ScaledMaxHealth = max(data.OriginalMaxHealth, int(bossHealthBase * levelHealth *
 			FinaleBossHealthMultiplier(candidate, playerProgress) + 0.5));
 		data.DamageMultiplier = levelDamage * FinaleBossDamageMultiplier(candidate, playerProgress);
 		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) *
@@ -1981,6 +1983,13 @@ class TuinRPGHandler : EventHandler
 		return clamp(double(max(1, playerProgress) - 1) / double(fullPowerLevel - 1), 0.0, 1.0);
 	}
 
+	int FinaleBossHealthBase(Actor monster, int originalHealth)
+	{
+		if (monster && !IsIconicEpisodeBoss(monster) && originalHealth < 500)
+			return max(200, originalHealth);
+		return max(1, originalHealth);
+	}
+
 	double FinaleBossHealthMultiplier(Actor monster, int playerProgress)
 	{
 		// Native finale monsters begin with much larger health pools than ordinary
@@ -2015,7 +2024,10 @@ class TuinRPGHandler : EventHandler
 		else wanted = playerProgress < 15 ? 2 : (playerProgress < 25 ? 4 : 6);
 		if (DifficultyMode() == 3) wanted += 2;
 		wanted = min(wanted, DifficultyAffixMaximum());
-		int flags = 0;
+		let monsterData = GetMonsterData(monster);
+		bool lowBaseBoss = monster && !IsIconicEpisodeBoss(monster) && monsterData &&
+			monsterData.OriginalMaxHealth < 500;
+		int flags = lowBaseBoss ? TuinMonsterData.AFFIX_ARMORED : 0;
 		while (AffixBitCount(flags) < wanted)
 		{
 			int bit = 1 << Random[TuinRPGAffix](0, 8);
@@ -2364,7 +2376,8 @@ class TuinRPGHandler : EventHandler
 				CVFloat('tuin_damage_scale', 0.02)) * DifficultyDamageLevelFactor();
 			if (data.MonsterRarity >= 6)
 			{
-				data.ScaledMaxHealth = max(data.OriginalMaxHealth, int(data.OriginalMaxHealth * levelHealth *
+				int bossHealthBase = FinaleBossHealthBase(mo, data.OriginalMaxHealth);
+				data.ScaledMaxHealth = max(data.OriginalMaxHealth, int(bossHealthBase * levelHealth *
 					FinaleBossHealthMultiplier(mo, playerProgress) + 0.5));
 				data.DamageMultiplier = levelDamage * FinaleBossDamageMultiplier(mo, playerProgress);
 				data.AffixFlags = RollFinaleBossAffixes(mo, playerProgress);

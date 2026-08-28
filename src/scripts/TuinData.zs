@@ -222,7 +222,7 @@ class TuinMonsterData : Inventory
 			double reduction = clamp(cv ? cv.GetFloat() : 0.20, 0.0, 0.80);
 			// Finale bosses already have a large progression-scaled health pool.
 			// Give their armor a useful but less extreme effective-health bonus.
-			if (MonsterRarity >= 6)
+			if (MonsterRarity >= 6 && OriginalMaxHealth >= 500)
 			{
 				let bossCV = CVar.FindCVar('tuin_boss_armored_reduction');
 				reduction = clamp(bossCV ? bossCV.GetFloat() : 0.25, 0.0, 0.50);
