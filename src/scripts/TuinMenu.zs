@@ -369,16 +369,14 @@ class TuinRPGPerkMenu : OptionMenu
 	{
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
-		int panelWidth = min(width - 32, 1800);
-		int panelHeight = min(height - 24, 850);
+		int panelWidth = min(width - 48, 1500);
+		int panelHeight = min(height - 80, 560);
 		int panelX = (width - panelWidth) / 2;
-		int panelY = 12;
+		int panelY = 36;
 		Screen.Dim(Color(3, 5, 10), 0.93, panelX, panelY, panelWidth, panelHeight);
 		Screen.DrawLineFrame(Color(170, 116, 26), panelX, panelY, panelWidth, panelHeight, 2);
-		Screen.Dim(Color(24, 15, 4), 0.72, panelX + 12, panelY + 12,
-			panelWidth - 24, 224);
-		Screen.Dim(Color(8, 17, 24), 0.72, panelX + 12, panelY + 246,
-			panelWidth - 24, panelHeight - 258);
+		Screen.Dim(Color(11, 17, 23), 0.64, panelX + 12, panelY + 12,
+			panelWidth - 24, panelHeight - 24);
 		Super.Drawer();
 	}
 }

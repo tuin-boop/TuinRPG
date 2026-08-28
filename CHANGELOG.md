@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.8
+
+- Split the perk interface into separate General Perks, Class Training, and Class Capstone pages behind a simple category selector.
+- Each page now shows only its own requirements, effects, and purchase action.
+- Replaced the oversized multi-section background with one compact framed panel per page.
+
 ## 0.6.7
 
 - Reorganized the perk screen into three numbered steps: universal perks, class training, and the level-20 class capstone.
