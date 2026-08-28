@@ -363,6 +363,26 @@ class TuinRPGFinaleTravelCommand : OptionMenuItemCommand
 	}
 }
 
+class TuinRPGPerkMenu : OptionMenu
+{
+	override void Drawer()
+	{
+		int width = Screen.GetWidth();
+		int height = Screen.GetHeight();
+		int panelWidth = min(width - 48, 1120);
+		int panelHeight = min(height - 48, 820);
+		int panelX = (width - panelWidth) / 2;
+		int panelY = (height - panelHeight) / 2;
+		Screen.Dim(Color(3, 5, 10), 0.93, panelX, panelY, panelWidth, panelHeight);
+		Screen.DrawLineFrame(Color(170, 116, 26), panelX, panelY, panelWidth, panelHeight, 2);
+		Screen.Dim(Color(24, 15, 4), 0.72, panelX + 12, panelY + 46,
+			panelWidth - 24, int(panelHeight * 0.36));
+		Screen.Dim(Color(8, 17, 24), 0.72, panelX + 12, panelY + int(panelHeight * 0.45),
+			panelWidth - 24, int(panelHeight * 0.50));
+		Super.Drawer();
+	}
+}
+
 class TuinRPGJohnShopMenu : OptionMenu
 {
 	double OldTimeScale;

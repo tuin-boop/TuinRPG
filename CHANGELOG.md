@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.6
+
+- Raised John's partial 25%-per-type ammo refill price from 15 to 100 coins.
+- Reworked the perk menu into a shorter, aligned layout with separate framed General and Class perk panels.
+- At player level 15 and above, successful Hell Director upgrades prioritize living Hell Knight-or-stronger candidates, falling back to lighter enemies when no heavy candidate remains.
+
 ## 0.6.5
 
 - Normal-level promoted bosses now reach at least player level +1.

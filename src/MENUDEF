@@ -269,28 +269,26 @@ OptionMenu "TuinRPGPerkHub"
 OptionMenu "TuinRPGPerks"
 {
 	Title "SPEND PERK POINTS"
+	Position 30
 	StaticText "GENERAL PERKS - 3 RANKS EACH", 1
-	Command "VITAL CORE", "netevent tuin_buy_perk 1"
-	StaticText "+10 maximum health per rank", 1
-	Command "SCAVENGER", "netevent tuin_buy_perk 2"
-	StaticText "+10% ammunition gained per rank", 1
-	Command "KILLER INSTINCT", "netevent tuin_buy_perk 3"
-	StaticText "+2% critical chance per rank", 1
-	Command "IRON SKIN", "netevent tuin_buy_perk 4"
-	StaticText "3% less damage taken per rank", 1
-	Command "BLOOD DRINKER", "netevent tuin_buy_perk 5"
-	StaticText "Leech 1% of damage per rank", 1
+	Command "VITAL CORE              +10 MAXIMUM HEALTH / RANK", "netevent tuin_buy_perk 1"
+	Command "SCAVENGER               +10% AMMUNITION GAINED / RANK", "netevent tuin_buy_perk 2"
+	Command "KILLER INSTINCT         +2% CRITICAL CHANCE / RANK", "netevent tuin_buy_perk 3"
+	Command "IRON SKIN               3% LESS DAMAGE TAKEN / RANK", "netevent tuin_buy_perk 4"
+	Command "BLOOD DRINKER           1% DAMAGE LEECH / RANK", "netevent tuin_buy_perk 5"
 	StaticText " "
-	StaticText "CLASS PERKS", 1
+	StaticText "CLASS PERKS - REQUIRE A CHOSEN CLASS", 1
 	Command "CLASS TRAINING", "netevent tuin_buy_perk 6"
 	StaticText "Tank: +3% protection/rank | Healer: +1 healing/rank", 1
 	StaticText "Dealer: +3% damage/rank | Doom Guy: faster regeneration", 1
 	StaticText "Rogue: enters Shadow Veil 0.25 sec faster per rank", 1
+	StaticText " "
 	Command "CLASS CAPSTONE", "netevent tuin_buy_perk 7"
 	StaticText "Requires level 20 and Class Training II", 1
 	StaticText "Tank: Last Stand | Healer: doubled healing", 1
 	StaticText "Dealer: 2.5x crits | Doom Guy: heal 3 per kill", 1
 	StaticText "Rogue: x6 ranged / x30 fist ambush", 1
+	Class "TuinRPGPerkMenu"
 }
 
 OptionMenu "TuinRPGArsenal"
@@ -308,7 +306,7 @@ OptionMenu "TuinRPGJohnShop"
 	StaticText "UP/DOWN TO BROWSE - ENTER TO BUY", 1
 	StaticText " "
 	Command "MEDKIT +25 HEALTH                         10 COINS", "netevent tuin_shop_buy 1"
-	Command "PARTIAL AMMO REFILL (+25% EACH)           15 COINS", "netevent tuin_shop_buy 2"
+	Command "PARTIAL AMMO REFILL (+25% EACH)          100 COINS", "netevent tuin_shop_buy 2"
 	Command "SMALL RANDOM AMMO CACHE                   10 COINS", "netevent tuin_shop_buy 3"
 	Command "ARMOR PLATES +25                          20 COINS", "netevent tuin_shop_buy 4"
 	Command "BACKPACK                                  50 COINS", "netevent tuin_shop_buy 5"
@@ -328,7 +326,7 @@ OptionMenu "TuinRPGFinaleJohnShop"
 	StaticText "UP/DOWN TO BROWSE - ENTER TO CHOOSE", 1
 	StaticText " "
 	Command "MEDKIT +25 HEALTH                         10 COINS", "netevent tuin_shop_buy 1"
-	Command "PARTIAL AMMO REFILL (+25% EACH)           15 COINS", "netevent tuin_shop_buy 2"
+	Command "PARTIAL AMMO REFILL (+25% EACH)          100 COINS", "netevent tuin_shop_buy 2"
 	Command "SMALL RANDOM AMMO CACHE                   10 COINS", "netevent tuin_shop_buy 3"
 	Command "ARMOR PLATES +25                          20 COINS", "netevent tuin_shop_buy 4"
 	Command "BACKPACK                                  50 COINS", "netevent tuin_shop_buy 5"

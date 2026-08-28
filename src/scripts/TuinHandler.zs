@@ -1342,7 +1342,7 @@ class TuinRPGHandler : EventHandler
 		switch (itemNumber)
 		{
 		case 1: cost = 10; break;
-		case 2: cost = 15; break;
+		case 2: cost = 100; break;
 		case 3: cost = 10; break;
 		case 4: cost = 20; break;
 		case 5: cost = 50; break;
@@ -2327,7 +2327,10 @@ class TuinRPGHandler : EventHandler
 		if (targetRarity >= 4 && FRandom[TuinRPGDirector](0.0, 100.0) < assassinChance && TrySpawnDirectorAssassin()) return;
 
 		Actor candidate;
+		Actor heavyCandidate;
 		int candidateCount = 0;
+		int heavyCandidateCount = 0;
+		bool preferHeavy = HighestActivePlayerLevel() >= 15;
 		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
 		Actor monster;
 		while (monster = Actor(iterator.Next()))
@@ -2337,7 +2340,13 @@ class TuinRPGHandler : EventHandler
 				monster.bBOSSDEATH || !data || data.MonsterRarity >= targetRarity || IsIconicEpisodeBoss(monster)) continue;
 			candidateCount++;
 			if (Random[TuinRPGDirector](1, candidateCount) == 1) candidate = monster;
+			if (preferHeavy && data.OriginalMaxHealth >= 500)
+			{
+				heavyCandidateCount++;
+				if (Random[TuinRPGDirector](1, heavyCandidateCount) == 1) heavyCandidate = monster;
+			}
 		}
+		if (heavyCandidate) candidate = heavyCandidate;
 		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);
 	}
 

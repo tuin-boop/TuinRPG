@@ -155,6 +155,8 @@ Press `Q` once to open the paused weapon wheel. Move the mouse toward an owned w
 
 ## Minimap, finale bosses and John
 
+John's partial refill restores 25% of every carried ammo type for 100 coins. The separate 10-coin cache restores only a small amount of one random carried ammo type.
+
 Ordinary promoted bosses reach at least player level +1. A boss originating below Hell Knight base health calculates its health from a 200-HP minimum and reserves one affix slot for full ordinary Armor, reducing damage by 50% by default. Hell Knights and stronger candidates do not receive forced Armor; if they randomly roll it, their Boss Armor defaults to 25% reduction.
 
 The optional minimap draws explored level geometry, player direction, exits, locked doors and kill/item/secret totals. Once a special monster has been seen, its last-known position remains marked with a rarity-colored circle. Legendary, Mythic and Boss threats receive stronger pulsing indicators, while weapon drops appear immediately as quality-colored diamonds and remain marked until collected or expired.
