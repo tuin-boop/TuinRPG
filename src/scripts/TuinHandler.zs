@@ -2099,7 +2099,7 @@ class TuinRPGHandler : EventHandler
 		int count = AffixCountForRarity(rarity);
 		// Hell Knight health is the dividing line. Armor consumes one trait slot;
 		// all remaining slots keep their normal random rolls.
-		if (rarity < 6 && originalHealth < 500)
+		if (rarity >= 2 && rarity < 6 && originalHealth < 500)
 		{
 			count = max(1, count);
 			int flags = TuinMonsterData.AFFIX_ARMORED;
