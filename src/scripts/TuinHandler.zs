@@ -51,6 +51,7 @@ class TuinRPGHandler : EventHandler
 	int DamageNumberTics[TUIN_MAX_DAMAGE_NUMBERS];
 	int DamageNumberPlayer[TUIN_MAX_DAMAGE_NUMBERS];
 	bool DamageNumberCritical[TUIN_MAX_DAMAGE_NUMBERS];
+	bool DamageNumberBleed[TUIN_MAX_DAMAGE_NUMBERS];
 	double DamageNumberCurl[TUIN_MAX_DAMAGE_NUMBERS];
 	int NextDamageNumber;
 	Actor RogueWanderActor[TUIN_MAX_ROGUE_WANDERERS];
@@ -74,6 +75,7 @@ class TuinRPGHandler : EventHandler
 	int OverheadRarity[TUIN_MAX_OVERHEAD_BARS];
 	string OverheadName[TUIN_MAX_OVERHEAD_BARS];
 	string OverheadAffixes[TUIN_MAX_OVERHEAD_BARS];
+	bool OverheadBleeding[TUIN_MAX_OVERHEAD_BARS];
 
 	const WEAPON_AFFIX_HASTE = 1;
 	const WEAPON_AFFIX_POWER = 2;
@@ -806,11 +808,16 @@ class TuinRPGHandler : EventHandler
 	clearscope static double TotalCriticalChance(TuinPlayerData data, int variantIndex = -1)
 	{
 		if (!data) return 0.0;
-		double chance = 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0;
+		double chance = 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 + RogueCriticalBonus(data);
 		if (variantIndex >= 0 && variantIndex < data.WeaponVariantCount)
 			chance += WeaponCriticalPercent(data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex],
 				data.VariantItemLevel[variantIndex]);
 		return clamp(chance, 0.0, 50.0);
+	}
+
+	clearscope static double RogueCriticalBonus(TuinPlayerData data)
+	{
+		return data && data.PlayerClass == 5 ? 5.0 + data.PerkClassMastery * 2.0 : 0.0;
 	}
 
 	clearscope static int StoredWeaponVariantScore(TuinPlayerData data, int index)
@@ -2141,6 +2148,7 @@ class TuinRPGHandler : EventHandler
 		if (data.AffixFlags & TuinMonsterData.AFFIX_HEALER) result.AppendFormat("%sHEALER", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_WARDING) result.AppendFormat("%sWARDING", result.Length() ? "  |  " : "");
 		else if (data.WardTics > 0) result.AppendFormat("%sWARDED", result.Length() ? "  |  " : "");
+		if (data.BleedPulsesRemaining > 0) result.AppendFormat("%sBLEEDING", result.Length() ? "  |  " : "");
 		return result;
 	}
 
@@ -2654,6 +2662,8 @@ class TuinRPGHandler : EventHandler
 		if (data)
 		{
 			data.LastPlayerNumber = -1;
+			data.BleedPulsesRemaining = 0;
+			data.BleedPlayerNumber = -1;
 			if (e.Thing.Health > 0 && e.Thing.Health < data.ScaledMaxHealth) e.Thing.A_SetHealth(data.ScaledMaxHealth);
 		}
 		else InitializeMonster(e.Thing);
@@ -2673,7 +2683,7 @@ class TuinRPGHandler : EventHandler
 		return data;
 	}
 
-	void SpawnDamageNumber(int playerNumber, Actor victim, int amount, bool critical)
+	void SpawnDamageNumber(int playerNumber, Actor victim, int amount, bool critical, bool bleeding = false)
 	{
 		if (!CVInt('tuin_damage_numbers', 1) || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS ||
 			!victim || amount <= 0) return;
@@ -2682,7 +2692,8 @@ class TuinRPGHandler : EventHandler
 		for (int i = 0; i < TUIN_MAX_DAMAGE_NUMBERS; i++)
 		{
 			if (DamageNumberTics[i] >= TUIN_DAMAGE_NUMBER_LIFETIME - 3 &&
-				DamageNumberPlayer[i] == playerNumber && DamageNumberVictim[i] == victim)
+				DamageNumberPlayer[i] == playerNumber && DamageNumberVictim[i] == victim &&
+				DamageNumberBleed[i] == bleeding)
 			{
 				DamageNumberAmount[i] += amount;
 				DamageNumberCritical[i] = DamageNumberCritical[i] || critical;
@@ -2699,7 +2710,43 @@ class TuinRPGHandler : EventHandler
 		DamageNumberTics[slot] = TUIN_DAMAGE_NUMBER_LIFETIME;
 		DamageNumberPlayer[slot] = playerNumber;
 		DamageNumberCritical[slot] = critical;
+		DamageNumberBleed[slot] = bleeding;
 		DamageNumberCurl[slot] = FRandom[TuinRPGDamageNumber](-1.0, 1.0);
+	}
+
+	void ApplyRogueBleed(int playerNumber, TuinMonsterData data)
+	{
+		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS) return;
+		// Repeated critical hits refresh this effect instead of stacking it.
+		data.BleedPulsesRemaining = 8;
+		data.BleedNextTime = level.Time + 35;
+		data.BleedPlayerNumber = playerNumber;
+		data.LastPlayerNumber = playerNumber;
+	}
+
+	void UpdateMonsterBleeds()
+	{
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				let data = GetMonsterData(victim);
+				if (!data || data.BleedPulsesRemaining <= 0 || victim.Health <= 0 ||
+					level.Time < data.BleedNextTime) continue;
+				int attacker = data.BleedPlayerNumber;
+				Actor source = attacker >= 0 && attacker < TUIN_MAX_PLAYERS && playerInGame[attacker] ?
+					players[attacker].mo : null;
+				int damage = min(victim.Health, max(1, int(max(1, data.ScaledMaxHealth) * 0.02 + 0.5)));
+				SpawnDamageNumber(attacker, victim, damage, false, true);
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(source, source, damage, 'TuinBleed', DMG_FORCED);
+				ApplyingBonusDamage = false;
+				data.BleedPulsesRemaining--;
+				data.BleedNextTime += 35;
+				if (data.BleedPulsesRemaining <= 0) data.BleedPlayerNumber = -1;
+			}
+		}
 	}
 
 	override void WorldThingDamaged(WorldEvent e)
@@ -2724,6 +2771,7 @@ class TuinRPGHandler : EventHandler
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
 		bool wasCritical = false;
+		bool rolledCritical = false;
 		let sourceMonsterData = MonsterDataFromSource(e.DamageSource, e.Inflictor);
 		if (sourceMonsterData)
 		{
@@ -2795,6 +2843,7 @@ class TuinRPGHandler : EventHandler
 				{
 					multiplier *= playerData.PlayerClass == 3 && playerData.PerkCapstone ? 2.5 : 2.0;
 					wasCritical = true;
+					rolledCritical = true;
 					CriticalPopupTics[attacker] = 18;
 				}
 				if (variantIndex >= 0)
@@ -2823,7 +2872,10 @@ class TuinRPGHandler : EventHandler
 			int baseDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 			int totalDamage = baseDamage + max(0, bonusDamage);
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
-			let leechData = EnsurePlayerData(attacker);
+			let attackData = EnsurePlayerData(attacker);
+			if (rolledCritical && attackData && attackData.PlayerClass == 5 && e.Thing.Health > 0)
+				ApplyRogueBleed(attacker, victimData);
+			let leechData = attackData;
 			if (leechData && leechData.PerkBloodDrinker > 0 && players[attacker].mo && players[attacker].mo.Health > 0)
 			{
 				int perkHealing = int(totalDamage * leechData.PerkBloodDrinker * 0.01);
@@ -2961,6 +3013,7 @@ class TuinRPGHandler : EventHandler
 		if (data.AffixFlags & TuinMonsterData.AFFIX_HEALER) result.AppendFormat("%sHEAL", result.Length() ? " / " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_WARDING) result.AppendFormat("%sWARD", result.Length() ? " / " : "");
 		else if (data.WardTics > 0) result.AppendFormat("%sWARDED", result.Length() ? " / " : "");
+		if (data.BleedPulsesRemaining > 0) result.AppendFormat("%sBLEED", result.Length() ? " / " : "");
 		return result;
 	}
 
@@ -3003,6 +3056,7 @@ class TuinRPGHandler : EventHandler
 					OverheadRarity[i] = OverheadRarity[i - 1];
 					OverheadName[i] = OverheadName[i - 1];
 					OverheadAffixes[i] = OverheadAffixes[i - 1];
+					OverheadBleeding[i] = OverheadBleeding[i - 1];
 				}
 				OverheadActor[insertAt] = actor;
 				OverheadPosition[insertAt] = (actor.Pos.x, actor.Pos.y, actor.Pos.z + actor.Height + 10.0);
@@ -3015,6 +3069,7 @@ class TuinRPGHandler : EventHandler
 				OverheadRarity[insertAt] = data.MonsterRarity;
 				OverheadName[insertAt] = CompactOverheadName(data.GeneratedName.Length() ? data.GeneratedName : actor.GetTag(actor.GetClassName()));
 				OverheadAffixes[insertAt] = CompactAffixList(data);
+				OverheadBleeding[insertAt] = data.BleedPulsesRemaining > 0;
 			}
 		}
 	}
@@ -3222,6 +3277,7 @@ class TuinRPGHandler : EventHandler
 				}
 			}
 		}
+		if ((level.Time % 7) == 0) UpdateMonsterBleeds();
 		if (EpisodeTravelTics > 0)
 		{
 			EpisodeTravelTics--;
@@ -3585,6 +3641,13 @@ class TuinRPGHandler : EventHandler
 			int healthY = barY + max(0, int((barHeight - 8 * detailScale) * 0.5));
 			Screen.DrawText(font, Font.CR_WHITE, anchor.x - healthWidth * 0.5, healthY, healthText,
 				DTA_ScaleX, detailScale, DTA_ScaleY, detailScale);
+			if (OverheadBleeding[i])
+			{
+				string bleedingText = "BLEEDING";
+				int bleedingWidth = int(font.StringWidth(bleedingText) * detailScale);
+				Screen.DrawText(font, Font.CR_RED, anchor.x - bleedingWidth * 0.5, barY + barHeight + 4,
+					bleedingText, DTA_ScaleX, detailScale, DTA_ScaleY, detailScale);
+			}
 		}
 	}
 
@@ -3616,7 +3679,9 @@ class TuinRPGHandler : EventHandler
 			int y = int(anchor.y);
 			Screen.DrawText(font, Font.CR_BLACK, x + 2, y + 2, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);
-			Screen.DrawText(font, DamageNumberCritical[i] ? Font.CR_GOLD : Font.CR_WHITE, x, y, number,
+			int numberColor = DamageNumberBleed[i] ? Font.CR_RED :
+				(DamageNumberCritical[i] ? Font.CR_GOLD : Font.CR_WHITE);
+			Screen.DrawText(font, numberColor, x, y, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);
 		}
 	}

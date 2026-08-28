@@ -26,6 +26,9 @@ class TuinMonsterData : Inventory
 	int AppliedGlowRadius;
 	int SupportClock;
 	int WardTics;
+	int BleedPulsesRemaining;
+	int BleedNextTime;
+	int BleedPlayerNumber;
 	int SignatureProfile;
 	int SignatureCooldown;
 	int SignatureWindup;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.12
+
+- Clarified in the character menu that every Luck point adds 0.5% critical chance as well as its bonus-XP proc chance.
+- Gave Rogues +5% innate critical chance, with another +2% per Class Training rank.
+- Rogue critical hits now inflict an eight-second bleed that removes 2% of the monster's maximum health per second; repeated criticals refresh rather than stack it.
+- Added a red `BLEEDING` label beneath affected monsters' overhead health bars, included the status in the current-target panel, and rendered bleed ticks as separate red floating damage numbers.
+
 ## 0.6.11
 
 - Prevented Lost Souls and other excluded survivors from stranding level-boss encounters by reserving and promoting the final eligible monster.

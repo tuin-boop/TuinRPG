@@ -230,7 +230,7 @@ OptionMenu "TuinRPGCharacter"
 	StaticText " "
 	Command "VITALITY +  (+5 maximum HP)", "netevent tuin_spend_vitality"
 	Command "STRENGTH +  (+2% damage)", "netevent tuin_spend_strength"
-	Command "LUCK +  (chance for bonus XP)", "netevent tuin_spend_luck"
+	Command "LUCK +  (+0.5% critical chance and bonus XP)", "netevent tuin_spend_luck"
 	Command "AGILITY +  (+2% firing speed)", "netevent tuin_spend_agility"
 	Command "ENDURANCE +  (-1% damage taken)", "netevent tuin_spend_endurance"
 	StaticText " "
@@ -302,7 +302,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
 	StaticText "DAMAGE DEALER: +3% DAMAGE", 1
 	StaticText "DOOM GUY: HEALTH REGENERATION TRIGGERS FASTER", 1
-	StaticText "ROGUE: SHADOW VEIL CHARGES 0.25 SEC FASTER", 1
+	StaticText "ROGUE: +2% CRITICAL CHANCE + FASTER SHADOW VEIL", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
 	Class "TuinRPGPerkMenu"

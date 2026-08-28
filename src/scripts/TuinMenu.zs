@@ -168,6 +168,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		int playerDamage = data.Strength * 2;
 		int playerHaste = min(75, data.Agility * 2);
 		double luckCritical = data.Luck * 0.5;
+		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data);
 		double classDamage = data.PlayerClass == 1 ? 0.60 : data.PlayerClass == 2 ? 0.75 :
 			data.PlayerClass == 3 ? 1.30 + data.PerkClassMastery * 0.03 : data.PlayerClass == 4 ? 1.10 : 1.0;
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
@@ -227,9 +228,10 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line, String.Format("MAX HEALTH  \c[green]%d\c[white]  (VITALITY +%d | PERK +%d)", pawn.GetMaxHealth(true), data.Vitality * 5, data.PerkVitalCore * 10), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 2, String.Format("DAMAGE  \c[cyan]+%d%%\c[white]  (STRENGTH)", playerDamage), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 3, String.Format("FIRE SPEED  \c[cyan]+%d%%\c[white]  (AGILITY)", playerHaste), DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 4, String.Format("CRITICAL  \c[cyan]%.1f%%\c[white]  (BASE/LUCK + %.1f%% PERK)", 2.0 + luckCritical + data.PerkKillerInstinct * 2.0, data.PerkKillerInstinct * 2.0), DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 5, String.Format("DAMAGE REDUCTION  \c[green]%d%%", totalDamageReduction), DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 6, String.Format("LEECH \c[green]%d%%\c[white] | BONUS XP \c[gold]%.1f%%", data.PerkBloodDrinker, bonusXPChance), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 4, String.Format("CRITICAL  \c[cyan]%.1f%%", 2.0 + luckCritical + data.PerkKillerInstinct * 2.0 + rogueCritical), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 5, String.Format("  BASE 2 | LUCK +%.1f | CLASS/PERKS +%.1f", luckCritical, data.PerkKillerInstinct * 2.0 + rogueCritical), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 6, String.Format("DAMAGE REDUCTION  \c[green]%d%%", totalDamageReduction), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 7, String.Format("LEECH \c[green]%d%%\c[white] | BONUS XP \c[gold]%.1f%%", data.PerkBloodDrinker, bonusXPChance), DTA_ScaleX, scale, DTA_ScaleY, scale);
 
 		Screen.DrawText(f, Font.CR_PURPLE, rightX, columnsY, "FROM CURRENT WEAPON", DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line, String.Format("DAMAGE  \c[purple]+%d%%\c[white]  (LEVEL +%d | ROLL +%d)", weaponPower, weaponLevelPower, weaponAffixPower), DTA_ScaleX, scale, DTA_ScaleY, scale);
@@ -377,7 +379,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		else if (mLabel ~== "DOOM GUY")
 			details = "BALANCED FIGHTER   |   +10% DAMAGE   |   10% RESISTANCE   |   REGEN 1 HP / 10 SEC";
 		else
-			details = "AMBUSHER   |   -20% MAX HP   |   STAND STILL TO VEIL   |   X4 RANGED / X20 FISTS";
+			details = "AMBUSHER   |   +5% CRIT   |   CRITS BLEED   |   -20% MAX HP   |   VEIL: X4 RANGED / X20 FISTS";
 
 		int center = Screen.GetWidth() / 2;
 		int classX = center - 660;
