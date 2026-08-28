@@ -272,9 +272,9 @@ OptionMenu "TuinRPGPerks"
 	Position 100
 	StaticText "SELECT A PERK CATEGORY", 1
 	StaticText " "
-	Submenu "GENERAL PERKS       UNIVERSAL UPGRADES", "TuinRPGGeneralPerks"
-	Submenu "CLASS TRAINING      THREE CLASS-SPECIFIC RANKS", "TuinRPGClassTraining"
-	Submenu "CLASS CAPSTONE      FINAL LEVEL-20 CLASS POWER", "TuinRPGClassCapstone"
+	Submenu "GENERAL PERKS: UNIVERSAL UPGRADES", "TuinRPGGeneralPerks"
+	Submenu "CLASS TRAINING: THREE CLASS-SPECIFIC RANKS", "TuinRPGClassTraining"
+	Submenu "CLASS CAPSTONE: FINAL LEVEL-20 CLASS POWER", "TuinRPGClassCapstone"
 	Class "TuinRPGPerkMenu"
 }
 
@@ -285,11 +285,11 @@ OptionMenu "TuinRPGGeneralPerks"
 	StaticText "AVAILABLE TO EVERY CLASS", 1
 	StaticText "1 POINT PER RANK   |   3 RANKS MAX", 1
 	StaticText " "
-	Command "VITAL CORE              +10 MAXIMUM HEALTH", "netevent tuin_buy_perk 1"
-	Command "IRON SKIN               3% LESS DAMAGE TAKEN", "netevent tuin_buy_perk 4"
-	Command "KILLER INSTINCT         +2% CRITICAL CHANCE", "netevent tuin_buy_perk 3"
-	Command "BLOOD DRINKER           LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
-	Command "SCAVENGER               +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
+	Command "VITAL CORE: +10 MAXIMUM HEALTH", "netevent tuin_buy_perk 1"
+	Command "IRON SKIN: 3% LESS DAMAGE TAKEN", "netevent tuin_buy_perk 4"
+	Command "KILLER INSTINCT: +2% CRITICAL CHANCE", "netevent tuin_buy_perk 3"
+	Command "BLOOD DRINKER: LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
+	Command "SCAVENGER: +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
 	Class "TuinRPGPerkMenu"
 }
 
@@ -301,11 +301,11 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "1 POINT PER RANK   |   3 RANKS MAX", 1
 	StaticText "ONLY YOUR CHOSEN CLASS RECEIVES ITS LISTED BONUS", 1
 	StaticText " "
-	StaticText "TANK             +3% DAMAGE RESISTANCE", 1
-	StaticText "HEALER           +1 HEALTH PER HEALING PULSE", 1
-	StaticText "DAMAGE DEALER    +3% DAMAGE", 1
-	StaticText "DOOM GUY         HEALTH REGENERATION TRIGGERS FASTER", 1
-	StaticText "ROGUE            SHADOW VEIL CHARGES 0.25 SEC FASTER", 1
+	StaticText "TANK: +3% DAMAGE RESISTANCE", 1
+	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
+	StaticText "DAMAGE DEALER: +3% DAMAGE", 1
+	StaticText "DOOM GUY: HEALTH REGENERATION TRIGGERS FASTER", 1
+	StaticText "ROGUE: SHADOW VEIL CHARGES 0.25 SEC FASTER", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
 	Class "TuinRPGPerkMenu"
@@ -319,11 +319,11 @@ OptionMenu "TuinRPGClassCapstone"
 	StaticText "COST: 1 PERK POINT", 1
 	StaticText "REQUIRES LEVEL 20 + CLASS TRAINING RANK 2", 1
 	StaticText " "
-	StaticText "TANK             LAST STAND BELOW 30% HEALTH", 1
-	StaticText "HEALER           DOUBLE ALL CLASS HEALING", 1
-	StaticText "DAMAGE DEALER    CRITICAL HITS DEAL 2.5X DAMAGE", 1
-	StaticText "DOOM GUY         HEAL 3 HEALTH PER KILL", 1
-	StaticText "ROGUE            AMBUSH: X6 RANGED / X30 FISTS", 1
+	StaticText "TANK: LAST STAND BELOW 30% HEALTH", 1
+	StaticText "HEALER: DOUBLE ALL CLASS HEALING", 1
+	StaticText "DAMAGE DEALER: CRITICAL HITS DEAL 2.5X DAMAGE", 1
+	StaticText "DOOM GUY: HEAL 3 HEALTH PER KILL", 1
+	StaticText "ROGUE: AMBUSH DEALS X6 RANGED / X30 FIST DAMAGE", 1
 	StaticText " "
 	Command "UNLOCK YOUR CLASS CAPSTONE", "netevent tuin_buy_perk 7"
 	Class "TuinRPGPerkMenu"

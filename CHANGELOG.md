@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.9
+
+- Centered all selectable perk category and purchase entries instead of relying on the option menu's right-aligned label column.
+- Replaced fragile space-padded pseudo-columns with clean `NAME: EFFECT` lines that remain aligned at different resolutions and UI scales.
+
 ## 0.6.8
 
 - Split the perk interface into separate General Perks, Class Training, and Class Capstone pages behind a simple category selector.

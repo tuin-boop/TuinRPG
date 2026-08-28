@@ -365,6 +365,16 @@ class TuinRPGFinaleTravelCommand : OptionMenuItemCommand
 
 class TuinRPGPerkMenu : OptionMenu
 {
+	override void Init(Menu parent, OptionMenuDescriptor desc)
+	{
+		Super.Init(parent, desc);
+		for (int i = 0; i < mDesc.mItems.Size(); i++)
+		{
+			if (mDesc.mItems[i].Selectable()) mDesc.mItems[i].mCentered = true;
+		}
+		mDesc.CalcIndent();
+	}
+
 	override void Drawer()
 	{
 		int width = Screen.GetWidth();
