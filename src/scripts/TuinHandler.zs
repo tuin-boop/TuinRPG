@@ -2071,11 +2071,8 @@ class TuinRPGHandler : EventHandler
 		if (FinaleBossPromoted || !CVInt('tuin_finale_boss_enabled', 1)) return false;
 		int minimumMonsters = clamp(CVInt('tuin_finale_boss_min_monsters', 8), 1, 100);
 		int threshold = clamp(CVInt('tuin_finale_boss_threshold', 85), 50, 99);
-		if (!forced)
-		{
-			if (level.total_monsters < minimumMonsters) return false;
-			if (level.killed_monsters * 100 < level.total_monsters * threshold) return false;
-		}
+		if (!forced && level.total_monsters < minimumMonsters) return false;
+		bool reachedThreshold = level.killed_monsters * 100 >= level.total_monsters * threshold;
 
 		Actor candidate;
 		int candidateCount = 0;
@@ -2088,6 +2085,10 @@ class TuinRPGHandler : EventHandler
 			if (Random[TuinRPGFinale](1, candidateCount) == 1) candidate = monster;
 		}
 		if (!candidate) return false;
+		// Do not let excluded survivors such as Lost Souls strand the encounter.
+		// Once only one valid candidate remains, reserve it as the level boss even
+		// when the ordinary percentage threshold has not quite been reached yet.
+		if (!forced && !reachedThreshold && candidateCount > 1) return false;
 
 		if (!PromoteFinaleBossActor(candidate, true)) return false;
 		FinaleBossPromoted = true;
@@ -2897,6 +2898,7 @@ class TuinRPGHandler : EventHandler
 			TryDropWeapon(e.Thing, data, killer);
 		}
 		SpawnCoinReward(e.Thing, data);
+		if (!IsIconicEpisodeFinale() && !FinaleBossPromoted) TryPromoteFinaleBoss();
 		if (data.MonsterRarity >= 6 && !JohnMerchant)
 		{
 			Actor johnAnchor = killer >= 0 && killer < TUIN_MAX_PLAYERS ? players[killer].mo : null;
@@ -3201,6 +3203,15 @@ class TuinRPGHandler : EventHandler
 		{
 			if (IsIconicEpisodeFinale()) TryPromoteIconicEpisodeBosses();
 			else TryPromoteFinaleBoss();
+			// Some custom maps may contain no eligible promotion actor at all. Never
+			// leave a fully cleared map without John merely because every counted
+			// survivor belonged to an excluded class.
+			if (!IsIconicEpisodeFinale() && !FinaleBossPromoted && level.total_monsters > 0 &&
+				level.killed_monsters >= level.total_monsters)
+			{
+				FinaleBossPromoted = true;
+				FinaleBoss = null;
+			}
 			if (!IsIconicEpisodeFinale() && FinaleBossPromoted && !JohnMerchant && level.total_monsters - level.killed_monsters <= 3)
 			{
 				for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)

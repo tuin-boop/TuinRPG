@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.11
+
+- Prevented Lost Souls and other excluded survivors from stranding level-boss encounters by reserving and promoting the final eligible monster.
+- Added a full-clear failsafe that allows John to arrive on unusual maps where no valid boss candidate exists at all.
+
 ## 0.6.10
 
 - Rebuilt class selection as a true two-column table with class names on the left and concise role, strength, and tradeoff explanations on the right.
