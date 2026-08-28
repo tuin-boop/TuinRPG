@@ -30,6 +30,7 @@ class TuinMonsterData : Inventory
 	int BleedPulsesRemaining;
 	int BleedNextTime;
 	int BleedPlayerNumber;
+	int BleedResistanceTics;
 	int SignatureProfile;
 	int SignatureCooldown;
 	int SignatureWindup;
@@ -307,6 +308,7 @@ class TuinMonsterData : Inventory
 			SignatureWindup = 0;
 			return;
 		}
+		if (BleedResistanceTics > 0) BleedResistanceTics--;
 		if (WardTics > 0) WardTics--;
 		if (HealerSelfLockTics > 0) HealerSelfLockTics--;
 		UpdateSupportAffixes();

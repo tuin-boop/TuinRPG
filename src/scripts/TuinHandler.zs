@@ -2727,6 +2727,7 @@ class TuinRPGHandler : EventHandler
 			data.LastPlayerNumber = -1;
 			data.BleedPulsesRemaining = 0;
 			data.BleedPlayerNumber = -1;
+			data.BleedResistanceTics = 0;
 			if (e.Thing.Health > 0 && e.Thing.Health < data.ScaledMaxHealth) e.Thing.A_SetHealth(data.ScaledMaxHealth);
 		}
 		else InitializeMonster(e.Thing);
@@ -2781,7 +2782,9 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
 			playerNumber >= TUIN_MAX_PLAYERS) return;
-		// Repeated critical hits refresh this effect instead of stacking it.
+		// Bleeding cannot be refreshed or stacked. This keeps rapid-fire weapons,
+		// including Tuin's Lead Spitter, from maintaining permanent percentage damage.
+		if (data.BleedPulsesRemaining > 0 || data.BleedResistanceTics > 0) return;
 		data.BleedPulsesRemaining = 8;
 		data.BleedNextTime = level.Time + 35;
 		data.BleedPlayerNumber = playerNumber;
@@ -2807,7 +2810,11 @@ class TuinRPGHandler : EventHandler
 				ApplyingBonusDamage = false;
 				data.BleedPulsesRemaining--;
 				data.BleedNextTime += 35;
-				if (data.BleedPulsesRemaining <= 0) data.BleedPlayerNumber = -1;
+				if (data.BleedPulsesRemaining <= 0)
+				{
+					data.BleedPlayerNumber = -1;
+					data.BleedResistanceTics = 12 * 35;
+				}
 			}
 		}
 	}

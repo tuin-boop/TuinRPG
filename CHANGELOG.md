@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.17
+
+- Prevented rapid-fire critical hits from refreshing or stacking Rogue Bleeding while it is already active.
+- Monsters now gain 12 seconds of Bleed Resistance after the full eight-second Bleeding effect ends; critical hits still deal their normal critical damage during both states.
+- Applied the same Bleeding limits to Tuin's Lead Spitter so its fire rate cannot maintain permanent percentage-health damage.
+
 ## 0.6.16
 
 - Replaced Shadow Veil's time cooldown with a damage-powered Shadow Charge meter; waiting no longer restores this powerful ability.
