@@ -26,6 +26,7 @@ class TuinMonsterData : Inventory
 	int AppliedGlowRadius;
 	int SupportClock;
 	int WardTics;
+	int HealerSelfLockTics;
 	int BleedPulsesRemaining;
 	int BleedNextTime;
 	int BleedPlayerNumber;
@@ -260,10 +261,22 @@ class TuinMonsterData : Inventory
 			{
 				let baseCV = CVar.FindCVar('tuin_affix_healer_base');
 				int healing = max(0, (baseCV ? baseCV.GetInt() : 5) + MonsterLevel);
-				ally.A_SetHealth(min(allyData.ScaledMaxHealth, ally.Health + healing));
+				if (ally == Owner)
+					healing = HealerSelfLockTics > 0 ? 0 : max(1, int(healing * 0.25 + 0.5));
+				healing = allyData.AdjustHealingReceived(healing);
+				if (healing > 0) ally.A_SetHealth(min(allyData.ScaledMaxHealth, ally.Health + healing));
 			}
-			if (AffixFlags & AFFIX_WARDING) allyData.WardTics = 45;
+			// Warding is an ally-support aura. It never protects its caster.
+			if ((AffixFlags & AFFIX_WARDING) && ally != Owner) allyData.WardTics = 45;
 		}
+	}
+
+	int AdjustHealingReceived(int healing)
+	{
+		if (healing <= 0) return 0;
+		// Rogue Bleeding is also an anti-healing effect while active.
+		if (BleedPulsesRemaining > 0) return max(1, int(healing * 0.50 + 0.5));
+		return healing;
 	}
 
 	override void Tick()
@@ -295,6 +308,7 @@ class TuinMonsterData : Inventory
 			return;
 		}
 		if (WardTics > 0) WardTics--;
+		if (HealerSelfLockTics > 0) HealerSelfLockTics--;
 		UpdateSupportAffixes();
 
 		if (AffixFlags & AFFIX_SWIFT)
@@ -337,7 +351,8 @@ class TuinMonsterData : Inventory
 			{
 				let cv = CVar.FindCVar('tuin_affix_regen_percent');
 				double rate = clamp(cv ? cv.GetFloat() : 0.01, 0.001, 0.25);
-				Owner.A_SetHealth(min(ScaledMaxHealth, Owner.Health + max(1, int(ScaledMaxHealth * rate + 0.5))));
+				int healing = AdjustHealingReceived(max(1, int(ScaledMaxHealth * rate + 0.5)));
+				Owner.A_SetHealth(min(ScaledMaxHealth, Owner.Health + healing));
 			}
 		}
 	}

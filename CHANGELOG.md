@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.14
+
+- Rebalanced support affixes: Warding now protects allies only; Healer retains full ally healing but self-heals at 25%, and damage suppresses self-healing for two seconds.
+- Rogue Bleeding now halves all healing received by affected monsters, including Healer, Regenerating, and Vampiric recovery.
+- Added a normalized visible floor pickup for fists and brass knuckles whose weapon mods supply unusable first-person sprite offsets.
+- Added the secret level-75 Tuin's Lead Spitter chaingun with 75% rolls in every weapon stat, 75% weapon critical chance, bleeding critical hits, and a unique-quality glow.
+
 ## 0.6.13
 
 - Excluded grenade projectiles and grenade damage types from critical-hit rolls, including Rogue Bleeding triggers.

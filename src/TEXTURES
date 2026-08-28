@@ -10,6 +10,14 @@ Sprite JOHNA0, 37, 56
 	Patch "graphics/TuinJohnSprite.png", 0, 0
 }
 
+// A world-oriented fist/knuckle pickup. PUNGA0 is available in every Doom IWAD,
+// while many weapon mods provide only an offset-less first-person pickup frame.
+Sprite TKNKA0, 67, 57
+{
+	Offset 33, 57
+	Patch PUNGA0, 0, 0
+}
+
 // Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
 // 70x59 menu units it is centered above the stock menu choices.
 Graphic M_DOOM, 1115, 941

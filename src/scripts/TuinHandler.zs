@@ -62,6 +62,7 @@ class TuinRPGHandler : EventHandler
 	Actor PoisonSource[TUIN_MAX_PLAYERS];
 	Actor GodlyGlowOwner[TUIN_MAX_PLAYERS];
 	bool GodlyGlowApplied[TUIN_MAX_PLAYERS];
+	int GodlyGlowQuality[TUIN_MAX_PLAYERS];
 	double AgilityAccumulator[TUIN_MAX_PLAYERS];
 	int OverheadCount;
 	Actor OverheadActor[TUIN_MAX_OVERHEAD_BARS];
@@ -83,6 +84,7 @@ class TuinRPGHandler : EventHandler
 	const WEAPON_AFFIX_EXECUTION = 8;
 	const WEAPON_AFFIX_PROSPERITY = 16;
 	const WEAPON_AFFIX_CRITICAL = 32;
+	const TUIN_LEAD_SPITTER_QUALITY = 7;
 
 	clearscope static int CVInt(Name key, int fallback = 0)
 	{
@@ -717,6 +719,7 @@ class TuinRPGHandler : EventHandler
 		case 4: return "LEGENDARY";
 		case 5: return "MYTHIC";
 		case 6: return "GODLY";
+		case 7: return "TUIN UNIQUE";
 		default: return "UNKNOWN";
 		}
 	}
@@ -731,6 +734,7 @@ class TuinRPGHandler : EventHandler
 		case 4: return Font.CR_GOLD;
 		case 5: return Font.CR_PURPLE;
 		case 6: return Font.CR_ICE;
+		case 7: return Font.CR_GOLD;
 		default: return Font.CR_WHITE;
 		}
 	}
@@ -775,6 +779,7 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static string WeaponVariantName(class<Weapon> weaponType, int affixFlags, int quality = 0, int variantID = 0)
 	{
+		if (quality == TUIN_LEAD_SPITTER_QUALITY) return "TUIN'S LEAD SPITTER";
 		if (quality >= 6)
 			return String.Format("%s (%s)", GodlyWeaponTitle(variantID), WeaponBaseName(weaponType));
 		string adjective = "Enchanted";
@@ -790,6 +795,7 @@ class TuinRPGHandler : EventHandler
 	clearscope static int WeaponCriticalPercent(int affixFlags, int quality, int itemLevel)
 	{
 		if (!(affixFlags & WEAPON_AFFIX_CRITICAL)) return 0;
+		if (quality == TUIN_LEAD_SPITTER_QUALITY) return 75;
 		return clamp(quality * 2 + max(0, itemLevel) / 10, 1, 20);
 	}
 
@@ -812,7 +818,8 @@ class TuinRPGHandler : EventHandler
 		if (variantIndex >= 0 && variantIndex < data.WeaponVariantCount)
 			chance += WeaponCriticalPercent(data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex],
 				data.VariantItemLevel[variantIndex]);
-		return clamp(chance, 0.0, 50.0);
+		double cap = variantIndex >= 0 && data.VariantQuality[variantIndex] == TUIN_LEAD_SPITTER_QUALITY ? 100.0 : 50.0;
+		return clamp(chance, 0.0, cap);
 	}
 
 	clearscope static double RogueCriticalBonus(TuinPlayerData data)
@@ -970,6 +977,28 @@ class TuinRPGHandler : EventHandler
 		lootDrop.Quality = quality;
 		RollWeaponAffixes(lootDrop, itemLevel, quality);
 		lootDrop.DisplayName = WeaponVariantName(weaponType, lootDrop.AffixFlags, quality, lootDrop.VariantID);
+		lootDrop.ConfigureVisuals();
+		return lootDrop;
+	}
+
+	TuinWeaponDrop SpawnLeadSpitterDrop(Vector3 position)
+	{
+		class<Weapon> weaponType = (class<Weapon>)(Actor.GetReplacement('Chaingun'));
+		if (!weaponType) weaponType = 'Chaingun';
+		let lootDrop = TuinWeaponDrop(Actor.Spawn('TuinWeaponDrop', position, NO_REPLACE));
+		if (!lootDrop) return null;
+		lootDrop.VariantID = ++NextLootID;
+		lootDrop.WeaponType = weaponType;
+		lootDrop.ItemLevel = 75;
+		lootDrop.Quality = TUIN_LEAD_SPITTER_QUALITY;
+		lootDrop.AffixFlags = WEAPON_AFFIX_HASTE | WEAPON_AFFIX_POWER | WEAPON_AFFIX_LEECH |
+			WEAPON_AFFIX_EXECUTION | WEAPON_AFFIX_PROSPERITY | WEAPON_AFFIX_CRITICAL;
+		lootDrop.HastePercent = 75;
+		lootDrop.PowerPercent = 75;
+		lootDrop.LeechPercent = 75;
+		lootDrop.ExecutionPercent = 75;
+		lootDrop.ProsperityPercent = 75;
+		lootDrop.DisplayName = "TUIN'S LEAD SPITTER";
 		lootDrop.ConfigureVisuals();
 		return lootDrop;
 	}
@@ -2765,7 +2794,12 @@ class TuinRPGHandler : EventHandler
 		if (!CVInt('tuin_enabled', 1) || !e.Thing || e.Damage <= 0) return;
 		int attacker = PlayerNumberFromSource(e.DamageSource, e.Inflictor);
 		let victimData = GetMonsterData(e.Thing);
-		if (victimData && attacker >= 0) victimData.LastPlayerNumber = attacker;
+		if (victimData)
+		{
+			if (attacker >= 0) victimData.LastPlayerNumber = attacker;
+			// A healer under fire cannot sustain itself until it has avoided damage for two seconds.
+			victimData.HealerSelfLockTics = 70;
+		}
 		if (e.Thing.player)
 		{
 			int hurtPlayer = e.Thing.PlayerNumber();
@@ -2795,7 +2829,7 @@ class TuinRPGHandler : EventHandler
 				e.Thing.player && sourceMonsterData.Owner.Health > 0)
 			{
 				double drain = clamp(CVFloat('tuin_affix_vampiric_percent', 0.20), 0.0, 1.0);
-				int healing = max(1, int(e.Damage * drain + 0.5));
+				int healing = sourceMonsterData.AdjustHealingReceived(max(1, int(e.Damage * drain + 0.5)));
 				sourceMonsterData.Owner.A_SetHealth(min(sourceMonsterData.ScaledMaxHealth, sourceMonsterData.Owner.Health + healing));
 			}
 			if ((sourceMonsterData.AffixFlags & TuinMonsterData.AFFIX_POISONOUS) && e.Thing.player)
@@ -2885,7 +2919,10 @@ class TuinRPGHandler : EventHandler
 			int totalDamage = baseDamage + max(0, bonusDamage);
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
 			let attackData = EnsurePlayerData(attacker);
-			if (rolledCritical && attackData && attackData.PlayerClass == 5 && e.Thing.Health > 0)
+			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
+			bool leadSpitterCritical = attackVariant >= 0 &&
+				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
+			if (rolledCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
 				ApplyRogueBleed(attacker, victimData);
 			let leechData = attackData;
 			if (leechData && leechData.PerkBloodDrinker > 0 && players[attacker].mo && players[attacker].mo.Health > 0)
@@ -3138,15 +3175,24 @@ class TuinRPGHandler : EventHandler
 			if (GodlyGlowOwner[playerNumber]) GodlyGlowOwner[playerNumber].A_RemoveLight('TuinHeldGodlyGlow');
 			GodlyGlowOwner[playerNumber] = pawn;
 			GodlyGlowApplied[playerNumber] = false;
+			GodlyGlowQuality[playerNumber] = 0;
 		}
 		int variantIndex = ActiveWeaponVariantIndex(playerNumber, data);
 		bool shouldGlow = variantIndex >= 0 && data.VariantQuality[variantIndex] >= 6;
-		if (shouldGlow == GodlyGlowApplied[playerNumber]) return;
+		int glowQuality = shouldGlow ? data.VariantQuality[variantIndex] : 0;
+		if (shouldGlow == GodlyGlowApplied[playerNumber] && glowQuality == GodlyGlowQuality[playerNumber]) return;
 		pawn.A_RemoveLight('TuinHeldGodlyGlow');
 		GodlyGlowApplied[playerNumber] = shouldGlow;
+		GodlyGlowQuality[playerNumber] = glowQuality;
 		if (shouldGlow)
-			pawn.A_AttachLight('TuinHeldGodlyGlow', DynamicLight.PulseLight, Color(170, 245, 255), 42, 88,
-				DynamicLight.LF_ATTENUATE, (18, 0, pawn.Height * 0.58), 0.8);
+		{
+			Color glowColor = glowQuality == TUIN_LEAD_SPITTER_QUALITY ? Color(255, 72, 16) : Color(170, 245, 255);
+			pawn.A_AttachLight('TuinHeldGodlyGlow', DynamicLight.PulseLight, glowColor,
+				glowQuality == TUIN_LEAD_SPITTER_QUALITY ? 60 : 42,
+				glowQuality == TUIN_LEAD_SPITTER_QUALITY ? 128 : 88,
+				DynamicLight.LF_ATTENUATE, (18, 0, pawn.Height * 0.58),
+				glowQuality == TUIN_LEAD_SPITTER_QUALITY ? 0.45 : 0.8);
+		}
 	}
 
 	void UpdateWeaponDropTarget(int playerNumber)
@@ -3498,6 +3544,17 @@ class TuinRPGHandler : EventHandler
 				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 64.0, sin(pawn.Angle) * 64.0, 8.0);
 				SpawnRolledWeaponDrop(position, (class<Weapon>)(ready.GetClass()), max(1, testData.PlayerLevel), 5);
 				SetLootNotification(e.Player, "MYTHIC TEST WEAPON SPAWNED", 5);
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_secret_lead_spitter")
+		{
+			let pawn = players[e.Player].mo;
+			if (pawn)
+			{
+				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 72.0, sin(pawn.Angle) * 72.0, 8.0);
+				SpawnLeadSpitterDrop(position);
+				SetLootNotification(e.Player, "TUIN'S LEAD SPITTER HAS ARRIVED", TUIN_LEAD_SPITTER_QUALITY);
 			}
 			return;
 		}

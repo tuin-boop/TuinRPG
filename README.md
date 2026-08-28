@@ -135,8 +135,10 @@ Chance values are literal percentages: `1.0` is 1%, while `100` guarantees that 
 - **Explosive:** creates a level-scaled death explosion.
 - **Vampiric:** heals when damaging a player.
 - **Poisonous:** applies a level-scaled damage-over-time effect to players.
-- **Healer:** restores `5 + monster level` health per second to visible nearby monsters.
-- **Warding:** grants visible nearby monsters temporary damage reduction.
+- **Healer:** restores `5 + monster level` health per second to visible nearby allies. It self-heals for only 25% of that amount, and taking damage disables its self-healing for two seconds.
+- **Warding:** grants visible nearby allies temporary damage reduction, but never protects the Warding monster itself.
+
+Rogue Bleeding halves all monster healing while it remains active, including Healer, Regenerating, and Vampiric recovery.
 
 Affix effect strengths have their own tuning submenu. Forced/scripted damage bypasses Armored and player Endurance so telefrags and mandatory map logic remain reliable.
 

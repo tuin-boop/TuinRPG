@@ -24,20 +24,38 @@ class TuinWeaponDrop : Actor
 		case 4: return Color(255, 190, 40);
 		case 5: return Color(190, 40, 255);
 		case 6: return Color(170, 255, 255);
+		case 7: return Color(255, 72, 16);
 		default: return Color(255, 255, 255);
 		}
 	}
 
 	void ConfigureVisuals()
 	{
+		bool unarmedPickup = false;
 		if (WeaponType)
 		{
 			readonly<Weapon> def = GetDefaultByType(WeaponType);
+			if (def)
+			{
+				string label = def.GetTag(def.GetClassName());
+				unarmedPickup = def.GetClassName() == 'Fist' || label ~== "FIST" ||
+					label ~== "FISTS" || label ~== "BRASS KNUCKLES" || label ~== "KNUCKLES" ||
+					label ~== "BARE HANDS" || label ~== "UNARMED" || label ~== "PUNCH" ||
+					label ~== "PUNCHES" || label ~== "MARTIAL ARTS";
+			}
 			if (def && def.SpawnState)
 			{
 				SetState(def.SpawnState, true);
 				Tics = -1;
 			}
+		}
+		// First-person fist sprites commonly have no world offset and disappear below
+		// the floor. Use our normalized pickup billboard for fists and knuckles.
+		if (unarmedPickup)
+		{
+			SetState(FindState('KnucklePickup'), true);
+			Scale = (0.70, 0.70);
+			Tics = -1;
 		}
 		Color col = QualityColor(Quality);
 		SetShade(col);
@@ -70,6 +88,9 @@ class TuinWeaponDrop : Actor
 
 	States
 	{
+	KnucklePickup:
+		TKNK A -1;
+		Stop;
 	Spawn:
 		TNT1 A -1;
 		Stop;
