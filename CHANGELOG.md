@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.3
+
+- John no longer speaks as though an end-level boss is dead while it is still alive.
+- Ordinary levels now offer one concise `SO... WHAT NOW?` story option with live boss status.
+- Four-part `SO... WHAT NOW?` and `WHAT COMES NEXT?` stories remain exclusive to completed finale and pre-intermission encounters.
+
 ## 0.6.2
 
 - Replaced only the native E2M8 Cyberdemon and E3M8 Spider Mastermind with visually and mechanically identical TuinRPG finale subclasses whose death states omit `A_BossDeath`. Their deaths can no longer trigger Doom's immediate episode ending before John appears.

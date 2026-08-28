@@ -1676,6 +1676,21 @@ class TuinRPGHandler : EventHandler
 		data.JohnWhatsNextPage = 0;
 	}
 
+	string JohnNormalStatusDialogue()
+	{
+		bool bossAlive = HasLivingIconicEpisodeBoss() ||
+			(FinaleBossPromoted && FinaleBoss && FinaleBoss.Health > 0);
+		if (bossAlive)
+		{
+			return "John: The boss is still alive.\nI arrived early so you can prepare for the fight.\nShop, reload and finish the job when you are ready.";
+		}
+		if (FinaleBossPromoted)
+		{
+			return "John: The boss is dead.\nInspect its weapon drop and spend any coins you need.\nThen search the map or take the ordinary exit when you are ready.";
+		}
+		return "John: The map's strongest monster is still out there.\nClear a little more ground and it will reveal itself.\nI can help you prepare while we wait.";
+	}
+
 	string JohnWhatNowDialogue(int page = 0)
 	{
 		page = clamp(page, 0, 3);
@@ -3259,8 +3274,15 @@ class TuinRPGHandler : EventHandler
 			if (shopData)
 			{
 				PrepareJohnDialogueSequence(shopData);
-				shopData.ShopDialogue = JohnWhatNowDialogue(shopData.JohnWhatNowPage);
-				shopData.JohnWhatNowPage = (shopData.JohnWhatNowPage + 1) % 4;
+				if (CanOfferJohnTravel())
+				{
+					shopData.ShopDialogue = JohnWhatNowDialogue(shopData.JohnWhatNowPage);
+					shopData.JohnWhatNowPage = (shopData.JohnWhatNowPage + 1) % 4;
+				}
+				else
+				{
+					shopData.ShopDialogue = JohnNormalStatusDialogue();
+				}
 			}
 			return;
 		}
