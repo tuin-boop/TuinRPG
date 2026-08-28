@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.4
+
+- Replaced John's dialogue portrait with the new square framed artwork and corrected its display aspect ratio.
+- Weapon item levels now grant +2% inherent damage per level after level 1, capped at +60%, and this contribution appears in comparisons, stats and gear score.
+- John's full refill is replaced by a 10-coin cache granting a small amount of one random carried ammo type.
+- Enemies below Hell Knight base health always receive Armor; their additional rarity traits remain random and respect the difficulty affix cap.
+- Rare and higher monster levels roll progressively closer to player level.
+- Director Assassin Imps immediately wake and hunt their selected player.
+
 ## 0.6.3
 
 - John no longer speaks as though an end-level boss is dead while it is still alive.

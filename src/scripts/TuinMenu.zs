@@ -157,7 +157,9 @@ class TuinRPGCharacterMenu : OptionMenu
 		int line = int(14 * scale);
 		Actor pawn = players[consoleplayer].mo;
 		int variantIndex = TuinRPGHandler.ActiveWeaponVariantIndex(consoleplayer, data);
-		int weaponPower = variantIndex >= 0 ? data.VariantPowerPercent[variantIndex] : 0;
+		int weaponAffixPower = variantIndex >= 0 ? data.VariantPowerPercent[variantIndex] : 0;
+		int weaponLevelPower = variantIndex >= 0 ? TuinRPGHandler.WeaponItemLevelPowerPercent(data.VariantItemLevel[variantIndex]) : 0;
+		int weaponPower = variantIndex >= 0 ? TuinRPGHandler.WeaponTotalPowerPercent(data.VariantItemLevel[variantIndex], weaponAffixPower) : 0;
 		int weaponHaste = variantIndex >= 0 ? data.VariantHastePercent[variantIndex] : 0;
 		int weaponLeech = variantIndex >= 0 ? data.VariantLeechPercent[variantIndex] : 0;
 		int weaponExecution = variantIndex >= 0 ? data.VariantExecutionPercent[variantIndex] : 0;
@@ -230,7 +232,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.DrawText(f, Font.CR_WHITE, x, columnsY + line * 6, String.Format("LEECH \c[green]%d%%\c[white] | BONUS XP \c[gold]%.1f%%", data.PerkBloodDrinker, bonusXPChance), DTA_ScaleX, scale, DTA_ScaleY, scale);
 
 		Screen.DrawText(f, Font.CR_PURPLE, rightX, columnsY, "FROM CURRENT WEAPON", DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line, String.Format("DAMAGE  \c[purple]+%d%%", weaponPower), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line, String.Format("DAMAGE  \c[purple]+%d%%\c[white]  (LEVEL +%d | ROLL +%d)", weaponPower, weaponLevelPower, weaponAffixPower), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line * 2, String.Format("FIRE SPEED  \c[purple]+%d%%", weaponHaste), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line * 3, String.Format("CRITICAL  \c[purple]+%d%%", weaponCritical), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, rightX, columnsY + line * 4, String.Format("DAMAGE LEECH  \c[purple]%d%%", weaponLeech), DTA_ScaleX, scale, DTA_ScaleY, scale);
@@ -337,6 +339,8 @@ class TuinRPGArsenalMenu : OptionMenu
 		Screen.DrawText(f, color, detailX, detailY + line, String.Format("%s   ITEM LEVEL %d", TuinRPGHandler.WeaponQualityName(data.VariantQuality[SelectedIndex]), data.VariantItemLevel[SelectedIndex]), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, detailX, detailY + line * 2, String.Format("GEAR SCORE %d", TuinRPGHandler.StoredWeaponVariantScore(data, SelectedIndex)), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		int statLine = 4;
+		int levelPower = TuinRPGHandler.WeaponItemLevelPowerPercent(data.VariantItemLevel[SelectedIndex]);
+		if (levelPower) Screen.DrawText(f, Font.CR_GOLD, detailX, detailY + line * statLine++, String.Format("+%d%% item-level damage", levelPower), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		if (data.VariantHastePercent[SelectedIndex]) Screen.DrawText(f, Font.CR_WHITE, detailX, detailY + line * statLine++, String.Format("+%d%% firing speed", data.VariantHastePercent[SelectedIndex]), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		if (data.VariantPowerPercent[SelectedIndex]) Screen.DrawText(f, Font.CR_WHITE, detailX, detailY + line * statLine++, String.Format("+%d%% damage", data.VariantPowerPercent[SelectedIndex]), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		if (data.VariantLeechPercent[SelectedIndex]) Screen.DrawText(f, Font.CR_WHITE, detailX, detailY + line * statLine++, String.Format("%d%% damage leech", data.VariantLeechPercent[SelectedIndex]), DTA_ScaleX, scale, DTA_ScaleY, scale);
@@ -424,7 +428,7 @@ class TuinRPGJohnShopMenu : OptionMenu
 		int height = Screen.GetHeight();
 		double scale = clamp(TuinRPGHandler.CVFloat('tuin_hud_scale', 1.5), 1.25, 2.0);
 		int portraitWidth = min(240, width / 5);
-		int portraitHeight = int(portraitWidth * 1.356);
+		int portraitHeight = portraitWidth;
 		int portraitX = max(28, width / 2 - int(500 * scale));
 		int portraitY = max(height / 2, height - portraitHeight - int(42 * scale));
 		Screen.Dim(Color(5, 8, 18), 0.90, portraitX - 8, portraitY - 8, portraitWidth + 16, portraitHeight + 16);

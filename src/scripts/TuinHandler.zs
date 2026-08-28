@@ -634,12 +634,28 @@ class TuinRPGHandler : EventHandler
 		int minLevel = max(1, CVInt('tuin_monster_min_level', 1));
 		int maxLevel = max(minLevel, CVInt('tuin_monster_max_level', 40));
 		int mode = CVInt('tuin_monster_level_mode', 0);
-		if (mode == 1) return Random[TuinRPGLevel](minLevel, maxLevel);
+		int playerLevel = HighestActivePlayerLevel();
+		if (mode == 1)
+		{
+			int randomLevel = Random[TuinRPGLevel](minLevel, maxLevel);
+			if (rarity >= 2 && playerLevel > 0)
+			{
+				double rareInfluence = min(0.85, 0.55 + (rarity - 2) * 0.10);
+				randomLevel = int(randomLevel * (1.0 - rareInfluence) + playerLevel * rareInfluence + 0.5);
+			}
+			return clamp(randomLevel, minLevel, maxLevel);
+		}
 		int variance = max(0, CVInt('tuin_monster_level_variance', 3));
 		int baseLevel = ProgressiveBaseLevel();
-		int playerLevel = HighestActivePlayerLevel();
 		if (playerLevel > baseLevel)
 			baseLevel += int((playerLevel - baseLevel) * DifficultyPlayerLevelInfluence() + 0.5);
+		// Rare and higher enemies lean toward player level without mirroring it.
+		if (rarity >= 2 && playerLevel > 0)
+		{
+			double rareInfluence = min(0.85, 0.55 + (rarity - 2) * 0.10);
+			baseLevel = int(baseLevel * (1.0 - rareInfluence) + playerLevel * rareInfluence + 0.5);
+			variance = max(1, variance - min(2, rarity - 1));
+		}
 		int rolledLevel = baseLevel + Random[TuinRPGLevel](-variance, variance);
 		// Elite+ enemies naturally sit a little above the local pack, and a small
 		// surge roll creates occasional high-level threats without scaling every
@@ -775,6 +791,18 @@ class TuinRPGHandler : EventHandler
 		return clamp(quality * 2 + max(0, itemLevel) / 10, 1, 20);
 	}
 
+	clearscope static int WeaponItemLevelPowerPercent(int itemLevel)
+	{
+		return clamp(max(0, itemLevel - 1) * 2, 0, 60);
+	}
+
+	clearscope static int WeaponTotalPowerPercent(int itemLevel, int rolledPower)
+	{
+		double levelMultiplier = 1.0 + WeaponItemLevelPowerPercent(itemLevel) * 0.01;
+		double rollMultiplier = 1.0 + max(0, rolledPower) * 0.01;
+		return int((levelMultiplier * rollMultiplier - 1.0) * 100.0 + 0.5);
+	}
+
 	clearscope static double TotalCriticalChance(TuinPlayerData data, int variantIndex = -1)
 	{
 		if (!data) return 0.0;
@@ -788,7 +816,7 @@ class TuinRPGHandler : EventHandler
 	clearscope static int StoredWeaponVariantScore(TuinPlayerData data, int index)
 	{
 		if (!data || index < 0 || index >= data.WeaponVariantCount) return 0;
-		return data.VariantQuality[index] * 100 + data.VariantItemLevel[index] * 3 + data.VariantHastePercent[index] +
+		return data.VariantQuality[index] * 100 + data.VariantItemLevel[index] * 3 + WeaponItemLevelPowerPercent(data.VariantItemLevel[index]) * 2 + data.VariantHastePercent[index] +
 			data.VariantPowerPercent[index] + data.VariantLeechPercent[index] * 2 + data.VariantExecutionPercent[index] +
 			data.VariantProsperityPercent[index] + WeaponCriticalPercent(data.VariantAffixFlags[index],
 				data.VariantQuality[index], data.VariantItemLevel[index]) * 2;
@@ -797,7 +825,7 @@ class TuinRPGHandler : EventHandler
 	clearscope static int DroppedWeaponScore(TuinWeaponDrop lootDrop)
 	{
 		if (!lootDrop) return 0;
-		return lootDrop.Quality * 100 + lootDrop.ItemLevel * 3 + lootDrop.HastePercent + lootDrop.PowerPercent +
+		return lootDrop.Quality * 100 + lootDrop.ItemLevel * 3 + WeaponItemLevelPowerPercent(lootDrop.ItemLevel) * 2 + lootDrop.HastePercent + lootDrop.PowerPercent +
 			lootDrop.LeechPercent * 2 + lootDrop.ExecutionPercent + lootDrop.ProsperityPercent +
 			WeaponCriticalPercent(lootDrop.AffixFlags, lootDrop.Quality, lootDrop.ItemLevel) * 2;
 	}
@@ -1274,6 +1302,25 @@ class TuinRPGHandler : EventHandler
 		return added;
 	}
 
+	int GiveSmallRandomAmmo(Actor pawn)
+	{
+		Ammo chosenAmmo;
+		int choices = 0;
+		for (Inventory item = pawn ? pawn.Inv : null; item; item = item.Inv)
+		{
+			let ammo = Ammo(item);
+			if (!ammo || ammo.MaxAmount <= ammo.Amount) continue;
+			choices++;
+			if (Random[TuinRPGJohn](1, choices) == 1) chosenAmmo = ammo;
+		}
+		if (!chosenAmmo) return 0;
+		int low = max(1, chosenAmmo.MaxAmount / 20);
+		int high = max(low, chosenAmmo.MaxAmount / 10);
+		int oldAmount = chosenAmmo.Amount;
+		chosenAmmo.Amount = min(chosenAmmo.MaxAmount, chosenAmmo.Amount + Random[TuinRPGJohn](low, high));
+		return chosenAmmo.Amount - oldAmount;
+	}
+
 	int RollJohnGambleQuality()
 	{
 		// Godly remains Boss-exclusive. A gamble always returns at least Uncommon,
@@ -1296,7 +1343,7 @@ class TuinRPGHandler : EventHandler
 		{
 		case 1: cost = 10; break;
 		case 2: cost = 15; break;
-		case 3: cost = 40; break;
+		case 3: cost = 10; break;
 		case 4: cost = 20; break;
 		case 5: cost = 50; break;
 		case 6: cost = 150; break;
@@ -1320,15 +1367,25 @@ class TuinRPGHandler : EventHandler
 			}
 			else data.ShopDialogue = "John: You're already at full health.";
 		}
-		else if (itemNumber == 2 || itemNumber == 3)
+		else if (itemNumber == 2)
 		{
-			int added = RefillAmmo(pawn, itemNumber == 3);
+			int added = RefillAmmo(pawn, false);
 			if (added > 0)
 			{
 				data.ShopDialogue = String.Format("John: Loaded you with %d rounds of assorted ammo.", added);
 				success = true;
 			}
 			else data.ShopDialogue = "John: Your current ammo is already full.";
+		}
+		else if (itemNumber == 3)
+		{
+			int added = GiveSmallRandomAmmo(pawn);
+			if (added > 0)
+			{
+				data.ShopDialogue = String.Format("John: A small cache gave you %d rounds for one random ammo type.", added);
+				success = true;
+			}
+			else data.ShopDialogue = "John: Every ammo type you carry is already full.";
 		}
 		else if (itemNumber == 4)
 		{
@@ -2037,6 +2094,26 @@ class TuinRPGHandler : EventHandler
 		return flags;
 	}
 
+	int RollOrdinaryMonsterAffixes(int originalHealth, int rarity)
+	{
+		int count = AffixCountForRarity(rarity);
+		// Hell Knight health is the dividing line. Armor consumes one trait slot;
+		// all remaining slots keep their normal random rolls.
+		if (rarity < 6 && originalHealth < 500)
+		{
+			count = max(1, count);
+			int flags = TuinMonsterData.AFFIX_ARMORED;
+			while (AffixBitCount(flags) < count)
+			{
+				int bit = 1 << Random[TuinRPGAffix](0, 8);
+				if (flags & bit) continue;
+				flags |= bit;
+			}
+			return flags;
+		}
+		return RollAffixes(count);
+	}
+
 	clearscope static string AffixList(TuinMonsterData data)
 	{
 		if (!data) return "";
@@ -2076,7 +2153,7 @@ class TuinRPGHandler : EventHandler
 		data.LastPlayerNumber = -1;
 		data.XPValue = max(1, int((5.0 + sqrt(originalHealth) * 2.5) * (1.0 + (monsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
 		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
-		data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
+		data.AffixFlags = RollOrdinaryMonsterAffixes(originalHealth, rarity);
 		mo.A_SetHealth(scaledHealth);
 		data.ResetSignatureAttack();
 	}
@@ -2095,7 +2172,7 @@ class TuinRPGHandler : EventHandler
 		data.DamageMultiplier = damageMultiplier;
 		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) * (1.0 + (data.MonsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
 		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
-		data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
+		data.AffixFlags = RollOrdinaryMonsterAffixes(data.OriginalMaxHealth, rarity);
 		data.RegenClock = 0;
 		data.SwiftClock = 0;
 		data.GlowClock = 0;
@@ -2123,7 +2200,7 @@ class TuinRPGHandler : EventHandler
 		data.XPValue = max(1, int((5.0 + sqrt(data.OriginalMaxHealth) * 2.5) *
 			(1.0 + (monsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
 		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
-		if (rerollAffixes) data.AffixFlags = RollAffixes(AffixCountForRarity(rarity));
+		if (rerollAffixes) data.AffixFlags = RollOrdinaryMonsterAffixes(data.OriginalMaxHealth, rarity);
 		data.RegenClock = 0;
 		data.SwiftClock = 0;
 		data.GlowClock = 0;
@@ -2196,7 +2273,14 @@ class TuinRPGHandler : EventHandler
 				continue;
 			}
 			if (!GetMonsterData(assassin)) InitializeMonster(assassin);
-			if (UpgradeDirectorMonster(assassin, 5, true)) return true;
+			if (UpgradeDirectorMonster(assassin, 5, true))
+			{
+				assassin.bDORMANT = false;
+				assassin.bAMBUSH = false;
+				assassin.Target = players[chosenPlayer].mo;
+				if (assassin.SeeState) assassin.SetState(assassin.SeeState);
+				return true;
+			}
 			assassin.Destroy();
 		}
 		return false;
@@ -2290,7 +2374,7 @@ class TuinRPGHandler : EventHandler
 				data.ScaledMaxHealth = max(1, int(data.OriginalMaxHealth * levelHealth *
 					RarityHealthMultiplier(data.MonsterRarity) + 0.5));
 				data.DamageMultiplier = levelDamage * RarityDamageMultiplier(data.MonsterRarity);
-				data.AffixFlags = RollAffixes(AffixCountForRarity(data.MonsterRarity));
+				data.AffixFlags = RollOrdinaryMonsterAffixes(data.OriginalMaxHealth, data.MonsterRarity);
 			}
 			data.RegenClock = 0;
 			data.SwiftClock = 0;
@@ -2692,6 +2776,7 @@ class TuinRPGHandler : EventHandler
 				}
 				if (variantIndex >= 0)
 				{
+					multiplier *= 1.0 + WeaponItemLevelPowerPercent(playerData.VariantItemLevel[variantIndex]) * 0.01;
 					if (playerData.VariantPowerPercent[variantIndex] > 0) multiplier *= 1.0 + playerData.VariantPowerPercent[variantIndex] * 0.01;
 					if (playerData.VariantExecutionPercent[variantIndex] > 0 && victimData && e.Thing.Health * 100 <= victimData.ScaledMaxHealth * 30)
 						multiplier *= 1.0 + playerData.VariantExecutionPercent[variantIndex] * 0.01;
@@ -3662,7 +3747,7 @@ class TuinRPGHandler : EventHandler
 			int difference = viewedScore - equippedScore;
 			bool hasCurrent = equippedIndex >= 0;
 			int currentHaste = hasCurrent ? playerData.VariantHastePercent[equippedIndex] : 0;
-			int currentPower = hasCurrent ? playerData.VariantPowerPercent[equippedIndex] : 0;
+			int currentPower = hasCurrent ? WeaponTotalPowerPercent(playerData.VariantItemLevel[equippedIndex], playerData.VariantPowerPercent[equippedIndex]) : 0;
 			int currentLeech = hasCurrent ? playerData.VariantLeechPercent[equippedIndex] : 0;
 			int currentExecution = hasCurrent ? playerData.VariantExecutionPercent[equippedIndex] : 0;
 			int currentProsperity = hasCurrent ? playerData.VariantProsperityPercent[equippedIndex] : 0;
@@ -3684,7 +3769,8 @@ class TuinRPGHandler : EventHandler
 			string comparison = equippedIndex < 0 ? "NEW WEAPON VARIANT" : difference > 0 ? String.Format("UPGRADE  +%d SCORE", difference) : difference < 0 ? String.Format("LOWER  %d SCORE", difference) : "EQUAL GEAR SCORE";
 			Screen.DrawText(font, difference >= 0 ? Font.CR_GREEN : Font.CR_RED, textX, panelY + 6 + line * 3, comparison, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.HastePercent, currentHaste, hasCurrent), textX, panelY + 6 + line * 4, WeaponStatComparison("FIRE SPEED", viewedDrop.HastePercent, currentHaste, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.PowerPercent, currentPower, hasCurrent), textX, panelY + 6 + line * 5, WeaponStatComparison("DAMAGE", viewedDrop.PowerPercent, currentPower, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			int viewedPower = WeaponTotalPowerPercent(viewedDrop.ItemLevel, viewedDrop.PowerPercent);
+			Screen.DrawText(font, WeaponStatComparisonColor(viewedPower, currentPower, hasCurrent), textX, panelY + 6 + line * 5, WeaponStatComparison("TOTAL DAMAGE", viewedPower, currentPower, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.LeechPercent, currentLeech, hasCurrent), textX, panelY + 6 + line * 6, WeaponStatComparison("DAMAGE LEECH", viewedDrop.LeechPercent, currentLeech, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.ExecutionPercent, currentExecution, hasCurrent), textX, panelY + 6 + line * 7, WeaponStatComparison("EXECUTION", viewedDrop.ExecutionPercent, currentExecution, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), textX, panelY + 6 + line * 8, WeaponStatComparison("KILL XP", viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
