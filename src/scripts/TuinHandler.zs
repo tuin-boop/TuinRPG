@@ -16,6 +16,7 @@ class TuinRPGHandler : EventHandler
 	Actor FinaleBoss;
 	TuinJohnShopNPC JohnMerchant;
 	int EpisodeTravelTics;
+	bool EpisodeTravelShowsIntermission;
 	int AppliedDifficultyMode;
 	bool MonsterLevelsSynchronized;
 	int DirectorCheckpoint;
@@ -1643,24 +1644,71 @@ class TuinRPGHandler : EventHandler
 		return false;
 	}
 
-	string NextEpisodeMap()
+	bool IsDoom2StoryTransitionMap()
+	{
+		return level.MapName ~== "MAP06" || level.MapName ~== "MAP11" || level.MapName ~== "MAP20";
+	}
+
+	string NextJohnMap()
 	{
 		if (level.MapName ~== "E1M8") return "E2M1";
 		if (level.MapName ~== "E2M8") return "E3M1";
 		if (level.MapName ~== "E3M8") return "E4M1";
+		if (level.MapName ~== "MAP06") return "MAP07";
+		if (level.MapName ~== "MAP11") return "MAP12";
+		if (level.MapName ~== "MAP20") return "MAP21";
 		return "";
+	}
+
+	bool CanOfferJohnTravel()
+	{
+		if (IsIconicEpisodeFinale()) return !HasLivingIconicEpisodeBoss();
+		if (IsDoom2StoryTransitionMap())
+			return FinaleBossPromoted && (!FinaleBoss || FinaleBoss.Health <= 0);
+		return false;
+	}
+
+	string JohnWhatNowDialogue()
+	{
+		if (level.MapName ~== "E1M8") return "John: Phobos is behind us. The anomaly leads to Deimos—and Deimos has vanished above Hell.";
+		if (level.MapName ~== "E2M8") return "John: The Cyberdemon guarded the gateway. Beyond it are the shores of Hell itself.";
+		if (level.MapName ~== "E3M8") return "John: The Spider is dead and Earth is visible again, but one last nightmare remains.";
+		if (level.MapName ~== "MAP06") return "John: The starport is breached. Push deeper while Earth's survivors prepare to escape.";
+		if (level.MapName ~== "MAP11") return "John: The evacuation can begin. You stay behind, because Hell is still holding Earth.";
+		if (level.MapName ~== "MAP20") return "John: You've reached the corrupted heart of the city. The road ahead descends into Hell.";
+		return "John: Catch your breath. The next fight will still be there when you're ready.";
+	}
+
+	string JohnWhatsNextDialogue()
+	{
+		if (level.MapName ~== "E1M8") return "John: Deimos Anomaly—Episode Two. Keep your weapons; you are going to need every one.";
+		if (level.MapName ~== "E2M8") return "John: Inferno—Episode Three. This time we walk into Hell instead of waiting for it.";
+		if (level.MapName ~== "E3M8") return "John: Thy Flesh Consumed—Episode Four. Earth has one final debt for us to collect.";
+		if (level.MapName ~== "MAP06") return "John: Dead Simple comes next. The city welcomes us with Mancubi and worse.";
+		if (level.MapName ~== "MAP11") return "John: The Factory is next. Your arsenal and Tuin RPG progress travel with you.";
+		if (level.MapName ~== "MAP20") return "John: Hell begins at MAP21. No free catch-up weapons—only what you have earned.";
+		return "John: Another level, another collection of bad decisions with guns.";
 	}
 
 	bool BeginEpisodeTravel(int playerNumber)
 	{
-		if (!IsIconicEpisodeFinale() || HasLivingIconicEpisodeBoss() || EpisodeTravelTics > 0) return false;
-		string destination = NextEpisodeMap();
+		if (!CanOfferJohnTravel() || EpisodeTravelTics > 0) return false;
+		string destination = NextJohnMap();
 		if (!destination.Length()) return false;
 		EpisodeTravelPlayer = playerNumber;
 		EpisodeTravelDestination = destination;
+		EpisodeTravelShowsIntermission = IsDoom2StoryTransitionMap();
 		EpisodeTravelTics = 70;
-		SetLootNotification(playerNumber, "JOHN: HOLD MY HAND, MY SON.", 5);
-		if (players[playerNumber].mo) players[playerNumber].mo.A_Log("John: Hold my hand, my son.");
+		// Arm this as soon as the player chooses to travel, so saves made during
+		// John's short hand-holding delay cannot lose the transition safeguard.
+		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+		{
+			if (!playerInGame[i]) continue;
+			let playerData = EnsurePlayerData(i);
+			if (playerData) playerData.SuppressNextMapCatchup = true;
+		}
+		SetLootNotification(playerNumber, "JOHN: HOLD MY HAND. WE MOVE ON TOGETHER.", 5);
+		if (players[playerNumber].mo) players[playerNumber].mo.A_Log("John: Hold my hand. We move on together.");
 		return true;
 	}
 
@@ -1685,14 +1733,10 @@ class TuinRPGHandler : EventHandler
 		}
 		if (!nearestJohn) return false;
 		JohnMerchant = nearestJohn;
-		if (IsIconicEpisodeFinale() && !HasLivingIconicEpisodeBoss())
-		{
-			BeginEpisodeTravel(playerNumber);
-			return true;
-		}
 		let data = EnsurePlayerData(playerNumber);
-		if (data) data.ShopDialogue = RandomJohnGreeting();
-		EventHandler.SendInterfaceEvent(playerNumber, "tuin_open_john_shop");
+		if (data)
+			data.ShopDialogue = CanOfferJohnTravel() ? "John: We can leave when you choose. Ask what you need—or shop first." : RandomJohnGreeting();
+		EventHandler.SendInterfaceEvent(playerNumber, CanOfferJohnTravel() ? "tuin_open_john_finale_shop" : "tuin_open_john_shop");
 		return true;
 	}
 
@@ -2371,6 +2415,24 @@ class TuinRPGHandler : EventHandler
 		ScaleSpawnedAmmo(e.Thing);
 	}
 
+	override void CheckReplacement(ReplaceEvent e)
+	{
+		// E2M8 and E3M8 normally call A_BossDeath from the stock actor's final
+		// death frame, immediately ending the episode. Replace only those exact
+		// finale actors with visually identical subclasses whose death animation
+		// stops before that call. This leaves every other map and custom boss alone.
+		if (level.MapName ~== "E2M8" && e.Replacee == 'Cyberdemon')
+		{
+			e.Replacement = 'TuinFinaleCyberdemon';
+			e.IsFinal = true;
+		}
+		else if (level.MapName ~== "E3M8" && e.Replacee == 'SpiderMastermind')
+		{
+			e.Replacement = 'TuinFinaleSpiderMastermind';
+			e.IsFinal = true;
+		}
+	}
+
 	override void WorldThingRevived(WorldEvent e)
 	{
 		let data = GetMonsterData(e.Thing);
@@ -2941,13 +3003,20 @@ class TuinRPGHandler : EventHandler
 			{
 				string destination = EpisodeTravelDestination;
 				EpisodeTravelDestination = "";
+				bool showIntermission = EpisodeTravelShowsIntermission;
+				EpisodeTravelShowsIntermission = false;
 				for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
 				{
 					if (!playerInGame[playerNumber]) continue;
 					let playerData = EnsurePlayerData(playerNumber);
 					if (playerData) playerData.SuppressNextMapCatchup = true;
 				}
-				level.ChangeLevel(destination, 0, CHANGELEVEL_KEEPFACING | CHANGELEVEL_NOINTERMISSION | CHANGELEVEL_PRERAISEWEAPON);
+				int travelFlags = CHANGELEVEL_KEEPFACING | CHANGELEVEL_PRERAISEWEAPON;
+				if (!showIntermission)
+				{
+					travelFlags |= CHANGELEVEL_NOINTERMISSION;
+				}
+				level.ChangeLevel(destination, 0, travelFlags);
 				return;
 			}
 		}
@@ -3091,6 +3160,23 @@ class TuinRPGHandler : EventHandler
 			if (shopData) shopData.ShopDialogue = RandomClassicGameFact();
 			return;
 		}
+		if (e.Name ~== "tuin_john_what_now")
+		{
+			let shopData = EnsurePlayerData(e.Player);
+			if (shopData) shopData.ShopDialogue = JohnWhatNowDialogue();
+			return;
+		}
+		if (e.Name ~== "tuin_john_whats_next")
+		{
+			let shopData = EnsurePlayerData(e.Player);
+			if (shopData) shopData.ShopDialogue = JohnWhatsNextDialogue();
+			return;
+		}
+		if (e.Name ~== "tuin_john_travel")
+		{
+			BeginEpisodeTravel(e.Player);
+			return;
+		}
 		if (e.Name ~== "tuin_test_weapon_drop")
 		{
 			let pawn = players[e.Player].mo;
@@ -3186,6 +3272,8 @@ class TuinRPGHandler : EventHandler
 		}
 		if (e.Name ~== "tuin_open_john_shop")
 			Menu.SetMenu('TuinRPGJohnShop');
+		else if (e.Name ~== "tuin_open_john_finale_shop")
+			Menu.SetMenu('TuinRPGFinaleJohnShop');
 	}
 
 	clearscope static bool, Vector2 ProjectOverheadPoint(Vector3 worldPosition, Vector3 viewPosition,

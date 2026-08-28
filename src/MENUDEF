@@ -319,3 +319,26 @@ OptionMenu "TuinRPGJohnShop"
 	Command "ASK JOHN ABOUT DOOM AND CLASSIC GAMES", "netevent tuin_shop_fact"
 	Class "TuinRPGJohnShopMenu"
 }
+
+OptionMenu "TuinRPGFinaleJohnShop"
+{
+	Title "JOHN'S END-LEVEL SHOP"
+	Position 25
+	StaticText "UP/DOWN TO BROWSE - ENTER TO CHOOSE", 1
+	StaticText " "
+	Command "MEDKIT +25 HEALTH                         10 COINS", "netevent tuin_shop_buy 1"
+	Command "PARTIAL AMMO REFILL (+25% EACH)           15 COINS", "netevent tuin_shop_buy 2"
+	Command "FULL AMMO REFILL                          40 COINS", "netevent tuin_shop_buy 3"
+	Command "ARMOR PLATES +25                          20 COINS", "netevent tuin_shop_buy 4"
+	Command "BACKPACK                                  50 COINS", "netevent tuin_shop_buy 5"
+	Command "GAMBLE: RANDOM OWNED-WEAPON VARIANT      150 COINS", "netevent tuin_shop_buy 6"
+	StaticText " "
+	Command "TALK TO JOHN", "netevent tuin_shop_talk"
+	Command "ASK JOHN FOR A TUIN RPG TIP", "netevent tuin_shop_tip"
+	Command "ASK JOHN ABOUT DOOM AND CLASSIC GAMES", "netevent tuin_shop_fact"
+	Command "SO... WHAT NOW?", "netevent tuin_john_what_now"
+	Command "WHAT COMES NEXT?", "netevent tuin_john_whats_next"
+	StaticText " "
+	Command "\c[gold]REACH OUT AND HOLD JOHN ROMERO'S HAND  (GO TO NEXT LEVEL)", "netevent tuin_john_travel", 0, 1
+	Class "TuinRPGJohnShopMenu"
+}

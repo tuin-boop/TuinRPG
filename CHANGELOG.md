@@ -2,6 +2,9 @@
 
 ## 0.6.2
 
+- Replaced only the native E2M8 Cyberdemon and E3M8 Spider Mastermind with visually and mechanically identical TuinRPG finale subclasses whose death states omit `A_BossDeath`. Their deaths can no longer trigger Doom's immediate episode ending before John appears.
+- Reworked finale travel into an explicit John conversation. On E1M8-E3M8, players may keep shopping, ask what happened, ask what comes next, or select the gold hand-holding option to continue while preserving progression.
+- Added the same contextual John conversation and explicit transition to Doom II's MAP06, MAP11 and MAP20 story breaks. Doom II transitions retain their intermission text, and every John transition suppresses late-start catch-up rewards on the destination map.
 - Added the adaptive Hell Director. At 25%, 50% and 75% map completion it measures party damage taken during that stage and, when the run is going smoothly, upgrades one living monster to Elite, Legendary or Mythic.
 - Added a configurable rare Assassin Imp event during successful high-tier Director checks. It appears near an older player trail position as a fast, translucent Mythic ambusher, while invalid or cramped spawn positions safely fall back to upgrading an existing monster.
 - Reworked progressive monster levels into hybrid scaling: map progression remains primary, but under-levelled enemies partially catch up to the highest active player based on difficulty. Elite, Legendary and Mythic enemies receive additional level pressure and ordinary monsters retain occasional challenge surges.

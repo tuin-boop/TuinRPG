@@ -415,9 +415,13 @@ class TuinRPGJohnShopMenu : OptionMenu
 		int dialogueX = portraitX + portraitWidth + int(30 * scale);
 		int dialogueY = portraitY + portraitHeight / 2 - int(16 * dialogueScale);
 		int dialogueWidth = min(width - dialogueX - 28, int(900 * scale));
-		Screen.Dim(Color(7, 7, 14), 0.92, dialogueX - 12, dialogueY - 10, dialogueWidth, int(30 * dialogueScale));
-		Screen.DrawText(font, Font.CR_WHITE, dialogueX, dialogueY, dialogue,
-			DTA_ScaleX, dialogueScale, DTA_ScaleY, dialogueScale);
+		BrokenLines dialogueLines = font.BreakLines(dialogue, int((dialogueWidth - 24) / dialogueScale));
+		int dialogueLineHeight = int(11 * dialogueScale);
+		int dialogueHeight = max(int(30 * dialogueScale), dialogueLineHeight * min(3, dialogueLines.Count()) + int(16 * dialogueScale));
+		Screen.Dim(Color(7, 7, 14), 0.92, dialogueX - 12, dialogueY - 10, dialogueWidth, dialogueHeight);
+		for (int dialogueLine = 0; dialogueLine < min(3, dialogueLines.Count()); dialogueLine++)
+			Screen.DrawText(font, Font.CR_WHITE, dialogueX, dialogueY + dialogueLine * dialogueLineHeight,
+				dialogueLines.StringAt(dialogueLine), DTA_ScaleX, dialogueScale, DTA_ScaleY, dialogueScale);
 	}
 }
 

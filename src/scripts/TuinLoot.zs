@@ -154,3 +154,45 @@ class TuinAssassinImp : DoomImp
 		+AMBUSH
 	}
 }
+
+// Map-specific replacements selected by TuinRPGHandler.CheckReplacement.
+// Their attacks and visuals remain entirely stock; only the final A_BossDeath
+// frame is omitted so John, rather than Doom's hard-coded episode ending,
+// controls the E2M8/E3M8 transition.
+class TuinFinaleCyberdemon : Cyberdemon
+{
+	Default
+	{
+		-BOSSDEATH
+		-E2M8BOSS
+	}
+	States
+	{
+	Death:
+		CYBR H 10;
+		CYBR I 10 A_Scream;
+		CYBR JKL 10;
+		CYBR M 10 A_NoBlocking;
+		CYBR NO 10;
+		CYBR P -1;
+		Stop;
+	}
+}
+
+class TuinFinaleSpiderMastermind : SpiderMastermind
+{
+	Default
+	{
+		-BOSSDEATH
+		-E3M8BOSS
+	}
+	States
+	{
+	Death:
+		SPID J 20 A_Scream;
+		SPID K 10 A_NoBlocking;
+		SPID LMNOPQR 10;
+		SPID S -1;
+		Stop;
+	}
+}
