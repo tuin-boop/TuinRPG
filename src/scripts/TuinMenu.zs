@@ -347,16 +347,42 @@ class TuinRPGArsenalMenu : OptionMenu
 	}
 }
 
+class TuinRPGFinaleTravelCommand : OptionMenuItemCommand
+{
+	override int Draw(OptionMenuDescriptor desc, int y, int indent, bool selected)
+	{
+		// Keep the irreversible story transition visually separate from John's
+		// ordinary shop and conversation entries.
+		int x = drawLabel(indent, y, selected ? Font.CR_YELLOW : Font.CR_GOLD);
+		if (mCentered) return x - 16 * CleanXfac_1;
+		return indent;
+	}
+}
+
 class TuinRPGJohnShopMenu : OptionMenu
 {
 	double OldTimeScale;
 	bool ChangedTimeScale;
 	TextureID JohnPortrait;
+	string LastDialogue;
+	int DialogueRevealStart;
 
 	override void Init(Menu parent, OptionMenuDescriptor desc)
 	{
 		Super.Init(parent, desc);
 		JohnPortrait = TexMan.CheckForTexture("graphics/TuinJohnPortrait.png", TexMan.Type_Any);
+		LastDialogue = "";
+		DialogueRevealStart = MenuTime();
+		for (int itemIndex = 0; itemIndex < desc.mItems.Size(); itemIndex++)
+		{
+			let item = OptionMenuItem(desc.mItems[itemIndex]);
+			if (item && item.mLabel == "REACH OUT AND HOLD JOHN ROMERO'S HAND (GO TO NEXT LEVEL)"
+				&& item.GetClass() != 'TuinRPGFinaleTravelCommand')
+			{
+				desc.mItems[itemIndex] = new ('TuinRPGFinaleTravelCommand').Init(
+					item.mLabel, "netevent tuin_john_travel", false, true);
+			}
+		}
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
@@ -411,17 +437,33 @@ class TuinRPGJohnShopMenu : OptionMenu
 			DTA_ScaleX, scale, DTA_ScaleY, scale);
 
 		string dialogue = data.ShopDialogue.Length() ? data.ShopDialogue : "John: Take your time. The exit is not going anywhere.";
+		if (dialogue != LastDialogue)
+		{
+			LastDialogue = dialogue;
+			DialogueRevealStart = MenuTime();
+		}
 		double dialogueScale = clamp(scale * 1.35, 1.8, 2.5);
 		int dialogueX = portraitX + portraitWidth + int(30 * scale);
 		int dialogueY = portraitY + portraitHeight / 2 - int(16 * dialogueScale);
 		int dialogueWidth = min(width - dialogueX - 28, int(900 * scale));
 		BrokenLines dialogueLines = font.BreakLines(dialogue, int((dialogueWidth - 24) / dialogueScale));
 		int dialogueLineHeight = int(11 * dialogueScale);
-		int dialogueHeight = max(int(30 * dialogueScale), dialogueLineHeight * min(3, dialogueLines.Count()) + int(16 * dialogueScale));
+		int visibleLineCount = min(6, dialogueLines.Count());
+		int dialogueHeight = max(int(30 * dialogueScale), dialogueLineHeight * visibleLineCount + int(16 * dialogueScale));
 		Screen.Dim(Color(7, 7, 14), 0.92, dialogueX - 12, dialogueY - 10, dialogueWidth, dialogueHeight);
-		for (int dialogueLine = 0; dialogueLine < min(3, dialogueLines.Count()); dialogueLine++)
+
+		// Reveal roughly one character per menu tic. Working from the already
+		// wrapped lines keeps completed words from jumping as the text grows.
+		int revealCharacters = max(1, MenuTime() - DialogueRevealStart + 1);
+		for (int dialogueLine = 0; dialogueLine < visibleLineCount; dialogueLine++)
+		{
+			string fullLine = dialogueLines.StringAt(dialogueLine);
+			if (revealCharacters <= 0) break;
+			int lineCharacters = min(fullLine.Length(), revealCharacters);
 			Screen.DrawText(font, Font.CR_WHITE, dialogueX, dialogueY + dialogueLine * dialogueLineHeight,
-				dialogueLines.StringAt(dialogueLine), DTA_ScaleX, dialogueScale, DTA_ScaleY, dialogueScale);
+				fullLine.Left(lineCharacters), DTA_ScaleX, dialogueScale, DTA_ScaleY, dialogueScale);
+			revealCharacters -= fullLine.Length();
+		}
 	}
 }
 

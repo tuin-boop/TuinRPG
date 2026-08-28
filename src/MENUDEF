@@ -339,6 +339,6 @@ OptionMenu "TuinRPGFinaleJohnShop"
 	Command "SO... WHAT NOW?", "netevent tuin_john_what_now"
 	Command "WHAT COMES NEXT?", "netevent tuin_john_whats_next"
 	StaticText " "
-	Command "\c[gold]REACH OUT AND HOLD JOHN ROMERO'S HAND  (GO TO NEXT LEVEL)", "netevent tuin_john_travel", 0, 1
+	Command "\c[gold]REACH OUT AND HOLD JOHN ROMERO'S HAND (GO TO NEXT LEVEL)", "netevent tuin_john_travel", 0, 1
 	Class "TuinRPGJohnShopMenu"
 }
