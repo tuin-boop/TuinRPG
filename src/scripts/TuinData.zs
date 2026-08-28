@@ -400,6 +400,9 @@ class TuinPlayerData : Inventory
 	int Agility;
 	int Endurance;
 	string ShopDialogue;
+	string JohnDialogueMap;
+	int JohnWhatNowPage;
+	int JohnWhatsNextPage;
 	int AppliedVitality;
 	Actor VitalityOwner;
 	bool FlashlightEnabled;

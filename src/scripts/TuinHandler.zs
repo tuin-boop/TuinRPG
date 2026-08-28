@@ -1668,26 +1668,114 @@ class TuinRPGHandler : EventHandler
 		return false;
 	}
 
-	string JohnWhatNowDialogue()
+	void PrepareJohnDialogueSequence(TuinPlayerData data)
 	{
-		if (level.MapName ~== "E1M8") return "John: Those Barons were the last lock on Phobos.\nDeimos has vanished from the sky—dragged above Hell itself.\nThe anomaly is still open, and something wants us to follow.";
-		if (level.MapName ~== "E2M8") return "John: That Cyberdemon was guarding more than a moon base.\nDeimos is floating over Hell, and the gateway is beneath its corpse.\nWe can turn back, or take the fight to the thing that started this.";
-		if (level.MapName ~== "E3M8") return "John: The Spider is dead, but Hell left one door open behind us.\nEarth is visible again—and something followed you home.\nThere is one last nightmare waiting beyond that door.";
-		if (level.MapName ~== "MAP06") return "John: The starport is breached and the demons are losing their grip.\nEarth's survivors are preparing the evacuation ships now.\nWe keep moving so they have time to launch.";
-		if (level.MapName ~== "MAP11") return "John: The evacuation worked. Humanity gets a chance to escape.\nYou are staying behind because Hell still owns the cities below.\nSomeone has to make it regret that purchase.";
-		if (level.MapName ~== "MAP20") return "John: You tore through the corrupted heart of the city.\nThe invasion is no longer coming from Earth—the trail descends into Hell.\nFrom here on, every step takes us farther from home.";
-		return "John: Catch your breath.\nThe next fight will still be there when you're ready.\nSo will I.";
+		if (!data || data.JohnDialogueMap ~== level.MapName) return;
+		data.JohnDialogueMap = level.MapName;
+		data.JohnWhatNowPage = 0;
+		data.JohnWhatsNextPage = 0;
 	}
 
-	string JohnWhatsNextDialogue()
+	string JohnWhatNowDialogue(int page = 0)
 	{
-		if (level.MapName ~== "E1M8") return "John: We step through to Deimos Anomaly—Episode Two.\nYour weapons, levels and scars all come with you.\nWhen you're ready, reach out and take my hand.";
-		if (level.MapName ~== "E2M8") return "John: Inferno—Episode Three—is waiting below us.\nThis time we walk into Hell instead of waiting for Hell to come here.\nTake my hand when you are ready to cross the threshold.";
-		if (level.MapName ~== "E3M8") return "John: Thy Flesh Consumed—Episode Four—is our final detour.\nEarth has survived, but it has one last debt for us to collect.\nTake my hand and we will finish this together.";
-		if (level.MapName ~== "MAP06") return "John: Dead Simple comes next, and the name is lying to you.\nThe city has Mancubi, Arachnotrons and a welcoming committee.\nTake my hand when your ammo and nerves are ready.";
-		if (level.MapName ~== "MAP11") return "John: The Factory is next; the demons turned industry into a weapon.\nYour arsenal and every point of Tuin RPG progress travel with you.\nNo fresh-start rewards—just everything you have earned.";
-		if (level.MapName ~== "MAP20") return "John: The road opens at MAP21, on Hell's own ground.\nThere are no free catch-up weapons waiting on the other side.\nTake my hand, and bring the arsenal you earned.";
-		return "John: Another level is waiting.\nAnother collection of bad decisions with guns.\nTake my hand when you are ready.";
+		page = clamp(page, 0, 3);
+		if (level.MapName ~== "E1M8")
+		{
+			if (page == 0) return "John: Those Barons were the last lock on Phobos.\nThey guarded the anomaly because Hell needed this moon silent.\nYou broke the lock and made enough noise for both of us.";
+			if (page == 1) return "John: Phobos was never the real target.\nThe invasion used it as a bridge to reach Deimos.\nWhile you fought here, the whole second moon vanished.";
+			if (page == 2) return "John: Deimos was not destroyed.\nIt was pulled out of our sky and suspended above Hell.\nThat open anomaly is the only trail we have left.";
+			return "John: You can call this a victory if you need the breath.\nThe truth is that the first battle just ended.\nThe war is waiting on the other side of that light.";
+		}
+		if (level.MapName ~== "E2M8")
+		{
+			if (page == 0) return "John: That Cyberdemon was the jailer of Deimos.\nEvery rocket was meant to keep mortals away from the gateway.\nNow its corpse is the last doorstop Hell has.";
+			if (page == 1) return "John: Look beyond the base walls.\nDeimos is floating over an endless red world.\nThe moon became a fortress hanging above Hell itself.";
+			if (page == 2) return "John: The creatures did not arrive by accident.\nSomething below is feeding troops through the gateway.\nKilling the Cyberdemon only cleared our path to the source.";
+			return "John: We could stay here and count the dead.\nSooner or later another army would climb through.\nThe only lasting answer is waiting below us.";
+		}
+		if (level.MapName ~== "E3M8")
+		{
+			if (page == 0) return "John: The Spider ruled this part of Hell through fear and machinery.\nYou turned its throne room into a grave.\nFor one quiet moment, the invasion has lost its voice.";
+			if (page == 1) return "John: Earth is visible again through the opening.\nThat should feel like the road home.\nInstead it feels like Hell left the door open on purpose.";
+			if (page == 2) return "John: Something crossed over while you fought here.\nIt carried Hell back toward the world you saved.\nThe war followed you home before you could return.";
+			return "John: This victory bought Earth time, not peace.\nOne final nightmare is gathering beyond the doorway.\nWe finish it before it learns how to grow.";
+		}
+		if (level.MapName ~== "MAP06")
+		{
+			if (page == 0) return "John: The starport defenses have finally collapsed.\nThe demons lost the ground they needed to trap the survivors.\nEvery cleared corridor gives another ship room to launch.";
+			if (page == 1) return "John: Earth is wounded, but it is not empty yet.\nFamilies are moving toward the evacuation craft right now.\nThey will never know your name, and that means the plan worked.";
+			if (page == 2) return "John: The enemy knows the ships are leaving.\nIt is gathering heavier bodies farther inside the city.\nThey want one final chance to close the escape route.";
+			return "John: We stay on the ground while everyone else leaves it.\nThat is not a punishment. It is the job.\nWe make enough trouble that Hell forgets to look upward.";
+		}
+		if (level.MapName ~== "MAP11")
+		{
+			if (page == 0) return "John: The evacuation ships made it away from Earth.\nHumanity survives because you refused to stop moving.\nFor the first time, this planet is no longer a hostage.";
+			if (page == 1) return "John: You are the last living human still fighting down here.\nThe streets belong to mutants, demons and hungry ghosts.\nThat makes every weapon you carry part of the resistance.";
+			if (page == 2) return "John: You could sit here and wait for the end.\nNo one would call you a coward after what you saved.\nBut Earth Control just found the source of the invasion.";
+			return "John: The signal points back into your own home city.\nThe alien base is close to the starport.\nIf we reach it, we may still seal the way into Earth.";
+		}
+		if (level.MapName ~== "MAP20")
+		{
+			if (page == 0) return "John: This is the corrupted heart of the city.\nEverything around us was reshaped to feed the invasion.\nYou fought through the body and reached the wound.";
+			if (page == 1) return "John: The gateway cannot be destroyed from this side.\nEarth has no weapon that can reach the machinery beyond it.\nHell built the entrance to survive anything fired from here.";
+			if (page == 2) return "John: That leaves one plan, and it is a terrible one.\nWe cross the gateway and attack its roots from inside.\nThe demons will not expect their prey to follow them home.";
+			return "John: Behind us is a dead city. Ahead of us is Hell.\nThere is no safe road left to choose.\nThere is only the road that might end the invasion.";
+		}
+		if (page == 0) return "John: That boss thought this map belonged to it.\nYou proved ownership with ammunition and poor manners.\nTake a moment before the next room starts arguing.";
+		if (page == 1) return "John: The strongest monsters gather power from everything nearby.\nThat is why their levels and affixes can turn one body into an army.\nIt is also why their loot is worth the risk.";
+		if (page == 2) return "John: Every boss you remove weakens the invasion.\nThe smaller demons lose their shield and their rallying point.\nThe map is safer now, but it is never completely safe.";
+		return "John: Spend your coins, inspect the weapon drop and reload.\nA victory is most useful when you survive long enough to use it.\nI will be here until you are ready to move.";
+	}
+
+	string JohnWhatsNextDialogue(int page = 0)
+	{
+		page = clamp(page, 0, 3);
+		if (level.MapName ~== "E1M8")
+		{
+			if (page == 0) return "John: The anomaly leads to Deimos and Episode Two.\nWe will arrive where the moon used to belong.\nDo not expect the base to remember the laws of space.";
+			if (page == 1) return "John: Your weapons, levels, perks and coins come with you.\nNothing you earned on Phobos will be rerolled away.\nThis is a journey forward, not a fresh start.";
+			if (page == 2) return "John: Deimos has stronger demons and less room for mistakes.\nKeep enough ammunition for whatever moved an entire moon.\nThe shop is open if your backpack feels too light.";
+			return "John: When you are ready, choose the gold option below.\nReach out and hold my hand.\nWe will cross into Deimos together.";
+		}
+		if (level.MapName ~== "E2M8")
+		{
+			if (page == 0) return "John: Inferno and Episode Three are waiting below.\nWe leave the moon and step onto Hell's own ground.\nEvery monster there will know why we came.";
+			if (page == 1) return "John: The shores ahead are built from fire, stone and memory.\nHell likes to turn familiar places into traps.\nTrust your map, but trust your weapon more.";
+			if (page == 2) return "John: Your entire Tuin RPG build travels with you.\nNo bonus weapons will appear for crossing normally.\nWhat you carry is what you earned.";
+			return "John: Finish shopping before we descend.\nThen choose the gold option and take my hand.\nThis time we invade Hell.";
+		}
+		if (level.MapName ~== "E3M8")
+		{
+			if (page == 0) return "John: Thy Flesh Consumed and Episode Four come next.\nEarth survived the first invasion, but the story is not finished.\nA final nest is waiting close to home.";
+			if (page == 1) return "John: The next episode is cruel even before Tuin RPG scaling.\nExpect tight spaces, heavy monsters and little mercy.\nBring ammunition for a war, not a victory lap.";
+			if (page == 2) return "John: Your character remains exactly who you built.\nYour equipment and progression cross with us.\nThere is no reward for pretending the journey started again.";
+			return "John: When the shop is finished, take my hand.\nWe will return to the edge of Earth.\nThen we close the last door together.";
+		}
+		if (level.MapName ~== "MAP06")
+		{
+			if (page == 0) return "John: Dead Simple is the next battlefield.\nThe name is a joke told by someone who hates you.\nMancubi and Arachnotrons are waiting to explain it.";
+			if (page == 1) return "John: The survivors need one more stretch of open sky.\nOur next fight keeps the enemy looking at us.\nEvery second we buy becomes distance for the ships.";
+			if (page == 2) return "John: Your current build continues into MAP07.\nNo catch up weapons or free talent points will appear.\nYou keep only the strength you earned.";
+			return "John: The original story message will play before we arrive.\nAfter it ends, we continue into Dead Simple.\nTake my hand when you want to begin.";
+		}
+		if (level.MapName ~== "MAP11")
+		{
+			if (page == 0) return "John: The Factory waits in MAP12.\nThe demons turned human industry into part of their invasion.\nWe are going to interrupt production.";
+			if (page == 1) return "John: Earth Control marked the source near the starport.\nThe route crosses districts the invasion has already transformed.\nEvery map from here leads closer to the alien base.";
+			if (page == 2) return "John: Your arsenal and Tuin RPG progress travel with you.\nThe next map grants no fresh start package.\nYou already have everything the run has earned.";
+			return "John: The original intermission comes first.\nThen we wake in the Factory with the mission intact.\nChoose the gold option when you are ready.";
+		}
+		if (level.MapName ~== "MAP20")
+		{
+			if (page == 0) return "John: MAP21 begins on Hell's own ground.\nThe gateway is a one way answer to an impossible problem.\nOnce we cross, Earth will be behind us.";
+			if (page == 1) return "John: We are not entering Hell to survive it.\nWe are entering to find the source and break it.\nSurvival is simply how we reach the next target.";
+			if (page == 2) return "John: Your full build crosses the gateway.\nNo extra levels, talent points or weapon choices will appear.\nHell gets exactly the marine it created.";
+			return "John: The story intermission will play before MAP21.\nListen to it, then remember why we crossed.\nTake my hand when you are ready for Hell.";
+		}
+		if (page == 0) return "John: The level exit is still the next destination.\nSearch for secrets and unclaimed drops before you leave.\nThe minimap can help with anything you missed.";
+		if (page == 1) return "John: Check your ammunition before crossing the exit.\nHigher level monsters can consume a full backpack quickly.\nMy shop is cheaper than dying with empty magazines.";
+		if (page == 2) return "John: Your build continues unless you deliberately start elsewhere.\nNormal map progression does not grant another catch up package.\nEvery upgrade should come from play, loot or perks.";
+		return "John: There is always another map and another boss.\nYou do not need my hand for this ordinary exit.\nFinish your business here, then keep moving.";
 	}
 
 	bool BeginEpisodeTravel(int playerNumber)
@@ -1735,9 +1823,12 @@ class TuinRPGHandler : EventHandler
 		JohnMerchant = nearestJohn;
 		let data = EnsurePlayerData(playerNumber);
 		if (data)
+		{
+			PrepareJohnDialogueSequence(data);
 			data.ShopDialogue = CanOfferJohnTravel()
 				? "John: The way forward is open.\nAsk me what happened, ask what comes next, or finish your shopping.\nWhen you are ready to leave, take my hand."
 				: RandomJohnGreeting();
+		}
 		EventHandler.SendInterfaceEvent(playerNumber, CanOfferJohnTravel() ? "tuin_open_john_finale_shop" : "tuin_open_john_shop");
 		return true;
 	}
@@ -3165,13 +3256,23 @@ class TuinRPGHandler : EventHandler
 		if (e.Name ~== "tuin_john_what_now")
 		{
 			let shopData = EnsurePlayerData(e.Player);
-			if (shopData) shopData.ShopDialogue = JohnWhatNowDialogue();
+			if (shopData)
+			{
+				PrepareJohnDialogueSequence(shopData);
+				shopData.ShopDialogue = JohnWhatNowDialogue(shopData.JohnWhatNowPage);
+				shopData.JohnWhatNowPage = (shopData.JohnWhatNowPage + 1) % 4;
+			}
 			return;
 		}
 		if (e.Name ~== "tuin_john_whats_next")
 		{
 			let shopData = EnsurePlayerData(e.Player);
-			if (shopData) shopData.ShopDialogue = JohnWhatsNextDialogue();
+			if (shopData)
+			{
+				PrepareJohnDialogueSequence(shopData);
+				shopData.ShopDialogue = JohnWhatsNextDialogue(shopData.JohnWhatsNextPage);
+				shopData.JohnWhatsNextPage = (shopData.JohnWhatsNextPage + 1) % 4;
+			}
 			return;
 		}
 		if (e.Name ~== "tuin_john_travel")

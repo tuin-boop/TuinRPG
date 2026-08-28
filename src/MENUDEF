@@ -317,6 +317,8 @@ OptionMenu "TuinRPGJohnShop"
 	Command "TALK TO JOHN", "netevent tuin_shop_talk"
 	Command "ASK JOHN FOR A TUIN RPG TIP", "netevent tuin_shop_tip"
 	Command "ASK JOHN ABOUT DOOM AND CLASSIC GAMES", "netevent tuin_shop_fact"
+	Command "SO... WHAT NOW? (4 PART STORY)", "netevent tuin_john_what_now"
+	Command "WHAT COMES NEXT? (4 PART STORY)", "netevent tuin_john_whats_next"
 	Class "TuinRPGJohnShopMenu"
 }
 
@@ -336,9 +338,9 @@ OptionMenu "TuinRPGFinaleJohnShop"
 	Command "TALK TO JOHN", "netevent tuin_shop_talk"
 	Command "ASK JOHN FOR A TUIN RPG TIP", "netevent tuin_shop_tip"
 	Command "ASK JOHN ABOUT DOOM AND CLASSIC GAMES", "netevent tuin_shop_fact"
-	Command "SO... WHAT NOW?", "netevent tuin_john_what_now"
-	Command "WHAT COMES NEXT?", "netevent tuin_john_whats_next"
+	Command "SO... WHAT NOW? (4 PART STORY)", "netevent tuin_john_what_now"
+	Command "WHAT COMES NEXT? (4 PART STORY)", "netevent tuin_john_whats_next"
 	StaticText " "
-	Command "\c[gold]REACH OUT AND HOLD JOHN ROMERO'S HAND (GO TO NEXT LEVEL)", "netevent tuin_john_travel", 0, 1
+	Command "REACH OUT AND HOLD JOHN ROMERO'S HAND (GO TO NEXT LEVEL)", "netevent tuin_john_travel", 0, 1
 	Class "TuinRPGJohnShopMenu"
 }
