@@ -2728,6 +2728,7 @@ class TuinRPGHandler : EventHandler
 			data.BleedPulsesRemaining = 0;
 			data.BleedPlayerNumber = -1;
 			data.BleedResistanceTics = 0;
+			data.BleedDamageRemaining = 0;
 			if (e.Thing.Health > 0 && e.Thing.Health < data.ScaledMaxHealth) e.Thing.A_SetHealth(data.ScaledMaxHealth);
 		}
 		else InitializeMonster(e.Thing);
@@ -2778,16 +2779,20 @@ class TuinRPGHandler : EventHandler
 		DamageNumberCurl[slot] = FRandom[TuinRPGDamageNumber](-1.0, 1.0);
 	}
 
-	void ApplyRogueBleed(int playerNumber, TuinMonsterData data)
+	void ApplyRogueBleed(int playerNumber, TuinMonsterData data, int triggeringCriticalDamage)
 	{
 		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
-			playerNumber >= TUIN_MAX_PLAYERS) return;
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringCriticalDamage <= 0) return;
 		// Bleeding cannot be refreshed or stacked. This keeps rapid-fire weapons,
 		// including Tuin's Lead Spitter, from maintaining permanent percentage damage.
 		if (data.BleedPulsesRemaining > 0 || data.BleedResistanceTics > 0) return;
 		data.BleedPulsesRemaining = 8;
 		data.BleedNextTime = level.Time + 35;
 		data.BleedPlayerNumber = playerNumber;
+		// Repeat one full critical hit over eight seconds, but never take more than
+		// 24% of the monster's scaled maximum health through a single Bleed.
+		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) * 0.24 + 0.5));
+		data.BleedDamageRemaining = min(triggeringCriticalDamage, healthCap);
 		data.LastPlayerNumber = playerNumber;
 	}
 
@@ -2803,7 +2808,12 @@ class TuinRPGHandler : EventHandler
 				int attacker = data.BleedPlayerNumber;
 				Actor source = attacker >= 0 && attacker < TUIN_MAX_PLAYERS && playerInGame[attacker] ?
 					players[attacker].mo : null;
-				int damage = min(victim.Health, max(1, int(max(1, data.ScaledMaxHealth) * 0.04 + 0.5)));
+				// Divide the stored critical damage over the pulses without losing integer
+				// remainders: a 500-damage crit becomes four 63s and four 62s.
+				int damage = max(1, (data.BleedDamageRemaining + data.BleedPulsesRemaining - 1) /
+					data.BleedPulsesRemaining);
+				data.BleedDamageRemaining = max(0, data.BleedDamageRemaining - damage);
+				damage = min(victim.Health, damage);
 				SpawnDamageNumber(attacker, victim, damage, false, true);
 				ApplyingBonusDamage = true;
 				victim.DamageMobj(source, source, damage, 'TuinBleed', DMG_FORCED);
@@ -2813,6 +2823,7 @@ class TuinRPGHandler : EventHandler
 				if (data.BleedPulsesRemaining <= 0)
 				{
 					data.BleedPlayerNumber = -1;
+					data.BleedDamageRemaining = 0;
 					data.BleedResistanceTics = 12 * 35;
 				}
 			}
@@ -2956,7 +2967,7 @@ class TuinRPGHandler : EventHandler
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
 			if (wasCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
-				ApplyRogueBleed(attacker, victimData);
+				ApplyRogueBleed(attacker, victimData, totalDamage);
 			let leechData = attackData;
 			if (leechData && leechData.PerkBloodDrinker > 0 && players[attacker].mo && players[attacker].mo.Health > 0)
 			{

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.18
+
+- Reworked Rogue Bleeding to repeat 100% of the triggering critical hit's damage across eight one-second ticks, strongly rewarding heavy Ambush weapons without disproportionately benefiting rapid-fire weapons.
+- Capped each complete Bleeding effect at 24% of the monster's RPG-scaled maximum health and preserved exact damage across integer-sized ticks.
+- Retained the no-refresh rule and 12-second post-Bleed resistance period for Rogues and Tuin's Lead Spitter.
+
 ## 0.6.17
 
 - Prevented rapid-fire critical hits from refreshing or stacking Rogue Bleeding while it is already active.

@@ -31,6 +31,7 @@ class TuinMonsterData : Inventory
 	int BleedNextTime;
 	int BleedPlayerNumber;
 	int BleedResistanceTics;
+	int BleedDamageRemaining;
 	int SignatureProfile;
 	int SignatureCooldown;
 	int SignatureWindup;
