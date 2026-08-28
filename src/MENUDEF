@@ -302,7 +302,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
 	StaticText "DAMAGE DEALER: +3% DAMAGE", 1
 	StaticText "DOOM GUY: HEALTH REGENERATION TRIGGERS FASTER", 1
-	StaticText "ROGUE: +2% CRIT + LONGER VEIL + SHORTER COOLDOWN", 1
+	StaticText "ROGUE: +2% CRIT + LONGER VEIL + MORE DAMAGE CHARGE", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
 	Class "TuinRPGPerkMenu"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.16
+
+- Replaced Shadow Veil's time cooldown with a damage-powered Shadow Charge meter; waiting no longer restores this powerful ability.
+- Full charge requires `400 + 60 × player level` ordinary weapon damage, allowing sustained boss combat to earn another Veil without making low-level fodder an instant refill.
+- Ambush and Bleeding damage do not generate Shadow Charge, preventing self-refilling Ambush loops.
+- Rogue Class Training now increases charge from damage by 15% per rank while retaining its critical-chance and Veil-duration bonuses.
+- Updated the Rogue HUD and ability feedback to show charge percentage and announce when Shadow Veil becomes ready.
+
 ## 0.6.15
 
 - Replaced Rogue's mandatory stand-still activation with a configurable active Shadow Veil ability, bound to `V` by default.

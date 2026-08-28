@@ -208,20 +208,27 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
-	clearscope static int RogueCooldownDuration(TuinPlayerData data)
-	{
-		return max(210, 525 - (data ? data.PerkClassMastery : 0) * 70);
-	}
-
 	clearscope static int RogueVeilDuration(TuinPlayerData data)
 	{
 		return 210 + (data ? data.PerkClassMastery : 0) * 70;
 	}
 
-	void ReduceRogueCooldown(TuinPlayerData data, int tics)
+	clearscope static int RogueChargeDamageRequired(TuinPlayerData data)
 	{
-		if (!data || data.PlayerClass != 5 || tics <= 0) return;
-		data.RogueCooldownTics = max(0, data.RogueCooldownTics - tics);
+		return 400 + max(1, data ? data.PlayerLevel : 1) * 60;
+	}
+
+	void AddRogueDamageCharge(int playerNumber, TuinPlayerData data, int damage)
+	{
+		if (!data || data.PlayerClass != 5 || damage <= 0 || data.RogueVeilCharge >= 100) return;
+		double exact = damage * 100.0 / RogueChargeDamageRequired(data) *
+			(1.0 + data.PerkClassMastery * 0.15) + data.RogueVeilChargeRemainder;
+		int gained = int(exact);
+		data.RogueVeilChargeRemainder = exact - gained;
+		int oldCharge = data.RogueVeilCharge;
+		data.RogueVeilCharge = min(100, data.RogueVeilCharge + gained);
+		if (oldCharge < 100 && data.RogueVeilCharge >= 100)
+			SetLootNotification(playerNumber, "SHADOW VEIL READY", 4);
 	}
 
 	TuinPlayerData EnsurePlayerData(int playerNumber)
@@ -377,7 +384,9 @@ class TuinRPGHandler : EventHandler
 		data.RogueVeiled = false;
 		data.RogueVeilTics = 0;
 		data.RogueStillTics = 0;
-		data.RogueCooldownTics = RogueCooldownDuration(data);
+		data.RogueCooldownTics = 0;
+		data.RogueVeilCharge = 0;
+		data.RogueVeilChargeRemainder = 0.0;
 		// Preserve the ambush until the weapon reaches its actual damage frame.
 		// Slow custom fists often connect well after the attack button is pressed.
 		if (preserveAmbush) data.RogueAmbushGraceTics = 70;
@@ -437,12 +446,11 @@ class TuinRPGHandler : EventHandler
 
 	void ActivateRogueVeil(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
-		if (!pawn || !data || data.PlayerClass != 5 || data.RogueCooldownTics > 0) return;
+		if (!pawn || !data || data.PlayerClass != 5 || data.RogueVeilCharge < 100) return;
 		data.RogueVeiled = true;
 		data.RogueVeilTics = 0;
 		data.RogueStillTics = 0;
 		data.RogueAmbushHitTime = -1;
-		data.RogueCooldownCritTime = -1;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
 		MaintainRogueDisengagement(playerNumber, pawn);
@@ -452,6 +460,12 @@ class TuinRPGHandler : EventHandler
 	void ApplyRogueStealth(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
+		if (!data.RogueChargeInitialized)
+		{
+			data.RogueChargeInitialized = true;
+			data.RogueVeilCharge = 100;
+			data.RogueCooldownTics = 0;
+		}
 		if (data.RogueVeilOwner != pawn)
 		{
 			data.RogueVeilOwner = pawn;
@@ -460,7 +474,6 @@ class TuinRPGHandler : EventHandler
 			data.RogueStillTics = 0;
 			data.RogueAmbushGraceTics = 0;
 			data.RogueAmbushHitTime = -1;
-			data.RogueCooldownCritTime = -1;
 		}
 		if (data.PlayerClass != 5)
 		{
@@ -468,14 +481,6 @@ class TuinRPGHandler : EventHandler
 			return;
 		}
 		bool attacking = (players[playerNumber].cmd.buttons & (BT_ATTACK | BT_ALTATTACK)) != 0;
-		bool using = (players[playerNumber].cmd.buttons & BT_USE) != 0;
-		bool moving = abs(pawn.Vel.x) + abs(pawn.Vel.y) > 0.25;
-		if (data.RogueCooldownTics > 0)
-		{
-			data.RogueCooldownTics--;
-			// Patient Rogues still gain an advantage, but standing still is never required.
-			if (!moving && !attacking && !using) data.RogueCooldownTics--;
-		}
 		if (data.RogueAmbushGraceTics > 0) data.RogueAmbushGraceTics--;
 		if (data.RogueVeiled)
 		{
@@ -507,6 +512,11 @@ class TuinRPGHandler : EventHandler
 		}
 		data.UnspentSkillPoints--;
 		data.PlayerClass = chosenClass;
+		if (chosenClass == 5)
+		{
+			data.RogueChargeInitialized = true;
+			data.RogueVeilCharge = 100;
+		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
 		ApplyClassHealth(pawn, data);
@@ -2829,6 +2839,8 @@ class TuinRPGHandler : EventHandler
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
 		bool wasCritical = false;
+		bool rogueAmbushAttack = false;
+		int victimHealthBefore = e.Thing.Health;
 		let sourceMonsterData = MonsterDataFromSource(e.DamageSource, e.Inflictor);
 		if (sourceMonsterData)
 		{
@@ -2875,6 +2887,7 @@ class TuinRPGHandler : EventHandler
 					(playerData.PlayerClass == 5 && playerData.RogueAmbushHitTime == level.Time);
 				if (rogueAmbush && victimData)
 				{
+					rogueAmbushAttack = true;
 					let readyWeapon = players[attacker].ReadyWeapon;
 					bool melee = IsRogueMeleeWeapon(readyWeapon);
 					double ambushMultiplier = melee ? (playerData.PerkCapstone ? 30.0 : 20.0) :
@@ -2930,12 +2943,8 @@ class TuinRPGHandler : EventHandler
 			int totalDamage = baseDamage + max(0, bonusDamage);
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
 			let attackData = EnsurePlayerData(attacker);
-			if (wasCritical && attackData && attackData.PlayerClass == 5 &&
-				attackData.RogueCooldownCritTime != level.Time)
-			{
-				attackData.RogueCooldownCritTime = level.Time;
-				ReduceRogueCooldown(attackData, 35);
-			}
+			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack)
+				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
@@ -3010,15 +3019,6 @@ class TuinRPGHandler : EventHandler
 			if (variantIndex >= 0)
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
-			if (playerData && playerData.PlayerClass == 5)
-			{
-				// Every kill refunds three seconds. An Ambush kill refunds five total,
-				// with another three seconds at Class Training rank III.
-				int cooldownRefund = 105;
-				if (playerData.RogueAmbushHitTime == level.Time)
-					cooldownRefund += 70 + (playerData.PerkClassMastery >= 3 ? 105 : 0);
-				ReduceRogueCooldown(playerData, cooldownRefund);
-			}
 			if (playerData && playerData.PlayerClass == 4 && playerData.PerkCapstone && players[killer].mo &&
 				players[killer].mo.Health > 0)
 				players[killer].mo.A_SetHealth(min(players[killer].mo.GetMaxHealth(true), players[killer].mo.Health + 3));
@@ -3494,10 +3494,11 @@ class TuinRPGHandler : EventHandler
 				BreakRogueVeil(e.Player, rogueData);
 				SetLootNotification(e.Player, "SHADOW VEIL CANCELLED", 0);
 			}
-			else if (rogueData.RogueCooldownTics <= 0)
+			else if (rogueData.RogueVeilCharge >= 100)
 				ActivateRogueVeil(e.Player, pawn, rogueData);
 			else
-				SetLootNotification(e.Player, String.Format("SHADOW VEIL: %.1f SEC", rogueData.RogueCooldownTics / 35.0), 0);
+				SetLootNotification(e.Player, String.Format("SHADOW CHARGE: %d%% - DEAL DAMAGE",
+					rogueData.RogueVeilCharge), 0);
 			return;
 		}
 		if (e.Name ~== "tuin_give_levels")
@@ -3858,10 +3859,10 @@ class TuinRPGHandler : EventHandler
 				max(0, RogueVeilDuration(data) - data.RogueVeilTics) / 35.0);
 			statusColor = Font.CR_PURPLE;
 		}
-		else if (data.RogueCooldownTics > 0)
+		else if (data.RogueVeilCharge < 100)
 		{
-			status = String.Format("SHADOW VEIL COOLDOWN  %.1f SEC", data.RogueCooldownTics / 35.0);
-			statusColor = Font.CR_RED;
+			status = String.Format("SHADOW CHARGE  %d%%  -  DEAL DAMAGE", data.RogueVeilCharge);
+			statusColor = Font.CR_GOLD;
 		}
 		else
 		{

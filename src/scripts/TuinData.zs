@@ -404,7 +404,9 @@ class TuinPlayerData : Inventory
 	int RogueVeilTics;
 	int RogueAmbushGraceTics;
 	int RogueAmbushHitTime;
-	int RogueCooldownCritTime;
+	int RogueVeilCharge;
+	double RogueVeilChargeRemainder;
+	bool RogueChargeInitialized;
 	bool RogueVeiled;
 	Actor RogueVeilOwner;
 	class<Ammo> ClassAmmoType[32];
