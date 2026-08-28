@@ -268,26 +268,33 @@ OptionMenu "TuinRPGPerkHub"
 
 OptionMenu "TuinRPGPerks"
 {
-	Title "SPEND PERK POINTS"
-	Position 30
-	StaticText "GENERAL PERKS - 3 RANKS EACH", 1
-	Command "VITAL CORE              +10 MAXIMUM HEALTH / RANK", "netevent tuin_buy_perk 1"
-	Command "SCAVENGER               +10% AMMUNITION GAINED / RANK", "netevent tuin_buy_perk 2"
-	Command "KILLER INSTINCT         +2% CRITICAL CHANCE / RANK", "netevent tuin_buy_perk 3"
-	Command "IRON SKIN               3% LESS DAMAGE TAKEN / RANK", "netevent tuin_buy_perk 4"
-	Command "BLOOD DRINKER           1% DAMAGE LEECH / RANK", "netevent tuin_buy_perk 5"
+	Title "PERK UPGRADES"
+	Position 24
+	StaticText "1. GENERAL PERKS - EVERY CLASS", 1
+	StaticText "1 POINT PER RANK   |   3 RANKS MAX   |   EACH RANK ADDS:", 1
+	Command "VITAL CORE              +10 MAXIMUM HEALTH", "netevent tuin_buy_perk 1"
+	Command "IRON SKIN               3% LESS DAMAGE TAKEN", "netevent tuin_buy_perk 4"
+	Command "KILLER INSTINCT         +2% CRITICAL CHANCE", "netevent tuin_buy_perk 3"
+	Command "BLOOD DRINKER           LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
+	Command "SCAVENGER               +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
 	StaticText " "
-	StaticText "CLASS PERKS - REQUIRE A CHOSEN CLASS", 1
-	Command "CLASS TRAINING", "netevent tuin_buy_perk 6"
-	StaticText "Tank: +3% protection/rank | Healer: +1 healing/rank", 1
-	StaticText "Dealer: +3% damage/rank | Doom Guy: faster regeneration", 1
-	StaticText "Rogue: enters Shadow Veil 0.25 sec faster per rank", 1
+	StaticText "2. CLASS TRAINING - CHOSEN CLASS ONLY", 1
+	StaticText "1 POINT PER RANK   |   3 RANKS MAX   |   YOUR CLASS GAINS:", 1
+	Command "BUY CLASS TRAINING", "netevent tuin_buy_perk 6"
+	StaticText "TANK             +3% DAMAGE RESISTANCE", 1
+	StaticText "HEALER           +1 HEALTH PER HEALING PULSE", 1
+	StaticText "DAMAGE DEALER    +3% DAMAGE", 1
+	StaticText "DOOM GUY         HEALTH REGENERATION TRIGGERS FASTER", 1
+	StaticText "ROGUE            SHADOW VEIL CHARGES 0.25 SEC FASTER", 1
 	StaticText " "
-	Command "CLASS CAPSTONE", "netevent tuin_buy_perk 7"
-	StaticText "Requires level 20 and Class Training II", 1
-	StaticText "Tank: Last Stand | Healer: doubled healing", 1
-	StaticText "Dealer: 2.5x crits | Doom Guy: heal 3 per kill", 1
-	StaticText "Rogue: x6 ranged / x30 fist ambush", 1
+	StaticText "3. CLASS CAPSTONE - FINAL CLASS PERK", 1
+	StaticText "REQUIRES: LEVEL 20 + CLASS TRAINING RANK 2", 1
+	Command "UNLOCK CLASS CAPSTONE", "netevent tuin_buy_perk 7"
+	StaticText "TANK             LAST STAND BELOW 30% HEALTH", 1
+	StaticText "HEALER           DOUBLE ALL CLASS HEALING", 1
+	StaticText "DAMAGE DEALER    CRITICAL HITS DEAL 2.5X DAMAGE", 1
+	StaticText "DOOM GUY         HEAL 3 HEALTH PER KILL", 1
+	StaticText "ROGUE            AMBUSH: X6 RANGED / X30 FISTS", 1
 	Class "TuinRPGPerkMenu"
 }
 

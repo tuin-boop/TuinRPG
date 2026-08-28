@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.7
+
+- Reorganized the perk screen into three numbered steps: universal perks, class training, and the level-20 class capstone.
+- Added concise cost, rank-limit, requirement, and per-class effect explanations.
+- Resized the perk background so it wraps the menu content instead of leaving a large empty lower panel.
+
 ## 0.6.6
 
 - Raised John's partial 25%-per-type ammo refill price from 15 to 100 coins.
