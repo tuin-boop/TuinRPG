@@ -242,18 +242,15 @@ OptionMenu "TuinRPGCharacter"
 OptionMenu "TuinRPGClassChoice"
 {
 	Title "CHOOSE YOUR CLASS"
-	StaticText "Costs 1 perk point - class choice is permanent", 1
+	Position 82
+	StaticText "COST: 1 PERK POINT   |   YOUR CHOICE IS PERMANENT", 1
 	StaticText " "
 	Command "TANK", "netevent tuin_choose_class 1"
-	StaticText "50% less damage taken | 40% less damage dealt | +40% ammo", 1
 	Command "HEALER", "netevent tuin_choose_class 2"
-	StaticText "Heal team 5/2 sec | 25% less damage dealt | +25% ammo", 1
 	Command "DAMAGE DEALER", "netevent tuin_choose_class 3"
-	StaticText "+30% damage | 25% lower maximum health | 10% more damage taken", 1
 	Command "DOOM GUY", "netevent tuin_choose_class 4"
-	StaticText "+10% damage | 10% protection | regenerate 1 HP/10 sec", 1
 	Command "ROGUE", "netevent tuin_choose_class 5"
-	StaticText "20% lower HP | stand still to veil | x4 ambush, x20 fists", 1
+	Class "TuinRPGClassChoiceMenu"
 }
 
 OptionMenu "TuinRPGPerkHub"

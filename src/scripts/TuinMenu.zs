@@ -363,6 +363,68 @@ class TuinRPGFinaleTravelCommand : OptionMenuItemCommand
 	}
 }
 
+class TuinRPGClassChoiceItem : OptionMenuItemCommand
+{
+	override int Draw(OptionMenuDescriptor desc, int y, int indent, bool selected)
+	{
+		string details;
+		if (mLabel ~== "TANK")
+			details = "FRONT-LINE SURVIVOR   |   50% RESISTANCE   |   -40% DAMAGE   |   +40% AMMO";
+		else if (mLabel ~== "HEALER")
+			details = "TEAM SUPPORT   |   HEAL 5 HP / 2 SEC   |   -25% DAMAGE   |   +25% AMMO";
+		else if (mLabel ~== "DAMAGE DEALER")
+			details = "GLASS CANNON   |   +30% DAMAGE   |   -25% MAX HP   |   +10% DAMAGE TAKEN";
+		else if (mLabel ~== "DOOM GUY")
+			details = "BALANCED FIGHTER   |   +10% DAMAGE   |   10% RESISTANCE   |   REGEN 1 HP / 10 SEC";
+		else
+			details = "AMBUSHER   |   -20% MAX HP   |   STAND STILL TO VEIL   |   X4 RANGED / X20 FISTS";
+
+		int center = Screen.GetWidth() / 2;
+		int classX = center - 660;
+		int detailX = center - 330;
+		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE, mLabel);
+		drawText(detailX, y, selected ? Font.CR_RED : Font.CR_GOLD, details);
+		return classX - 16 * CleanXfac_1;
+	}
+}
+
+class TuinRPGClassChoiceMenu : OptionMenu
+{
+	override void Init(Menu parent, OptionMenuDescriptor desc)
+	{
+		Super.Init(parent, desc);
+		for (int i = 0; i < mDesc.mItems.Size(); i++)
+		{
+			let item = mDesc.mItems[i];
+			string command;
+			if (item.mLabel ~== "TANK") command = "netevent tuin_choose_class 1";
+			else if (item.mLabel ~== "HEALER") command = "netevent tuin_choose_class 2";
+			else if (item.mLabel ~== "DAMAGE DEALER") command = "netevent tuin_choose_class 3";
+			else if (item.mLabel ~== "DOOM GUY") command = "netevent tuin_choose_class 4";
+			else if (item.mLabel ~== "ROGUE") command = "netevent tuin_choose_class 5";
+			else continue;
+			mDesc.mItems[i] = new ('TuinRPGClassChoiceItem').Init(item.mLabel, command);
+		}
+		mDesc.CalcIndent();
+	}
+
+	override void Drawer()
+	{
+		int width = Screen.GetWidth();
+		int height = Screen.GetHeight();
+		int panelWidth = min(width - 48, 1800);
+		int panelHeight = min(height - 90, 430);
+		int panelX = (width - panelWidth) / 2;
+		int panelY = 36;
+		Screen.Dim(Color(0, 0, 0), 0.96, panelX, panelY, panelWidth, panelHeight);
+		Screen.DrawLineFrame(Color(0, 0, 0), panelX, panelY, panelWidth, panelHeight, 7);
+		Screen.DrawLineFrame(Color(170, 116, 26), panelX + 7, panelY + 7,
+			panelWidth - 14, panelHeight - 14, 2);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 370, panelY + 112, 2, 224);
+		Super.Drawer();
+	}
+}
+
 class TuinRPGPerkMenu : OptionMenu
 {
 	override void Init(Menu parent, OptionMenuDescriptor desc)

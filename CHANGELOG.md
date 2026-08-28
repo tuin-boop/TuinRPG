@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.10
+
+- Rebuilt class selection as a true two-column table with class names on the left and concise role, strength, and tradeoff explanations on the right.
+- Added a dedicated opaque black panel, thick black outer border, gold inner frame, and column divider.
+
 ## 0.6.9
 
 - Centered all selectable perk category and purchase entries instead of relying on the option menu's right-aligned label column.
