@@ -820,6 +820,17 @@ class TuinRPGHandler : EventHandler
 		return data && data.PlayerClass == 5 ? 5.0 + data.PerkClassMastery * 2.0 : 0.0;
 	}
 
+	clearscope static bool IsGrenadeDamage(Actor inflictor, Name damageType)
+	{
+		if (inflictor)
+		{
+			string projectileName = String.Format("%s", inflictor.GetClassName()).MakeLower();
+			if (projectileName.IndexOf("grenade") >= 0) return true;
+		}
+		string typeName = String.Format("%s", damageType).MakeLower();
+		return typeName.IndexOf("grenade") >= 0;
+	}
+
 	clearscope static int StoredWeaponVariantScore(TuinPlayerData data, int index)
 	{
 		if (!data || index < 0 || index >= data.WeaponVariantCount) return 0;
@@ -2839,7 +2850,8 @@ class TuinRPGHandler : EventHandler
 					e.NewDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 				multiplier *= 1.0 + playerData.Strength * 0.02;
 				int variantIndex = ActiveWeaponVariantIndex(attacker, playerData);
-				if (victimData && FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
+				if (victimData && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+					FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
 				{
 					multiplier *= playerData.PlayerClass == 3 && playerData.PerkCapstone ? 2.5 : 2.0;
 					wasCritical = true;

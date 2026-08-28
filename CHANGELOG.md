@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.13
+
+- Excluded grenade projectiles and grenade damage types from critical-hit rolls, including Rogue Bleeding triggers.
+
 ## 0.6.12
 
 - Clarified in the character menu that every Luck point adds 0.5% critical chance as well as its bonus-XP proc chance.
