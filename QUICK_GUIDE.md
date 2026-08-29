@@ -11,7 +11,7 @@ TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a
 - **Tap E / Use:** Inspect and equip nearby weapon drops or talk to John
 - **Q:** Open the weapon wheel; move the mouse, then press Q, click or Enter to equip
 - **G:** Throw a quick grenade
-- **V:** Use the selected class ability
+- **V:** Use the selected class ability; Doom Guy holds it to ready Blood Punch and releases it to strike
 
 The keys can be changed under **Customize Controls > Tuin RPG**.
 

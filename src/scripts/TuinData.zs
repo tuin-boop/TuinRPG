@@ -442,6 +442,12 @@ class TuinPlayerData : Inventory
 	bool DoomBloodPunchReadyNotified;
 	int DoomBloodPunchFlashTics;
 	bool DoomBloodPunchWeaponHidden;
+	bool DoomBloodPunchHolding;
+	bool DoomBloodPunchReleaseQueued;
+	bool DoomBloodPunchImpactDone;
+	int DoomBloodPunchPrepareTics;
+	int DoomBloodPunchAttackTics;
+	double DoomBloodPunchWeaponStartY;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
 	double ClassAmmoRemainder[32];
@@ -668,15 +674,15 @@ class TuinBloodPunchOverlayWeapon : Weapon
 
 	States
 	{
-	ProjectSIDE:
-		PKFS L 1;
-		PKFS B 1;
-		PKFS D 1;
-		PKFS E 1 Bright;
-		PKFS F 1;
-		PKFS H 1;
-		PKFS J 1;
-		PKFS L 1;
+	ProjectSIDEReady:
+		PKFS A -1;
+		Stop;
+	ProjectSIDEPunch:
+		PKFS LBCD 1;
+		PKFS E 2 Bright;
+		PKFS FGHI 2;
+		PKFS JKL 1;
+		PKFS A 5;
 		Stop;
 	Enhanced:
 		PUN3 A 1 Bright;

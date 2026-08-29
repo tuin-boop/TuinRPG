@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.30
+
+- Reworked Blood Punch into a held first-person stance: hold Class Ability to lower the current weapon and ready the ProjectSIDE fists, then release to strike.
+- Restored ProjectSIDE's complete normal-speed punch sequence instead of compressing it into eight tics.
+- Moved cone damage, healing, crimson effects and the standard `*fist` impact sound onto the animation's contact frame.
+- Restored the previous weapon through its normal raise state after the punch finishes.
+- Changed Class Ability to a press/release key command while retaining the old one-shot command as a compatibility fallback for existing binds.
+
 ## 0.6.29
 
 - Integrated the complete ProjectSIDE weapons/effects compatibility edition into the main TuinRPG PK3, including its animated weapon replacements, effects, sounds, casings, projectiles and credits.

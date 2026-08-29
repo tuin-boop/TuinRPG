@@ -263,7 +263,7 @@ class TuinRPGHandler : EventHandler
 		if (oldCharge < 100 && data.DoomBloodPunchCharge >= 100)
 		{
 			data.DoomBloodPunchReadyNotified = true;
-			SetLootNotification(playerNumber, "BLOOD PUNCH READY - PRESS V", 4);
+			SetLootNotification(playerNumber, "BLOOD PUNCH READY - HOLD V", 4);
 		}
 	}
 
@@ -645,32 +645,105 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
-	void ActivateDoomBloodPunch(int playerNumber, Actor pawn, TuinPlayerData data)
+	void ShowDoomBloodPunchReadyFists(Actor pawn)
 	{
-		if (!pawn || !data || data.PlayerClass != 4 || data.DoomBloodPunchCharge < 100) return;
+		if (!pawn || !pawn.player) return;
+		let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
+		pawn.player.SetPsprite(90, punchProvider.FindState('ProjectSIDEReady'));
+	}
+
+	void RestoreDoomBloodPunchWeapon(Actor pawn, TuinPlayerData data, bool raiseWeapon = true)
+	{
+		if (!pawn || !data) return;
+		if (pawn.player)
+		{
+			pawn.player.SetPsprite(90, null);
+			pawn.player.SetPsprite(PSP_FLASH, null);
+			if (data.DoomBloodPunchWeaponHidden)
+			{
+				if (raiseWeapon && pawn.Health > 0 && pawn.player.ReadyWeapon)
+				{
+					pawn.player.SetPsprite(PSP_WEAPON, pawn.player.ReadyWeapon.GetUpState());
+					let raisedSprite = pawn.player.FindPSprite(PSP_WEAPON);
+					if (raisedSprite)
+					{
+						raisedSprite.y = WEAPONBOTTOM;
+						raisedSprite.alpha = 1.0;
+						raisedSprite.ResetInterpolation();
+					}
+				}
+				else pawn.player.SetPsprite(PSP_WEAPON, null);
+			}
+			else
+			{
+				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+				if (weaponSprite)
+				{
+					weaponSprite.y = data.DoomBloodPunchWeaponStartY;
+					weaponSprite.alpha = 1.0;
+					weaponSprite.ResetInterpolation();
+				}
+			}
+		}
+		data.DoomBloodPunchHolding = false;
+		data.DoomBloodPunchReleaseQueued = false;
+		data.DoomBloodPunchImpactDone = false;
+		data.DoomBloodPunchPrepareTics = 0;
+		data.DoomBloodPunchAttackTics = 0;
+		data.DoomBloodPunchFlashTics = 0;
+		data.DoomBloodPunchWeaponHidden = false;
+		pawn.A_RemoveLight('TuinBloodPunchGlow');
+	}
+
+	void BeginDoomBloodPunchHold(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.PlayerClass != 4 ||
+			data.DoomBloodPunchCharge < 100 || data.DoomBloodPunchHolding ||
+			data.DoomBloodPunchPrepareTics > 0 || data.DoomBloodPunchAttackTics > 0) return;
 		data.DoomBloodPunchCharge = 0;
 		data.DoomBloodPunchChargeRemainder = 0.0;
 		data.DoomBloodPunchReadyNotified = false;
-		data.DoomBloodPunchFlashTics = 8;
-		data.DoomBloodPunchWeaponHidden = true;
-		if (pawn.player)
-		{
-			let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
-			let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
-			if (weaponSprite) weaponSprite.alpha = 0.0;
-			if (flashSprite) flashSprite.alpha = 0.0;
-			let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
-			bool projectSidePunch = TexMan.CheckForTexture("PKFSL0", TexMan.Type_Sprite).IsValid();
-			bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
-			State punchState = projectSidePunch ? punchProvider.FindState('ProjectSIDE') :
-				(enhancedKnuckles ? punchProvider.FindState('Enhanced') : punchProvider.FindState('Classic'));
-			pawn.player.SetPsprite(90, punchState);
-		}
+		data.DoomBloodPunchHolding = true;
+		data.DoomBloodPunchReleaseQueued = false;
+		data.DoomBloodPunchImpactDone = false;
+		data.DoomBloodPunchPrepareTics = 16;
+		data.DoomBloodPunchAttackTics = 0;
+		data.DoomBloodPunchFlashTics = 0;
+		data.DoomBloodPunchWeaponHidden = false;
+		let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+		data.DoomBloodPunchWeaponStartY = weaponSprite ? weaponSprite.y : WEAPONTOP;
+		pawn.player.SetPsprite(PSP_FLASH, null);
+		SetLootNotification(playerNumber, "BLOOD PUNCH READY - RELEASE V TO STRIKE", 4);
+	}
+
+	void StartDoomBloodPunchAttack(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.DoomBloodPunchAttackTics > 0) return;
+		data.DoomBloodPunchHolding = false;
+		data.DoomBloodPunchReleaseQueued = false;
+		data.DoomBloodPunchImpactDone = false;
+		data.DoomBloodPunchAttackTics = 22;
+		data.DoomBloodPunchFlashTics = 22;
+		let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
+		pawn.player.SetPsprite(90, punchProvider.FindState('ProjectSIDEPunch'));
+	}
+
+	void ReleaseDoomBloodPunch(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || (!data.DoomBloodPunchHolding && data.DoomBloodPunchPrepareTics <= 0)) return;
+		data.DoomBloodPunchHolding = false;
+		data.DoomBloodPunchReleaseQueued = true;
+		if (data.DoomBloodPunchPrepareTics <= 0) StartDoomBloodPunchAttack(pawn, data);
+	}
+
+	void ExecuteDoomBloodPunchImpact(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.DoomBloodPunchImpactDone) return;
+		data.DoomBloodPunchImpactDone = true;
 		SpawnBloodPunchCone(pawn);
 		pawn.A_RemoveLight('TuinBloodPunchGlow');
 		pawn.A_AttachLight('TuinBloodPunchGlow', DynamicLight.PulseLight, Color(255, 16, 4), 76, 76,
 			DynamicLight.LF_ATTENUATE, (32, 0, pawn.Height * 0.62), 0.32);
-		pawn.A_StartSound("weapons/punch", CHAN_WEAPON);
 
 		int baseDamage = min(650, 140 + max(1, data.PlayerLevel) * 14);
 		int totalDamage = 0;
@@ -698,8 +771,19 @@ class TuinRPGHandler : EventHandler
 		if (healing > 0 && pawn.Health > 0)
 			pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
 		if (targetsHit > 0)
+		{
+			pawn.A_StartSound("*fist", CHAN_WEAPON);
 			SetLootNotification(playerNumber, String.Format("BLOOD PUNCH! %d HIT - HEALED %d", targetsHit, healing), 5);
+		}
 		else SetLootNotification(playerNumber, "BLOOD PUNCH MISSED - BUILD CHARGE", 0);
+	}
+
+	// Kept for old binds and testing addons: it performs a tap, lowering the
+	// weapon first and automatically punching as soon as the fists are ready.
+	void ActivateDoomBloodPunch(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		BeginDoomBloodPunchHold(playerNumber, pawn, data);
+		ReleaseDoomBloodPunch(pawn, data);
 	}
 
 	void ApplyDoomBloodPunch(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -712,45 +796,48 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.PlayerClass != 4 || pawn.Health <= 0)
 		{
-			data.DoomBloodPunchFlashTics = 0;
-			if (data.DoomBloodPunchWeaponHidden && pawn.player)
-			{
-				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
-				let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
-				if (weaponSprite) weaponSprite.alpha = 1.0;
-				if (flashSprite) flashSprite.alpha = 1.0;
-			}
-			data.DoomBloodPunchWeaponHidden = false;
-			pawn.A_RemoveLight('TuinBloodPunchGlow');
+			if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0 ||
+				data.DoomBloodPunchAttackTics > 0 || data.DoomBloodPunchWeaponHidden)
+				RestoreDoomBloodPunchWeapon(pawn, data, false);
 			return;
 		}
 		if (data.DoomBloodPunchCharge >= 100 && !data.DoomBloodPunchReadyNotified)
 		{
 			data.DoomBloodPunchReadyNotified = true;
-			SetLootNotification(playerNumber, "BLOOD PUNCH READY - PRESS V", 4);
+			SetLootNotification(playerNumber, "BLOOD PUNCH READY - HOLD V", 4);
 		}
-		if (data.DoomBloodPunchFlashTics > 0)
+		if (data.DoomBloodPunchPrepareTics > 0 && pawn.player)
 		{
-			if (pawn.player)
+			let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+			if (weaponSprite)
 			{
-				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
-				let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
-				if (weaponSprite) weaponSprite.alpha = 0.0;
-				if (flashSprite) flashSprite.alpha = 0.0;
+				int loweringStep = 17 - data.DoomBloodPunchPrepareTics;
+				weaponSprite.y = min(double(WEAPONBOTTOM), data.DoomBloodPunchWeaponStartY + loweringStep * 6.0);
 			}
-			data.DoomBloodPunchFlashTics--;
-			if (data.DoomBloodPunchFlashTics <= 0)
+			pawn.player.SetPsprite(PSP_FLASH, null);
+			data.DoomBloodPunchPrepareTics--;
+			if (data.DoomBloodPunchPrepareTics <= 0)
 			{
-				if (pawn.player)
-				{
-					let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
-					let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
-					if (weaponSprite) weaponSprite.alpha = 1.0;
-					if (flashSprite) flashSprite.alpha = 1.0;
-				}
-				data.DoomBloodPunchWeaponHidden = false;
-				pawn.A_RemoveLight('TuinBloodPunchGlow');
+				pawn.player.SetPsprite(PSP_WEAPON, null);
+				data.DoomBloodPunchWeaponHidden = true;
+				ShowDoomBloodPunchReadyFists(pawn);
+				if (data.DoomBloodPunchReleaseQueued) StartDoomBloodPunchAttack(pawn, data);
 			}
+		}
+		else if (data.DoomBloodPunchHolding && data.DoomBloodPunchWeaponHidden && pawn.player)
+		{
+			pawn.player.SetPsprite(PSP_WEAPON, null);
+			if (!pawn.player.FindPSprite(90)) ShowDoomBloodPunchReadyFists(pawn);
+		}
+		if (data.DoomBloodPunchAttackTics > 0)
+		{
+			if (pawn.player) pawn.player.SetPsprite(PSP_WEAPON, null);
+			data.DoomBloodPunchAttackTics--;
+			data.DoomBloodPunchFlashTics = data.DoomBloodPunchAttackTics;
+			if (!data.DoomBloodPunchImpactDone && data.DoomBloodPunchAttackTics <= 18)
+				ExecuteDoomBloodPunchImpact(playerNumber, pawn, data);
+			if (data.DoomBloodPunchAttackTics <= 0)
+				RestoreDoomBloodPunchWeapon(pawn, data, true);
 		}
 	}
 
@@ -794,6 +881,11 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchReadyNotified = false;
 			data.DoomBloodPunchFlashTics = 0;
 			data.DoomBloodPunchWeaponHidden = false;
+			data.DoomBloodPunchHolding = false;
+			data.DoomBloodPunchReleaseQueued = false;
+			data.DoomBloodPunchImpactDone = false;
+			data.DoomBloodPunchPrepareTics = 0;
+			data.DoomBloodPunchAttackTics = 0;
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -3946,8 +4038,17 @@ class TuinRPGHandler : EventHandler
 			EventHandler.SendInterfaceEvent(e.Player, "tuin_toggle_minimap_silent");
 			return;
 		}
-		if (e.Name ~== "tuin_rogue_shadow_veil")
+		if (e.Name ~== "tuin_class_ability_up")
 		{
+			let releaseData = EnsurePlayerData(e.Player);
+			let releasePawn = players[e.Player].mo;
+			if (releaseData && releasePawn && releaseData.PlayerClass == 4)
+				ReleaseDoomBloodPunch(releasePawn, releaseData);
+			return;
+		}
+		if (e.Name ~== "tuin_class_ability_down" || e.Name ~== "tuin_rogue_shadow_veil")
+		{
+			bool legacyAbilityBind = e.Name ~== "tuin_rogue_shadow_veil";
 			let rogueData = EnsurePlayerData(e.Player);
 			let pawn = players[e.Player].mo;
 			if (rogueData && pawn && rogueData.PlayerClass == 1)
@@ -3964,7 +4065,10 @@ class TuinRPGHandler : EventHandler
 			if (rogueData && pawn && rogueData.PlayerClass == 4)
 			{
 				if (rogueData.DoomBloodPunchCharge >= 100)
-					ActivateDoomBloodPunch(e.Player, pawn, rogueData);
+				{
+					BeginDoomBloodPunchHold(e.Player, pawn, rogueData);
+					if (legacyAbilityBind) ReleaseDoomBloodPunch(pawn, rogueData);
+				}
 				else
 					SetLootNotification(e.Player, String.Format("BLOOD PUNCH CHARGE: %d%% - DEAL DAMAGE",
 						rogueData.DoomBloodPunchCharge), 0);
@@ -4444,10 +4548,28 @@ class TuinRPGHandler : EventHandler
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 4) return;
 		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
-		string status = data.DoomBloodPunchCharge < 100 ?
-			String.Format("BLOOD PUNCH CHARGE  %d%%  -  DEAL DAMAGE", data.DoomBloodPunchCharge) :
-			"BLOOD PUNCH READY  -  PRESS V";
-		int statusColor = data.DoomBloodPunchCharge < 100 ? Font.CR_GOLD : Font.CR_GREEN;
+		string status;
+		int statusColor;
+		if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0)
+		{
+			status = "BLOOD PUNCH ARMED  -  RELEASE V TO STRIKE";
+			statusColor = Font.CR_GREEN;
+		}
+		else if (data.DoomBloodPunchAttackTics > 0)
+		{
+			status = "BLOOD PUNCH!";
+			statusColor = Font.CR_RED;
+		}
+		else if (data.DoomBloodPunchCharge < 100)
+		{
+			status = String.Format("BLOOD PUNCH CHARGE  %d%%  -  DEAL DAMAGE", data.DoomBloodPunchCharge);
+			statusColor = Font.CR_GOLD;
+		}
+		else
+		{
+			status = "BLOOD PUNCH READY  -  HOLD V";
+			statusColor = Font.CR_GREEN;
+		}
 		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
 		int panelX = screenWidth - panelWidth - 10;
 		int panelY = 10;
@@ -4504,7 +4626,7 @@ class TuinRPGHandler : EventHandler
 		let overlayData = GetPlayerData(players[pnum].mo);
 		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomBloodPunchFlashTics > 0)
 		{
-			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 8.0;
+			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 22.0;
 			Screen.Dim(Color(155, 0, 0), flashStrength, 0, 0, sw, sh);
 		}
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
