@@ -169,10 +169,11 @@ class TuinRPGCharacterMenu : OptionMenu
 		int playerHaste = min(75, data.Agility * 2);
 		double luckCritical = data.Luck * 0.5;
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data);
-		double classDamage = data.PlayerClass == 1 ? 0.60 : data.PlayerClass == 2 ? 0.75 :
+		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 0.50) : data.PlayerClass == 2 ? 0.75 :
 			data.PlayerClass == 3 ? 1.30 + data.PerkClassMastery * 0.03 : data.PlayerClass == 4 ? 1.10 : 1.0;
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
-		int firingSpeed = min(75, data.Agility * 2 + weaponHaste);
+		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
+			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
 		double criticalChance = TuinRPGHandler.TotalCriticalChance(data, variantIndex);
 		double bonusXPChance = (1.0 - exp(log(0.97) * max(0, data.Luck))) * 100.0;
 		double classProtection = data.PlayerClass == 1 ? 0.50 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
@@ -371,7 +372,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 	{
 		string details;
 		if (mLabel ~== "TANK")
-			details = "FRONT-LINE SURVIVOR   |   50% RESISTANCE   |   -40% DAMAGE   |   +40% AMMO";
+			details = "300 BASE HP   |   50% RESISTANCE / DAMAGE   |   +50% AMMO   |   V: OVERDRIVE";
 		else if (mLabel ~== "HEALER")
 			details = "TEAM SUPPORT   |   HEAL 5 HP / 2 SEC   |   -25% DAMAGE   |   +25% AMMO";
 		else if (mLabel ~== "DAMAGE DEALER")

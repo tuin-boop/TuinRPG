@@ -418,6 +418,13 @@ class TuinPlayerData : Inventory
 	bool RogueChargeInitialized;
 	bool RogueVeiled;
 	Actor RogueVeilOwner;
+	int TankOverdriveCharge;
+	double TankOverdriveChargeRemainder;
+	bool TankChargeInitialized;
+	bool TankReadyNotified;
+	bool TankOverdriveActive;
+	int TankOverdriveTics;
+	Actor TankOverdriveOwner;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
 	double ClassAmmoRemainder[32];
@@ -441,6 +448,21 @@ class TuinPlayerData : Inventory
 	int AppliedFlashlightIntensity;
 	int AppliedFlashlightPitch;
 	bool AppliedFlashlightEnabled;
+
+	clearscope int TankOverdriveDamageRequired()
+	{
+		return 800 + max(1, PlayerLevel) * 50;
+	}
+
+	void AddTankOverdriveCharge(int weightedDamage)
+	{
+		if (PlayerClass != 1 || TankOverdriveActive || weightedDamage <= 0 || TankOverdriveCharge >= 100) return;
+		double exact = weightedDamage * 100.0 / TankOverdriveDamageRequired() + TankOverdriveChargeRemainder;
+		int gained = int(exact);
+		TankOverdriveChargeRemainder = exact - gained;
+		TankOverdriveCharge = min(100, TankOverdriveCharge + gained);
+		if (TankOverdriveCharge < 100) TankReadyNotified = false;
+	}
 
 	clearscope int FindEquippedVariant(class<Weapon> weaponType)
 	{
@@ -559,6 +581,11 @@ class TuinPlayerData : Inventory
 
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
+		// The active pass belongs to the attacker's inventory. Apply the Tank's
+		// weapon-output rule here so both stock and custom weapons use the same
+		// reliable 50% / 125% factors before the hit reaches its target.
+		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed')
+			newdamage = max(1, int(newdamage * (TankOverdriveActive ? 1.25 : 0.50) + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED))
 		{
 			double multiplier = 1.0;
@@ -572,6 +599,17 @@ class TuinPlayerData : Inventory
 			if (PlayerClass == 1 && PerkCapstone && Owner && Owner.Health * 100 <= Owner.GetMaxHealth(true) * 30)
 				multiplier *= 0.75;
 			newdamage = max(1, int(newdamage * multiplier + 0.5));
+			if (PlayerClass == 1 && Owner)
+			{
+				bool directHit = (inflictor || source) && damageType != 'Poison' && damageType != 'TuinBleed' &&
+					damageType != 'Telefrag' && damageType != 'Crush';
+				if (directHit)
+				{
+					int maximumHit = max(1, int(Owner.GetMaxHealth(true) * 0.20 + 0.5));
+					newdamage = min(newdamage, maximumHit);
+				}
+				AddTankOverdriveCharge(min(newdamage, max(0, Owner.Health)) * 4);
+			}
 		}
 	}
 	Default

@@ -218,6 +218,23 @@ class TuinRPGHandler : EventHandler
 		return 400 + max(1, data ? data.PlayerLevel : 1) * 60;
 	}
 
+	clearscope static int TankOverdriveDuration()
+	{
+		return 350;
+	}
+
+	void AddTankDamageCharge(int playerNumber, TuinPlayerData data, int damage)
+	{
+		if (!data || data.PlayerClass != 1 || data.TankOverdriveActive || damage <= 0) return;
+		int oldCharge = data.TankOverdriveCharge;
+		data.AddTankOverdriveCharge(damage);
+		if (oldCharge < 100 && data.TankOverdriveCharge >= 100)
+		{
+			data.TankReadyNotified = true;
+			SetLootNotification(playerNumber, "OVERDRIVE READY - PRESS V", 4);
+		}
+	}
+
 	void AddRogueDamageCharge(int playerNumber, TuinPlayerData data, int damage)
 	{
 		if (!data || data.PlayerClass != 5 || damage <= 0 || data.RogueVeilCharge >= 100) return;
@@ -289,14 +306,18 @@ class TuinRPGHandler : EventHandler
 			data.ClassHealthOwner = pawn;
 			data.AppliedClassHealthPenalty = 0;
 		}
-		int unpenalizedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty);
-		int desiredPenalty = data.PlayerClass == 3 ? max(1, int(unpenalizedMaximum * 0.25 + 0.5)) :
-			data.PlayerClass == 5 ? max(1, int(unpenalizedMaximum * 0.20 + 0.5)) : 0;
-		int delta = desiredPenalty - data.AppliedClassHealthPenalty;
+		int unmodifiedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty);
+		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
+		int desiredModifier = data.PlayerClass == 1 ? 300 - baseMaximum :
+			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
+			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) : 0;
+		int currentModifier = -data.AppliedClassHealthPenalty;
+		int delta = desiredModifier - currentModifier;
 		if (delta != 0)
 		{
-			pp.Stamina -= delta;
-			data.AppliedClassHealthPenalty = desiredPenalty;
+			pp.Stamina += delta;
+			data.AppliedClassHealthPenalty = -desiredModifier;
+			if (delta > 0) pawn.A_SetHealth(pawn.Health + delta);
 			if (pawn.Health > pawn.GetMaxHealth(true)) pawn.A_SetHealth(pawn.GetMaxHealth(true));
 		}
 	}
@@ -324,7 +345,7 @@ class TuinRPGHandler : EventHandler
 	void ApplyClassAmmoBonus(Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
-		double rate = (data.PlayerClass == 1 ? 0.40 : data.PlayerClass == 2 ? 0.25 : 0.0) +
+		double rate = (data.PlayerClass == 1 ? 0.50 : data.PlayerClass == 2 ? 0.25 : 0.0) +
 			data.PerkScavenger * 0.10;
 		if (rate <= 0.0) return;
 		for (Inventory item = pawn.Inv; item; item = item.Inv)
@@ -493,6 +514,77 @@ class TuinRPGHandler : EventHandler
 		data.RogueStillTics = 0;
 	}
 
+	void ActivateTankOverdrive(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 1 || data.TankOverdriveActive || data.TankOverdriveCharge < 100) return;
+		data.TankOverdriveActive = true;
+		data.TankOverdriveTics = TankOverdriveDuration();
+		data.TankOverdriveCharge = 100;
+		data.TankReadyNotified = true;
+		data.TankOverdriveChargeRemainder = 0.0;
+		pawn.A_RemoveLight('TuinTankOverdriveGlow');
+		pawn.A_AttachLight('TuinTankOverdriveGlow', DynamicLight.PulseLight, Color(255, 24, 8), 62, 128,
+			DynamicLight.LF_ATTENUATE, (0, 0, pawn.Height * 0.52), 0.45);
+		SetLootNotification(playerNumber, "TANK OVERDRIVE - 10 SECONDS", 5);
+	}
+
+	void ApplyTankOverdrive(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		if (!data.TankChargeInitialized)
+		{
+			data.TankChargeInitialized = true;
+			data.TankOverdriveCharge = 0;
+		}
+		if (data.TankOverdriveOwner != pawn)
+		{
+			bool interrupted = data.TankOverdriveActive;
+			if (data.TankOverdriveOwner) data.TankOverdriveOwner.A_RemoveLight('TuinTankOverdriveGlow');
+			data.TankOverdriveOwner = pawn;
+			data.TankOverdriveActive = false;
+			data.TankOverdriveTics = 0;
+			if (interrupted)
+			{
+				data.TankOverdriveCharge = 0;
+				data.TankOverdriveChargeRemainder = 0.0;
+				data.TankReadyNotified = false;
+			}
+		}
+		if (data.PlayerClass != 1 || pawn.Health <= 0)
+		{
+			if (data.TankOverdriveActive || data.TankOverdriveTics > 0)
+			{
+				data.TankOverdriveActive = false;
+				data.TankOverdriveTics = 0;
+				data.TankOverdriveCharge = 0;
+				data.TankOverdriveChargeRemainder = 0.0;
+				data.TankReadyNotified = false;
+				pawn.A_RemoveLight('TuinTankOverdriveGlow');
+			}
+			return;
+		}
+		if (!data.TankOverdriveActive)
+		{
+			if (data.TankOverdriveCharge >= 100 && !data.TankReadyNotified)
+			{
+				data.TankReadyNotified = true;
+				SetLootNotification(playerNumber, "OVERDRIVE READY - PRESS V", 4);
+			}
+			return;
+		}
+		data.TankOverdriveTics--;
+		if (data.TankOverdriveTics <= 0)
+		{
+			data.TankOverdriveActive = false;
+			data.TankOverdriveTics = 0;
+			data.TankOverdriveCharge = 0;
+			data.TankOverdriveChargeRemainder = 0.0;
+			data.TankReadyNotified = false;
+			pawn.A_RemoveLight('TuinTankOverdriveGlow');
+			SetLootNotification(playerNumber, "OVERDRIVE ENDED - BUILD CHARGE", 0);
+		}
+	}
+
 	void ChoosePlayerClass(int playerNumber, int chosenClass)
 	{
 		let data = EnsurePlayerData(playerNumber);
@@ -516,6 +608,14 @@ class TuinRPGHandler : EventHandler
 		{
 			data.RogueChargeInitialized = true;
 			data.RogueVeilCharge = 100;
+		}
+		else if (chosenClass == 1)
+		{
+			data.TankChargeInitialized = true;
+			data.TankOverdriveCharge = 0;
+			data.TankOverdriveActive = false;
+			data.TankOverdriveTics = 0;
+			data.TankReadyNotified = false;
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -2951,7 +3051,7 @@ class TuinRPGHandler : EventHandler
 			let playerData = EnsurePlayerData(attacker);
 			if (playerData)
 			{
-				if (playerData.PlayerClass == 1) playerBaseDamageFactor = 0.60;
+				if (playerData.PlayerClass == 1) playerBaseDamageFactor = 1.0;
 				else if (playerData.PlayerClass == 2) playerBaseDamageFactor = 0.75;
 				else if (playerData.PlayerClass == 3)
 					multiplier *= 1.30 + playerData.PerkClassMastery * 0.03;
@@ -3024,6 +3124,8 @@ class TuinRPGHandler : EventHandler
 			let attackData = EnsurePlayerData(attacker);
 			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack)
 				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
+			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
+				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
@@ -3261,13 +3363,17 @@ class TuinRPGHandler : EventHandler
 		double speedBonus = data.Agility * 0.02;
 		int variantIndex = data.FindEquippedVariant((class<Weapon>)(weapon.GetClass()));
 		if (variantIndex >= 0) speedBonus += data.VariantHastePercent[variantIndex] * 0.01;
-		// Combined Agility and weapon haste are capped at +75% for compatibility.
-		AgilityAccumulator[playerNumber] += min(0.75, speedBonus);
-		if (AgilityAccumulator[playerNumber] >= 1.0)
+		if (data.PlayerClass == 1 && data.TankOverdriveActive) speedBonus += 1.50;
+		// Normal haste remains capped at +75%; Tank Overdrive raises the safe combined ceiling to +200%.
+		double speedCap = data.PlayerClass == 1 && data.TankOverdriveActive ? 2.0 : 0.75;
+		AgilityAccumulator[playerNumber] += min(speedCap, speedBonus);
+		int extraSteps = 0;
+		while (AgilityAccumulator[playerNumber] >= 1.0 && extraSteps < 2 && psp.CurState && psp.Tics > 0)
 		{
 			AgilityAccumulator[playerNumber] -= 1.0;
 			psp.Tics--;
 			if (psp.Tics == 0) psp.SetState(psp.CurState.NextState);
+			extraSteps++;
 		}
 	}
 
@@ -3478,6 +3584,7 @@ class TuinRPGHandler : EventHandler
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
+			ApplyTankOverdrive(i, players[i].mo, playerData);
 			ApplyFlashlight(players[i].mo, playerData);
 			ApplyHeldGodlyGlow(i, playerData);
 			ApplyAgility(i, playerData);
@@ -3563,9 +3670,20 @@ class TuinRPGHandler : EventHandler
 		{
 			let rogueData = EnsurePlayerData(e.Player);
 			let pawn = players[e.Player].mo;
+			if (rogueData && pawn && rogueData.PlayerClass == 1)
+			{
+				if (rogueData.TankOverdriveActive)
+					SetLootNotification(e.Player, String.Format("OVERDRIVE ACTIVE: %.1f SEC",
+						max(0, rogueData.TankOverdriveTics) / 35.0), 0);
+				else if (rogueData.TankOverdriveCharge >= 100)
+					ActivateTankOverdrive(e.Player, pawn, rogueData);
+				else
+					SetLootNotification(e.Player, String.Format("OVERDRIVE CHARGE: %d%%", rogueData.TankOverdriveCharge), 0);
+				return;
+			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
 			{
-				SetLootNotification(e.Player, "SHADOW VEIL REQUIRES THE ROGUE CLASS", 0);
+				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK OR ROGUE", 0);
 				return;
 			}
 			if (rogueData.RogueVeiled)
@@ -3900,7 +4018,8 @@ class TuinRPGHandler : EventHandler
 			double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
 			panelY = playerStatusY + int(34 * statusScale) + 7;
 			let targetPlayerData = GetPlayerData(players[playerNumber].mo);
-			if (targetPlayerData && targetPlayerData.PlayerClass == 5) panelY += int(22 * statusScale) + 5;
+			if (targetPlayerData && (targetPlayerData.PlayerClass == 1 || targetPlayerData.PlayerClass == 5))
+				panelY += int(22 * statusScale) + 5;
 			panelWidth = mapSize;
 		}
 
@@ -3968,6 +4087,50 @@ class TuinRPGHandler : EventHandler
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
 	}
 
+	ui void DrawTankStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 1) return;
+		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		string status;
+		int statusColor;
+		if (data.TankOverdriveActive)
+		{
+			status = String.Format("TANK OVERDRIVE  %.1f SEC  -  +150%% DAMAGE / FIRE SPEED",
+				max(0, data.TankOverdriveTics) / 35.0);
+			statusColor = Font.CR_RED;
+		}
+		else if (data.TankOverdriveCharge < 100)
+		{
+			status = String.Format("OVERDRIVE CHARGE  %d%%  -  DEAL OR TAKE DAMAGE", data.TankOverdriveCharge);
+			statusColor = Font.CR_GOLD;
+		}
+		else
+		{
+			status = "OVERDRIVE READY  -  PRESS V";
+			statusColor = Font.CR_GREEN;
+		}
+		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		int panelX = screenWidth - panelWidth - 10;
+		int panelY = 10;
+		if (CVInt('tuin_minimap_enabled', 1))
+		{
+			int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, screenHeight - 32));
+			double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
+			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+			panelWidth = mapSize;
+		}
+		Screen.Dim(Color(15, 2, 2), 0.94, panelX, panelY, panelWidth, int(20 * scale));
+		Screen.DrawLineFrame(Color(235, 42, 18), panelX, panelY, panelWidth, int(20 * scale), 2);
+		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
+		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
+			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+	}
+
 	ui void DrawCurrentTargetAffixes(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
@@ -4004,6 +4167,7 @@ class TuinRPGHandler : EventHandler
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
+		DrawTankStatus(pnum, font, sw, sh, hudScale);
 		DrawCurrentTargetPanel(pnum, font, sw, sh, hudScale);
 		DrawCurrentTargetAffixes(pnum, font, sw, sh, hudScale);
 		if (DifficultyNoticeTics[pnum] > 0 && DifficultyNoticeTitle[pnum].Length())
