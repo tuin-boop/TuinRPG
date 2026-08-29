@@ -140,6 +140,8 @@ Chance values are literal percentages: `1.0` is 1%, while `100` guarantees that 
 
 Rogue Bleeding halves all monster healing while it remains active, including Healer, Regenerating, and Vampiric recovery.
 
+TuinRPG's added player damage uses diminishing overflow during half-second bursts against stronger enemies. Base weapon damage is never reduced. Rare-through-Mythic monsters receive the first 25% of maximum health in RPG bonus damage normally and only 25% of overflow; ordinary RPG bosses use a 15% threshold with 20% overflow, while iconic finale bosses use an 8% threshold with 15% overflow. Grouping damage into a short burst prevents BFG tracers, shotgun pellets, and rapid attacks from receiving a fresh threshold for every individual hit.
+
 Affix effect strengths have their own tuning submenu. Forced/scripted damage bypasses Armored and player Endurance so telefrags and mandatory map logic remain reliable.
 
 ## Signature attacks

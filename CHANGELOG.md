@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.19
+
+- Added half-second diminishing-overflow windows for TuinRPG bonus damage, preventing critical BFG tracers, shotgun pellets, and rapid bursts from bypassing boss protection as separate hits.
+- Left all original weapon damage untouched; only damage added by TuinRPG multipliers is compressed.
+- Rare-through-Mythic enemies now use a 25%-health bonus threshold with 25% overflow, normal bosses use 15% with 20% overflow, and iconic finale bosses use 8% with 15% overflow.
+
 ## 0.6.18
 
 - Reworked Rogue Bleeding to repeat 100% of the triggering critical hit's damage across eight one-second ticks, strongly rewarding heavy Ambush weapons without disproportionately benefiting rapid-fire weapons.

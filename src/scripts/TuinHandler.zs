@@ -2796,6 +2796,33 @@ class TuinRPGHandler : EventHandler
 		data.LastPlayerNumber = playerNumber;
 	}
 
+	int DiminishRPGBonusDamage(Actor victim, TuinMonsterData data, int rawBonusDamage)
+	{
+		if (!victim || !data || rawBonusDamage <= 0) return max(0, rawBonusDamage);
+		// Rarity 6 is the explicit TuinRPG boss state. Do not use Doom's BOSSDEATH
+		// flag here: Baron-family actors carry it even during ordinary encounters.
+		bool rpgBoss = data.MonsterRarity >= 6;
+		bool finaleBoss = data.MonsterRarity >= 6 && IsIconicEpisodeBoss(victim);
+		// Common and Uncommon monsters remain completely unrestricted.
+		if (!rpgBoss && data.MonsterRarity < 2) return rawBonusDamage;
+
+		double thresholdPercent = finaleBoss ? 0.08 : rpgBoss ? 0.15 : 0.25;
+		double overflowFactor = finaleBoss ? 0.15 : rpgBoss ? 0.20 : 0.25;
+		int threshold = max(1, int(max(1, data.ScaledMaxHealth) * thresholdPercent + 0.5));
+		// One short window catches BFG tracers, shotgun pellets, and rapid bursts as
+		// a group instead of allowing every individual damage event a fresh limit.
+		if (data.RPGBonusWindowEndTime <= level.Time)
+		{
+			data.RPGBonusWindowEndTime = level.Time + 18;
+			data.RPGBonusWindowRawDamage = 0;
+		}
+		int unrestricted = min(rawBonusDamage, max(0, threshold - data.RPGBonusWindowRawDamage));
+		int overflow = max(0, rawBonusDamage - unrestricted);
+		data.RPGBonusWindowRawDamage = min(2000000000,
+			data.RPGBonusWindowRawDamage + rawBonusDamage);
+		return unrestricted + int(overflow * overflowFactor + 0.5);
+	}
+
 	void UpdateMonsterBleeds()
 	{
 		foreach (sector: level.Sectors)
@@ -2949,6 +2976,8 @@ class TuinRPGHandler : EventHandler
 			}
 		}
 		int bonusDamage = int(e.Damage * playerBaseDamageFactor * (multiplier - 1.0) + 0.5);
+		if (victimData && bonusDamage > 0)
+			bonusDamage = DiminishRPGBonusDamage(e.Thing, victimData, bonusDamage);
 		if (bonusDamage > 0 && e.Thing.Health > 0)
 		{
 			ApplyingBonusDamage = true;
