@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.31
+
+- Corrected Blood Punch fist placement by running the ProjectSIDE animation on the native weapon psprite, with its normal centered weapon-space origin and bobbing.
+- Migrated `V` to the press/release Class Ability binding automatically so existing one-shot bindings no longer release Blood Punch immediately.
+- Preserved the held stance indefinitely until `V` is released, then restored the previous weapon through its normal raise animation.
+
 ## 0.6.30
 
 - Reworked Blood Punch into a held first-person stance: hold Class Ability to lower the current weapon and ready the ProjectSIDE fists, then release to strike.

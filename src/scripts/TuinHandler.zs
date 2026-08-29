@@ -649,7 +649,10 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!pawn || !pawn.player) return;
 		let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
-		pawn.player.SetPsprite(90, punchProvider.FindState('ProjectSIDEReady'));
+		// Use the actual weapon layer so ProjectSIDE's fist sprite offsets are
+		// interpreted in normal 320x200 weapon space. A generic overlay layer
+		// anchors these wide sprites at the screen edge instead.
+		pawn.player.SetPsprite(PSP_WEAPON, punchProvider.FindState('ProjectSIDEReady'));
 	}
 
 	void RestoreDoomBloodPunchWeapon(Actor pawn, TuinPlayerData data, bool raiseWeapon = true)
@@ -725,7 +728,7 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchAttackTics = 22;
 		data.DoomBloodPunchFlashTics = 22;
 		let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
-		pawn.player.SetPsprite(90, punchProvider.FindState('ProjectSIDEPunch'));
+		pawn.player.SetPsprite(PSP_WEAPON, punchProvider.FindState('ProjectSIDEPunch'));
 	}
 
 	void ReleaseDoomBloodPunch(Actor pawn, TuinPlayerData data)
@@ -826,12 +829,10 @@ class TuinRPGHandler : EventHandler
 		}
 		else if (data.DoomBloodPunchHolding && data.DoomBloodPunchWeaponHidden && pawn.player)
 		{
-			pawn.player.SetPsprite(PSP_WEAPON, null);
-			if (!pawn.player.FindPSprite(90)) ShowDoomBloodPunchReadyFists(pawn);
+			if (!pawn.player.FindPSprite(PSP_WEAPON)) ShowDoomBloodPunchReadyFists(pawn);
 		}
 		if (data.DoomBloodPunchAttackTics > 0)
 		{
-			if (pawn.player) pawn.player.SetPsprite(PSP_WEAPON, null);
 			data.DoomBloodPunchAttackTics--;
 			data.DoomBloodPunchFlashTics = data.DoomBloodPunchAttackTics;
 			if (!data.DoomBloodPunchImpactDone && data.DoomBloodPunchAttackTics <= 18)
@@ -4613,6 +4614,17 @@ class TuinRPGHandler : EventHandler
 		int targetColor = TargetRarity[playerNumber] > 0 ? RarityColor(TargetRarity[playerNumber]) : Font.CR_WHITE;
 		Screen.DrawText(font, targetColor, (screenWidth - font.StringWidth(affixes) * affixScale) / 2,
 			panelY + int(16 * scale), affixes, DTA_ScaleX, affixScale, DTA_ScaleY, affixScale);
+	}
+
+	override void UiTick()
+	{
+		// v0.6.30 changed Class Ability from a one-shot event to a +/- command.
+		// Migrate keys carrying the old default so held input also works for
+		// existing configurations; new installs are covered by KEYCONF.
+		array<int> legacyKeys;
+		Bindings.GetAllKeysForCommand(legacyKeys, "netevent tuin_rogue_shadow_veil");
+		for (int i = 0; i < legacyKeys.Size(); i++)
+			Bindings.SetBind(legacyKeys[i], "+tuin_class_ability");
 	}
 
 	override void RenderOverlay(RenderEvent e)
