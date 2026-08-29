@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.32
+
+- Fixed the E2M1 runtime abort caused by UZDoom rejecting key-binding changes outside menu code.
+- Replaced binding mutation with a safe legacy-input translator: an old one-shot `V` configuration now sends proper press and release events without modifying the player's controls.
+- Retained the corrected native weapon-layer positioning for the held ProjectSIDE fists.
+
 ## 0.6.31
 
 - Corrected Blood Punch fist placement by running the ProjectSIDE animation on the native weapon psprite, with its normal centered weapon-space origin and bobbing.

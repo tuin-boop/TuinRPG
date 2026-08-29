@@ -4616,15 +4616,25 @@ class TuinRPGHandler : EventHandler
 			panelY + int(16 * scale), affixes, DTA_ScaleX, affixScale, DTA_ScaleY, affixScale);
 	}
 
-	override void UiTick()
+	override bool InputProcess(InputEvent e)
 	{
-		// v0.6.30 changed Class Ability from a one-shot event to a +/- command.
-		// Migrate keys carrying the old default so held input also works for
-		// existing configurations; new installs are covered by KEYCONF.
-		array<int> legacyKeys;
-		Bindings.GetAllKeysForCommand(legacyKeys, "netevent tuin_rogue_shadow_veil");
-		for (int i = 0; i < legacyKeys.Size(); i++)
-			Bindings.SetBind(legacyKeys[i], "+tuin_class_ability");
+		// UZDoom does not permit changing bindings from an event handler. For
+		// existing installs where V still carries the old one-shot command,
+		// translate the physical key-down/key-up pair without altering config.
+		if (gamestate != GS_LEVEL || e.KeyScan != 0x2F ||
+			!(Bindings.GetBinding(e.KeyScan) ~== "netevent tuin_rogue_shadow_veil"))
+			return false;
+		if (e.Type == InputEvent.Type_KeyDown)
+		{
+			EventHandler.SendNetworkEvent("tuin_class_ability_down");
+			return true;
+		}
+		if (e.Type == InputEvent.Type_KeyUp)
+		{
+			EventHandler.SendNetworkEvent("tuin_class_ability_up");
+			return true;
+		}
+		return false;
 	}
 
 	override void RenderOverlay(RenderEvent e)

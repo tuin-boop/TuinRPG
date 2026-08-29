@@ -112,7 +112,7 @@ PowerShell creates the distributable `TuinRPG.pk3` directly from `src`:
 
 For balance testing, open the console and enter `netevent tuin_give_levels 10` to grant ten player levels. The command accepts 1-100 levels at a time and awards the same stat points and every-fifth-level perk points as ordinary leveling. Open the character screen with `K`, then choose **Class and Perks** to select a permanent class and spend later points.
 
-To test Blood Punch instantly, enter `netevent tuin_test_blood_punch`. This testing command selects Doom Guy and fills Blood Punch; hold and release `V` to use it, then repeat the command whenever another full charge is needed. Version 0.6.31 automatically migrates `V` to the press/release **Class Ability** binding for existing installations.
+To test Blood Punch instantly, enter `netevent tuin_test_blood_punch`. This testing command selects Doom Guy and fills Blood Punch; hold and release `V` to use it, then repeat the command whenever another full charge is needed. New installations bind **Class Ability** correctly, while version 0.6.32 safely translates the old one-shot `V` binding into press/release input without changing the player's configuration at runtime.
 
 For predictable load order, put TuinRPG after maps and visual/content packs. The separate `ProjectSIDE_WeaponsEffects_Compat.pk3` must not be loaded with this version because its complete contents are already bundled. Other weapon/gameplay replacements may override or conflict with the integrated ProjectSIDE weapons and are no longer part of the primary supported configuration.
 
