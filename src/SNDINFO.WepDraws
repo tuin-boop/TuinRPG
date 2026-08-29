@@ -1,0 +1,51 @@
+// Weapon Sounds --------------------------------------------
+
+//Fists---------------------
+weapons/draw	WEAPDRAW
+$volume weapons/draw 0.7
+
+//Pistol----------
+weapons/pistol/draw	PISTDRAW
+$volume weapons/pistol/draw 0.7
+
+//Rifle--------
+weapons/rifle/draw WEAPDRAW
+$volume weapons/rifle/draw 0.7
+
+// Shotgun ----------
+weapons/shotgun/draw	STGNDRAW
+$volume weapons/shotgun/draw 0.7
+
+// SUPER Shotgun------
+weapons/ssg/draw	SSGDRAW
+$volume weapons/ssg/draw 0.7
+
+// Chaingun--------
+weapons/chaingun/draw	CHGNDRAW
+$volume weapons/chaingun/draw 0.7
+
+
+// Rocket Launcher-----
+weapons/rlan/draw	RLANDRAW
+$volume weapons/rlan/draw 0.7
+
+// Plasma Rifle -----
+weapons/plasma/draw		PLSDRAW
+$volume weapons/plasma/draw	0.7
+
+// Bio Force Gun ;)
+weapons/bfg/draw	BFGDRAW
+$volume weapons/bfg/draw 0.7
+
+//Monster Sounds
+
+// Zombieman
+grunt/start 	DSPOSATK
+$volume grunt/start 0.3
+
+//ShotgunGuy
+shotguy/start 	STGNDRAW
+$volume shotguy/start 0.3
+
+//Chaingunguy
+chainguy/start CHGNDRAW

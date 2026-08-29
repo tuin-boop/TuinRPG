@@ -1,0 +1,18 @@
+psgrenade/pin      DSGRPIN
+psgrenade/toss     DSGRTOSS
+psgrenade/bounce   DSGRDROP
+psgrenade/pickup   DSGRSELE
+$random psgrenade/explode { psgrenade/explode1 psgrenade/explode2 psgrenade/explode3 }
+psgrenade/explode1 GRENEXP1
+psgrenade/explode2 GRENEXP2
+psgrenade/explode3 GRENEXP3
+
+$random psgrenade/explode_distant { psgrenade/distant1 psgrenade/distant2 psgrenade/distant3 }
+psgrenade/distant1 GRENEXP4
+psgrenade/distant2 GRENEXP5
+psgrenade/distant3 GRENEXP6
+
+$rolloff psgrenade/explode 900 1600
+$limit psgrenade/explode 6
+$rolloff psgrenade/explode_distant 1000 6000
+$limit psgrenade/explode_distant 4

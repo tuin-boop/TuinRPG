@@ -1,0 +1,75 @@
+///////////////
+//PROJECTILES//
+///////////////
+
+//imp ball
+$volume projectiles/impball/fly 0.3
+projectiles/impball/fly		IMPFLY
+
+//caco ball
+$volume projectiles/cacoball/fly 0.3
+projectiles/cacoball/fly	CACOFLY
+
+//baron ball
+$volume projectiles/baronball/fly 0.2
+projectiles/baronball/fly	BOOGFLY
+
+//rocket... uh, rocket
+$limit projectiles/rocket/fly 2
+$volume projectiles/rocket/fly 0.4
+$attenuation projectiles/rocket/fly 2.0
+projectiles/rocket/fly      ROCKFLY
+
+//plasma ball
+$volume projectiles/plasma/fly 0.4
+$attenuation projectiles/plasma/fly 1.6
+$limit projectiles/plasma/fly 2
+projectiles/plasma/fly		PLASFLY
+
+//bfg ball
+$limit projectiles/bfg/fly 2
+$attenuation projectiles/bfg/fly 0.4
+projectiles/bfg/fly		    BFGFLY
+
+//bfg extra
+$limit projectiles/bfg/extra 4
+$random projectiles/bfg/extra { BFXTR1 BFXTR2 }
+BFXTR1 BFXTR1
+BFXTR2 BFXTR2
+
+//Puffs
+$volume misc/puff 0.5
+$random misc/puff  { DSPUFF1 DSPUFF2 DSPUFF3 DSPUFF5 DSPUFF6 DSPUFF7 DSPUFF8 DSPUFF9 DSPUFF10 DSPUFF11 }
+DSPUFF1 DSPUFF1
+DSPUFF2 DSPUFF2
+DSPUFF3 DSPUFF3
+DSPUFF5 DSPUFF5
+DSPUFF6 DSPUFF6
+DSPUFF7 DSPUFF7
+DSPUFF8 DSPUFF8
+DSPUFF9 DSPUFF9
+DSPUFF10 DSPUFF10
+DSPUFF11 DSPUFF11
+$limit misc/puff 5
+$attenuation misc/puff 1.5
+
+///SAW----
+$volume misc/sawpuff 0.3
+$random misc/sawpuff { DSPUFF4 DSPUFF12 DSPUFF13 DSPUFF14 DSPUFF15 }
+DSPUFF4 DSPUFF4
+DSPUFF12 DSPUFF12
+DSPUFF13 DSPUFF13
+DSPUFF14 DSPUFF14
+DSPUFF15 DSPUFF15
+
+//Fists---------------------
+$random weapons/fist/hitwall { weapons/fist/hitwall1 weapons/fist/hitwall2 weapons/fist/hitwall3 weapons/fist/hitwall4 }
+weapons/fist/hitwall1	FISTWAL1
+weapons/fist/hitwall2	FISTWAL2
+weapons/fist/hitwall3	FISTWAL3
+weapons/fist/hitwall4	FISTWAL4
+$Volume weapons/fist/hitwall 0.3
+
+
+
+

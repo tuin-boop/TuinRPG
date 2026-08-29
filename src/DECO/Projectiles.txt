@@ -1,0 +1,973 @@
+ACTOR smoothrevball : revenanttracer
+{
+	decal revenantscorch
+	renderstyle add
+	states
+	{
+	spawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	FATB A 2 bright A_Tracer
+	FATB B 2 bright
+	FATB C 2 bright A_Tracer
+	FATB D 2 bright
+	Loop
+	
+	fancyspawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "fancySoundSpawn")
+	TNT1 A 0 A_SpawnItemEx ("Revtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	FATB A 2 bright A_Tracer
+	FATB B 2 bright
+	FATB C 2 bright A_Tracer
+	FATB D 2 bright
+	Loop
+	
+	soundspawn:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancysoundspawn")
+	TNT1 A 0 A_PlaySound ("projectiles/rocket/fly",7,1,1,1.5)
+	FATB A 2 bright A_Tracer
+	FATB B 2 bright
+	FATB C 2 bright A_Tracer
+	FATB D 2 bright
+	
+	fancysoundspawn:
+	TNT1 A 0 A_PlaySound ("projectiles/rocket/fly",7,1,1,1.5)
+	TNT1 A 0 A_SpawnItemEx ("Revtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	FATB A 2 bright A_Tracer
+	FATB B 2 bright
+	FATB C 2 bright A_Tracer
+	FATB D 2 bright
+	
+	Loop
+	Death:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+    RBXP A 2 Bright  a_stopsound(7)
+    RBXP B 2 Bright
+    RBXP C 2 Bright
+	RBXP D 2 Bright
+	RBXP E 2 bright
+	RBXP F 2 bright
+    Stop
+	fancydeath:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 AAAAAAAAAAAAAAAAAAAA 0 a_SpawnItemEx("ExplosionParticles",random(-1,1),random(-1,1),random(-1,1),random(-4,4),random(-4,4),random(0,6),random(0,360))
+	RBXP A 2 Bright a_stopsound(7)
+    RBXP B 2 Bright
+    RBXP C 2 Bright
+	RBXP D 2 Bright
+	RBXP E 2 bright
+	RBXP F 2 bright
+	Stop
+	}
+}
+
+ACTOR Revtracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    FATR AABBCCDD 1 A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR smoothfatshot : fatshot
+{
+	decal scorch
+	states
+	{
+	Spawn:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	MANF a 2 bright
+	TNT1 A 0 A_SpawnItemEx("smoothrockettrail",-8,random(-3,3),random(2,6))
+	MANF b 2 bright
+	MANF c 2 bright 
+	TNT1 A 0 A_SpawnItemEx("smoothrockettrail",-8,random(-3,3),random(2,6))
+	MANF d 2 bright
+	loop
+	fancyspawn:
+	TNT1 A 0 A_SpawnItemEx ("Fattracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	MANF aa 1 bright
+	TNT1 A 0 A_SpawnItemEx("smoothrockettrail",-8,random(-3,3),random(2,6))
+	MANF bb 1 bright
+	MANF cc 1 bright 
+	TNT1 A 0 A_SpawnItemEx("smoothrockettrail",-8,random(-3,3),random(2,6))
+	MANF dd 1 bright
+	loop
+	death: 
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+	expl a 3 bright
+	expl bcdef 2 bright
+	stop
+	fancydeath:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 AAAAAAAAAAAAAAAAAAAA 0 a_SpawnItemEx("ExplosionParticles",random(-1,1),random(-1,1),random(-1,1),random(-4,4),random(-4,4),random(0,6),random(0,360))
+	expl a 3 bright
+	expl b 2 bright
+	expl c 2 bright
+	expl d 2 bright
+	expl e 2 bright
+	expl f 2 bright
+	stop
+	}
+}
+
+ACTOR Fattracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    M2NF aabbccdd 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR smoothbooger : baronball
+{
+	decal baronscorch
+	states
+	{
+	spawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	soundspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	fancyspawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundFancySpawn")
+	TNT1 A 0 A_SpawnItemEx ("Boogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	soundfancyspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_SpawnItemEx ("Boogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	death:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+	boog a 2 bright a_stopsound(6)
+	boog bcdefgi 2 bright
+	stop
+	fancydeath:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", 0, 0, 0, random(-2, 2), random(-2, 2), random(-1, 2), random(0, 360))
+	BBDT abcdefghijklmnopqrstuvwxyz 1 bright a_stopsound(6)
+	BBD2 abcdefghijklmnop 1 bright
+	stop
+	}
+}
+
+ACTOR Redbooger : smoothbooger
+{
+	translation "112:127=176:191"
+	decal baronscorch
+	states
+	{
+	spawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	soundspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	fancyspawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundFancySpawn")
+	TNT1 A 0 A_SpawnItemEx ("redBoogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	soundfancyspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_SpawnItemEx ("redBoogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	death:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+	boog a 2 bright a_stopsound(6)
+	boog bcdefgi 2 bright
+	stop
+	fancydeath:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 AAAAAA 0 A_SpawnItemEx("RedSparkle", 0, 0, 0, random(-2, 2), random(-2, 2), random(-1, 2), random(0, 360))
+	BBDT abcdefghijklmnopqrstuvwxyz 1 bright a_stopsound(6)
+	BBD2 abcdefghijklmnop 1 bright
+	stop
+	}
+}
+
+ACTOR Bluebooger : smoothbooger
+{
+	translation "112:127=192:207"
+	decal baronscorch
+	states
+	{
+	spawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	soundspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	BAL7 ABCD 2 Bright
+	loop
+	fancyspawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundFancySpawn")
+	TNT1 A 0 A_SpawnItemEx ("blueBoogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	soundfancyspawn:
+	TNT1 A 0 A_PlaySound("projectiles/baronball/fly", 6, 1, TRUE)
+	TNT1 A 0 A_SpawnItemEx ("blueBoogertracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BAL7 a 2 bright
+	BAL7 b 2 bright
+	BAL7 c 2 bright
+	BAL7 d 2 bright
+	loop
+	death:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+	boog a 2 bright a_stopsound(6)
+	boog bcdefgi 2 bright
+	stop
+	fancydeath:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 AAAAAA 0 A_SpawnItemEx("BlueSparkle", 0, 0, 0, random(-2, 2), random(-2, 2), random(-1, 2), random(0, 360))
+	BBDT abcdefghijklmnopqrstuvwxyz 1 bright a_stopsound(6)
+	BBD2 abcdefghijklmnop 1 bright
+	stop
+	}
+}
+
+ACTOR fastbooger : smoothbooger
+{
+speed 18
+}
+
+ACTOR redfastbooger : redbooger
+{
+speed 18
+}
+
+ACTOR bluefastbooger : bluebooger
+{
+speed 18
+}
+
+ACTOR Boogertracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    BLT7 AABBCCDD  1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR blueBoogertracer : Boogertracer
+{
+translation "112:127=192:207"
+}
+
+ACTOR RedBoogertracer : Boogertracer
+{
+translation "112:127=176:191"
+}
+
+ACTOR smoothblueplasma : plasmaball replaces plasmaball
+{
+decal plasmascorch
+states
+	{
+	spawn:
+		TNT1 A 0
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		BLPL abcd 2 bright
+		loop
+	soundspawn:
+		TNT1 A 0
+		TNT1 A 0 A_PlaySound("Projectiles/plasma/FLY", 6, 1, TRUE)
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		BLPL abcd 2 bright
+		loop
+		
+	fancyspawn:
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundFancySpawn")
+		PLSP c random ( 1, 2) bright
+		TNT1 A 0 A_SpawnItemEx ("Plasmatracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		PLSP defghijklmnopqrstuv 1 bright
+		{
+		a_spawnparticle(
+		/*color*/66ccff, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/random(9,12),
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		
+			a_spawnparticle(
+		/*color*/1a8cff, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/random(11,14),
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		}
+		goto fancyspawn +4
+		
+		soundfancyspawn:
+		PLSP c random ( 1, 2) bright
+		TNT1 A 0 A_SpawnItemEx ("Plasmatracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		PLSP defghijklmnopqrstuv 1 bright
+		{
+		A_PlaySound("Projectiles/plasma/FLY", 6, 1, TRUE);
+		a_spawnparticle(
+		/*color*/66ccff, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/random(9,12),
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		
+			a_spawnparticle(
+		/*color*/1a8cff, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/random(11,14),
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		}
+		goto soundfancyspawn +3
+	death:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==0, "finish")
+		TNT1 aaa 0 a_spawnitemex("BlueSparkle",0,0,0,random(-2,2),random(-2,2),random(-1,1),random(0,360))
+		TNT1 aaaaaaaaaaaa 0 a_spawnitemex("BlueSparkle",0,0,0,random(3,5),random(-3,3),random(-3,2),random(0,360))
+		TNT1 a 0 a_stopsound(6)		
+		TNT1 aaaaaa 0 bright a_spawnparticle(
+		/*color*/22a6ff, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/random(14,19),
+		/*size*/random(2,6), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ 0, 0, 0, 
+		/*xyz vel*/ random(2,8), random(-3,3), random(-4,3), 
+		/*xyz accel*/ 0, 0, 0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1)
+		TNT1 aaaaa 0 a_spawnitemex("BlueEXparticles",0,0,0,random(-2,2),random(-2,2),random(-1,2),random(0,360))
+		goto finish
+	finish:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		PLSE ABCD 1 bright
+		PLSE EFGHIJKLMN 2 Bright
+		stop
+	}
+}
+
+ACTOR Plasmatracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    PL2P defghijklmnopqrstuv 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR smoothimpball : doomimpball
+{
+Game Doom
+	SpawnID 10
+	Radius 6
+	Height 8
+	Speed 10
+	FastSpeed 20
+	Damage 3
+	Projectile
+	+RANDOMIZE
+	decal doomimpscorch
+	Alpha 1
+	SeeSound "imp/attack"
+	DeathSound "imp/shotx"
+	States
+	{
+	spawn:
+		TNT1 A 0 nodelay A_SpawnItemEx ("Impballtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+		IBSP bc 2 bright
+		goto Idle
+		
+	soundspawn:
+		TNT1 A 0
+		IMBS bc 2 bright A_PlaySound("projectiles/impball/fly", 6, 1, TRUE)
+		goto Idle
+		
+	Idle:
+		IMBL abcdefghijklmnopqrstuvwxyz 1 bright
+		loop
+		
+	death:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		IBDT acegikmoqsuwxyz 1 Bright A_StopSound(6)
+		IBD2 abcdefghijklmnop 1 bright
+		stop
+	}
+}
+
+ACTOR Impballtracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+   Scale 0.85
+
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+	IBSP bc 2 bright
+   goto Idle
+   Idle:
+      IMB2 abcdefghijklmnopqrstuvwxyz 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+
+ACTOR fastimpball : smoothimpball
+{
+speed 14
+}
+
+ACTOR smoothbabyplas : arachnotronplasma
+{
+decal ArachnotronScorch
+
+states
+	{
+	spawn:
+		TNT1 A 0 nodelay A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+		BAPL a 2 bright
+		BAPL bcd 2 bright 
+		loop
+	soundspawn:
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "soundfancyspawn")
+		BAPL a 2 bright A_PlaySound("Projectiles/plasma/FLY", 6, 1, TRUE)
+		BAPL bcd 2 bright 
+		loop
+	fancyspawn: 
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "soundfancyspawn")
+		TNT1 A 0 A_SpawnItemEx ("Babytracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		GLSP defghijklmnopqrstuv 1 bright 
+		{
+			a_spawnparticle(
+		/*color*/green, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/13,
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		
+			a_spawnparticle(
+		/*color*/yellow, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/16,
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		}
+		goto fancyspawn +1
+		
+		soundfancyspawn: 
+		TNT1 A 0 A_SpawnItemEx ("Babytracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		GLSP defghijklmnopqrstuv 1 bright
+		{
+		A_PlaySound("Projectiles/plasma/FLY", 6, 1, TRUE);
+			a_spawnparticle(
+		/*color*/green, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/13,
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		
+			a_spawnparticle(
+		/*color*/yellow, 
+		/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+		/*lifetime*/16,
+		/*size*/random(2,4), 
+		/*angle*/ frandom(0,360), 
+		/*xyz off*/ random(-1,1),random(-1,1),random(-1,1), 
+		/*xyz vel*/ 0, 0, -1, 
+		/*xyz accel*/ 0,0,0,
+		/*start alpha*/ 1.0,
+		/*fadestep*/ -1);
+		}
+		loop
+	death:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+		GPLD abcefghijklm 2 bright a_stopsound(6)
+		stop
+	fancydeath:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		tnt1 aaaaaaa 0 a_spawnitemex("GreenSparkle",0,0,0,random(3,5),random(-3,3),random(-3,3),random(0,360))
+		GPLD abcd 1 bright a_spawnitemex("GreenSparkle",0,0,0,random(3,5),random(-3,3),random(-3,3),random(0,360))
+		GPLD efghijklm 2 bright a_stopsound(6)
+		stop
+	}
+}
+
+ACTOR Babytracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    GL2P defghijklmnopqrstuv 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR smoothBFGball : BFGball replaces BFGball
+{
+decal BFGlightning
+states
+{
+	spawn:
+		TNT1 A 0
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+		FUCK a 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK b 2 bright
+		FUCK c 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK d 2 bright
+		FUCK e 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK f 2 bright
+		FUCK g 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK h 2 bright
+		loop
+	soundspawn:
+		TNT1 A 0
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		FUCK a 2 bright A_Playsound("projectiles/bfg/fly", 7, 1, TRUE)
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK b 2 bright
+		FUCK c 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK d 2 bright
+		FUCK e 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK f 2 bright
+		FUCK g 2 bright
+		TNT1 AAAAAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		FUCK h 2 bright
+		loop
+	fancyspawn:
+		TNT1 A 0 A_SpawnItemEx ("BFGtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundfancySpawn")
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL abcd 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL efgh 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL ijkl 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL mnop 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL qrstu 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL vwxyz 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFB2 abcd 1 bright
+		loop
+	soundfancyspawn:
+		TNT1 A 0 A_SpawnItemEx ("BFGtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+		TNT1 A 0 A_Playsound("projectiles/bfg/fly", 7, 1, TRUE)
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL abcd 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL efgh 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL ijkl 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL mnop 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL qrstu 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFBL vwxyz 1 bright
+		TNT1 AAA 0 A_SpawnItemEx("GreenSparkle", random(-40, 40), random(-40, 40), random(0, 30))
+		BFB2 abcd 1 bright
+		loop
+	death:
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancydeath")
+		TNT1 A 0 A_JumpIf(CallACS("RumbleToggle")==0, "+3")
+		expl d 0 a_quake (3,10,0,750,0)
+		expl d 0 a_quake (1,25,0,1000,0)
+	BFGB abc 3 bright
+	{
+		a_stopsound(7);
+	}
+	BFGB dge 2 bright
+	BFGB f 1 bright
+	BFGB f 3 bright a_BFGspray
+	BFGB ghijklmn 2 bright
+	stop
+	
+	fancydeath:
+		TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+		TNT1 A 0 A_JumpIf(CallACS("RumbleToggle")==0, "+3")
+		expl d 0 a_quake (3,10,0,750,0)
+		expl d 0 a_quake (1,25,0,1000,0)
+	TNT1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0 a_spawnparticle(
+			/*color*/yellow, 
+			/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+			/*lifetime*/random(28,40),
+			/*size*/random(4,7), 
+			/*angle*/ frandom(0,360),
+			/*xyz off*/ 0, 0, 0,		
+			/*xyz vel*/ random(-6,6), random(-6,6), random(-3,6), 
+			/*xyz accel*/ 0, 0, 0,
+			/*start alpha*/ 1.0,
+			/*fadestep*/ -1)
+	TNT1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0 a_spawnparticle(
+			/*color*/green, 
+			/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+			/*lifetime*/random(18,35),
+			/*size*/random(4,7), 
+			/*angle*/ frandom(0,360),
+			/*xyz off*/ 0, 0, 0,		
+			/*xyz vel*/ random(-3,3), random(-3,3), random(-1,3), 
+			/*xyz accel*/ 0, 0, 0,
+			/*start alpha*/ 1.0,
+			/*fadestep*/ -1)
+	TNT1 A 0 A_SpawnItemEx ("BFGFinishtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	BFGB a 1 bright
+	{
+		a_stopsound(7);
+		A_SpawnItemEx("GreenGlimmer", random(-50, 50), random(-50, 50), random(-0, 40),random(-2,2),random(-2,2),random(-2,2));
+	}
+	BFGB a 2 bright
+	BFGB bc 3 bright 
+	BFGB dge 2 bright
+	BFGB f 4 bright a_BFGspray
+	BFGB gh 3 bright A_SpawnItemEx("GreenGlimmer", random(-60, 60), random(-60, 60), random(0, 20))
+	BFGB ijklmn 2 bright
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	TNT1 aaaaaa 3 A_SpawnItemEx("GreenSparkle", random(-70, 70), random(-70, 70), random(0, 50))
+	stop
+	}
+}
+
+ACTOR BFGtracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+	BF2L abcdefghijklmnopqrstuvwxyz 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+	BF22 abcd 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)	
+   loop
+  }
+}
+
+ACTOR BFGFinishtracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+	BF3T AAABBBCCCDDGGEEFFFFGGGHHHIIJJKKLLMMNN 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   stop
+  }
+}
+
+ACTOR smoothBFGextra : BFGextra replaces BFGextra
+{
+states
+	{
+	spawn:
+	tnt1 a 0
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	tnt1 a 0 A_SpawnItemEx("GreenGlimmer", random(-60, 60), random(-60, 60), random(0, 20))
+	BFEX abcdefghijklmno 2 bright
+	stop
+	soundspawn:
+	tnt1 a 0
+	tnt1 a 0 a_playsound("projectiles/bfg/extra", 0, 1, false, 0.5, true )
+	tnt1 a 0 A_SpawnItemEx("GreenGlimmer", random(-60, 60), random(-60, 60), random(0, 20))
+	BFEX abcdefghijklmno 2 bright
+	stop
+	}
+}
+	
+ACTOR smoothcacoball : CacodemonBall
+{
+decal CacoScorch
+states
+	{
+	spawn:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+	CABA abcdefgh 2 bright
+	loop
+	soundspawn:
+	TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancySoundSpawn")
+	CABA abcdefgh 2 bright A_PlaySound("projectiles/cacoball/fly", 6, 1, TRUE)
+	loop
+	fancyspawn:
+	TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "fancySoundSpawn")
+	TNT1 A 0 A_SpawnItemEx ("Cacoballtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	CCBL abcdefghijklmnopqrstuvwxyz 1 bright
+	loop
+	fancysoundspawn:
+	TNT1 A 0 A_SpawnItemEx ("Cacoballtracer",0,0,0,0,0,0,0, SXF_SETMASTER|SXF_ORIGINATOR)
+	CCBL abcdefghijklmnopqrstuvwxyz 1 bright A_PlaySound("projectiles/cacoball/fly", 6, 1, TRUE)
+	loop
+	death:
+	TNT1 A 0 A_RemoveChildren(true,RMVF_MISC)
+	CABX a 4 bright A_StopSound(6)
+	CABX bcdef 2 bright
+	stop
+	}
+}
+
+ACTOR Cacoballtracer
+{
+   +NOCLIP
+   +NOGRAVITY
+   +NOBLOCKMAP
+   
+  States
+  {
+   Spawn:
+    TNT1 A 0 nodelay A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+    CCB2 abcdefghijklmnopqrstuvwxyz 1 bright A_Warp(AAPTR_MASTER, 0, 0, 0, 0,  WARPF_NOCHECKPOSITION|WARPF_INTERPOLATE|WARPF_COPYVELOCITY)
+   loop
+  }
+}
+
+ACTOR fastcacoball : smoothcacoball
+{
+	speed 15
+}
+
+ACTOR SmoothRocket Replaces Rocket
+{
+	Game Doom
+	SpawnID 127
+	Radius 11
+	Height 8
+	Speed 20
+	Damage 20
+	Projectile
+	+RANDOMIZE
+	-ROCKETTRAIL
+	+EXTREMEDEATH
+	decal scorch
+	SeeSound "weapons/rocklf"
+	DeathSound "weapons/rocklx"
+	Obituary "$OB_MPROCKET"
+	States
+	{
+	Spawn:
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "SoundSpawn")
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		MISC A 1 bright 
+		TNT1 a 0 a_spawnitemex("smoothrockettrail",-8,random(-3,3),random(2,6),0,0,0)
+		TNT1 a 0
+		loop
+		
+	soundSpawn:
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancysoundspawn")
+		MISC A 1 bright  {
+		A_PlaySound("Projectiles/Rocket/FLY", 6, 1, TRUE);
+		a_spawnitemex("smoothrockettrail",-8,random(-3,3),random(2,6),0,0,0);
+		}
+		loop
+		
+	FancySpawn:
+		TNT1 A 0 A_JumpIf(CallACS("ProjectileSounds")==1, "FancySoundSpawn")
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==1, "fancyspawn")
+		MISC A 1 bright  {
+		a_spawnitemex("smoothrockettrail",-20,random(-3,3),random(2,6),0,0,0);
+		A_SpawnItemEx("MissleDash", -10, 0, 0, 0, 0, 0, 0, 128);
+		}
+		loop
+		
+	FancysoundSpawn:
+		MISC A 1 bright  {
+		A_PlaySound("Projectiles/Rocket/FLY", 6, 1, TRUE);
+		a_spawnitemex("smoothrockettrail",-20,random(-3,3),random(2,6),0,0,0);
+		A_SpawnItemEx("MissleDash", -10, 0, 0, 0, 0, 0, 0, 128);
+		}
+		loop
+		
+	Death:
+		TNT1 A 0 A_JumpIf(CallACS("RumbleToggle")==0, "+3")
+		TNT1 a 0 a_stopsound(6)
+		TNT1 A 0 a_quake (2,7,0,600,0)
+		TNT1 A 0 a_quake (1,10,0,1000,0)
+
+		TNT1 A 0 A_JumpIf(CallACS("PuffStyle")==0, "finish")		
+		TNT1 aaaaaaaaaaaaaaaaaaaa 0 a_spawnitemex("ExplosionParticles",random(-1,1),random(-1,1),random(-1,1),random(-4,4),random(-4,4),random(0,6),random(0,360))
+			
+			//yellow particles
+			TNT1 aaaaaaaaaaaaaaaaaaaaaaaaaa 0 a_spawnparticle(
+			/*color*/yellow, 
+			/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+			/*lifetime*/random(10,18),
+			/*size*/random(3,6), 
+			/*angle*/ frandom(0,360),
+			/*xyz off*/ random(-2,2), random(-2,2), random(-2,2), 
+			/*xyz vel*/ random(4,8), random(4,8), random(-5,10), 
+			/*xyz accel*/ 0, 0, 0,
+			/*start alpha*/ 1.0,
+			/*fadestep*/ -1)
+		
+			//orange particles
+			TNT1 aaaaaaaaa 0 a_spawnparticle(
+			/*color*/ffac00, 
+			/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+			/*lifetime*/random(32,37),
+			/*size*/random(5,7), 
+			/*angle*/ frandom(0,360),
+			/*xyz off*/ random(-2,2), random(-2,2), random(-2,2), 
+			/*xyz vel*/ random(1,3), random(1,3), random(-2,4), 
+			/*xyz accel*/ 0, 0, 0,
+			/*start alpha*/ 1.0,
+			/*fadestep*/ -1)
+		
+			//red particles
+			TNT1 aaaaaaaaaaaaaaaaaaaaaaa 0 a_spawnparticle(
+			/*color*/ff2f00, 
+			/*flags*/ +SPF_FULLBRIGHT +SPF_RELATIVE, 
+			/*lifetime*/65,
+			/*size*/random(3,4), 
+			/*angle*/ frandom(0,360),
+			/*xyz off*/ random(-2,2), random(-2,2), random(-2,2), 
+			/*xyz vel*/ random(1,2), random(1,2), random(0,1), 
+			/*xyz accel*/ 0, 0, 0,
+			/*start alpha*/ 0.8,
+			/*fadestep*/ -1)
+			goto finish
+			
+	Finish:
+		expl A 5 Bright A_Explode
+		expl BCDEF 3 Bright A_SpawnItemEx("SmoothSmoke", random(-40, 40), random(-40, 40), random(0, 30))
+		TNT1 AAAA 0 A_SpawnItemEx("SmoothSmoke", random(-40, 40), random(-40, 40), random(0, 30))
+		Stop
+	}
+}
+
+ACTOR MissleDash
+{
+  Projectile
+   Speed 20 
+  +NoClip
+  +FLOAT
+  +NOGRAVITY
+  +ALLOWPARTICLES
+  Scale 0.9
+  renderstyle add
+  States
+  {
+  Spawn:
+    FRBM AB 1 Bright A_fadeout(0.25)
+    Loop
+	Fade:
+	FRBM AB 1 A_fadeout(0.25) 
+	loop
+  }
+}

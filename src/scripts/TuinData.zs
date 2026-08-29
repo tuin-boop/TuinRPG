@@ -668,6 +668,16 @@ class TuinBloodPunchOverlayWeapon : Weapon
 
 	States
 	{
+	ProjectSIDE:
+		PKFS L 1;
+		PKFS B 1;
+		PKFS D 1;
+		PKFS E 1 Bright;
+		PKFS F 1;
+		PKFS H 1;
+		PKFS J 1;
+		PKFS L 1;
+		Stop;
 	Enhanced:
 		PUN3 A 1 Bright;
 		PUN3 B 1 Bright;

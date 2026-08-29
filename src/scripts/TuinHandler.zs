@@ -660,8 +660,10 @@ class TuinRPGHandler : EventHandler
 			if (weaponSprite) weaponSprite.alpha = 0.0;
 			if (flashSprite) flashSprite.alpha = 0.0;
 			let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
+			bool projectSidePunch = TexMan.CheckForTexture("PKFSL0", TexMan.Type_Sprite).IsValid();
 			bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
-			State punchState = enhancedKnuckles ? punchProvider.FindState('Enhanced') : punchProvider.FindState('Classic');
+			State punchState = projectSidePunch ? punchProvider.FindState('ProjectSIDE') :
+				(enhancedKnuckles ? punchProvider.FindState('Enhanced') : punchProvider.FindState('Classic'));
 			pawn.player.SetPsprite(90, punchState);
 		}
 		SpawnBloodPunchCone(pawn);

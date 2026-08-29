@@ -1,4 +1,4 @@
 GameInfo
 {
-	AddEventHandlers = "TuinRPGHandler", "TuinMinimapHandler"
+	AddEventHandlers = "PSCompatWeaponHandler", "TuinRPGHandler", "TuinMinimapHandler"
 }

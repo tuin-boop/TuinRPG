@@ -4,7 +4,7 @@
   <img src="src/graphics/TuinMenuTitle.png" alt="TuinRPG for Doom" width="720">
 </p>
 
-TuinRPG is a universal RPG layer for **GZDoom and UZDoom**. It adds player levels, classes, perks, rare monsters, affixes, weapon loot, finale bosses, a minimap and an end-level merchant without replacing the monsters, weapons, player class or maps supplied by Doom and most gameplay mods.
+TuinRPG is an RPG conversion for **GZDoom and UZDoom**. It adds player levels, classes, perks, rare monsters, affixes, weapon loot, finale bosses, a minimap and an end-level merchant. The release now includes the ProjectSIDE weapon/effects compatibility edition, providing its complete animated weapon set and quick grenades without a separate companion PK3. Monsters, maps and the player class remain untouched.
 
 The ready-to-play `TuinRPG.pk3` is included in this repository and on the [GitHub Releases page](https://github.com/tuin-boop/TuinRPG/releases). For a compact introduction, see the [Quick Guide](QUICK_GUIDE.md).
 
@@ -12,10 +12,10 @@ The ready-to-play `TuinRPG.pk3` is included in this repository and on the [GitHu
 
 1. Install a recent GZDoom or UZDoom build. Development is tested with **UZDoom 4.14.3**.
 2. Download `TuinRPG.pk3` from the latest release.
-3. Load it after your maps and weapon/gameplay mods:
+3. Load it after your maps and visual/content mods. Do not also load `ProjectSIDE_WeaponsEffects_Compat.pk3`; it is already included:
 
    ```powershell
-   uzdoom.exe -file mymap.wad myweaponmod.pk3 TuinRPG.pk3
+   uzdoom.exe -file mymap.wad myvisualmod.pk3 TuinRPG.pk3
    ```
 
 4. Start a game and press `K` for the character screen. TuinRPG settings are also available directly from the Escape menu.
@@ -41,6 +41,8 @@ The ready-to-play `TuinRPG.pk3` is included in this repository and on the [GitHu
 | `Q` | Open/close the mouse-controlled weapon wheel |
 | `N` | Toggle the minimap |
 | `F` | Toggle the flashlight |
+| `G` | Throw a quick grenade |
+| `V` | Activate the selected class ability |
 | `E` / Use | Equip nearby loot or interact with John |
 
 All bindings can be changed under **Customize Controls > Tuin RPG**.
@@ -62,6 +64,8 @@ Later points buy three ranks of **Vital Core**, **Scavenger**, **Killer Instinct
 ## Core features
 
 - Generic hostile-monster detection (`ISMONSTER`, shootable, alive, not friendly)
+- Integrated ProjectSIDE animated fist, chainsaw, pistol, rifle, shotgun, super shotgun, chaingun, rocket launcher, plasma rifle and BFG replacements with their firing effects, sounds, casings and projectiles
+- Integrated quick grenades on `G`: two starting grenades, five maximum (eight with a backpack), physical pickups/drops, a first-person pin-and-throw animation and a multi-band blast
 - Progressive or fully random monster levels with configurable bounds/variance
 - Hybrid progressive scaling that keeps map progression primary while letting monsters partially catch up when the player is far ahead; higher rarities and occasional surge rolls create threatening outliers
 - An optional Hell Director that evaluates damage taken at 25%, 50% and 75% kills and can awaken an Elite, Legendary or Mythic threat; rare successful checks can send a translucent Assassin Imp to an older player trail position
@@ -74,7 +78,7 @@ Later points buy three ranks of **Vital Core**, **Scavenger**, **Killer Instinct
 - A permanent first-perk class choice: Tank (300 base HP, 50% protection, -50% damage, +50% ammo, and Overdrive), Healer (team-wide 5 HP healing every two seconds, -25% damage, +25% ammo), Damage Dealer (+30% damage, -25% maximum health, +10% damage taken), Doom Guy (+10% damage, 10% protection, regeneration, and Blood Punch), or Rogue (20% lower maximum health and an actively triggered Shadow Veil). The choice costs one perk point.
 - Rogues have +5% innate critical chance. Their critical hits, including forced Ambush criticals, inflict eight seconds of bleeding that repeats the triggering critical hit's total damage over eight ticks, capped at 24% of the target's RPG-scaled maximum health. Bleeding cannot refresh or stack, and the monster resists new Bleeding for 12 seconds after it ends. Critical hits still deal normal critical damage during both states. Bleeding appears on the target display and overhead health bar, with red floating damage numbers. Rogue Class Training adds another +2% critical chance per rank.
 - Press the configurable **Class Ability** key (`V` by default) for the Tank's Overdrive, Doom Guy's Blood Punch, or the Rogue's Shadow Veil. Tank Overdrive charges from damage dealt plus four times health actually lost; its threshold is `800 + 50 × player level`. At full charge, `V` grants +150% weapon damage and firing speed for ten seconds with a red glow. It cannot recharge while active and empties when it ends. Normal combined firing-speed bonuses remain capped at +75%, while Overdrive safely raises that combined cap to +200%.
-- Doom Guy's ordinary damage fills Blood Punch, requiring `500 + 40 × player level` damage for a full charge. Pressing `V` briefly hides the held weapon and muzzle flash while a fast red-tinted first-person fist animation plays, then releases a bright 110-degree crimson cone reaching 240 units. It deals `140 + 14 × player level` base damage (maximum 650) to every visible hostile in the cone and heals Doom Guy for 20% of actual damage dealt, capped at 75 HP per punch. Blood Punch cannot crit, inherit weapon-affix damage, or recharge itself.
+- Doom Guy's ordinary damage fills Blood Punch, requiring `500 + 40 × player level` damage for a full charge. Pressing `V` briefly hides the held weapon and muzzle flash while a fast ProjectSIDE first-person punch plays with a crimson screen pulse, then releases a bright 110-degree crimson cone reaching 240 units. It deals `140 + 14 × player level` base damage (maximum 650) to every visible hostile in the cone and heals Doom Guy for 20% of actual damage dealt, capped at 75 HP per punch. Blood Punch cannot crit, inherit weapon-affix damage, or recharge itself.
 - Overdrive firing speed uses the engine's universal weapon-state accelerator, so slow launchers and one-tic custom weapon animations receive the boost consistently. Thrown grenades are tracked through contact, fuse, death animation, and custom cleanup; reaching, exploding near, or disappearing within 192 units of a Cyberdemon or Spider Mastermind adds a controlled boss-impact component of 2% scaled health (minimum 128, maximum 500 raw damage).
 - Rogue Shadow Veil makes the Rogue half translucent and untargetable for six seconds, forcing monsters to disengage and wander. Attacking, taking damage, expiry, or pressing the ability again ends it. Its ambush attack deals x4 weapon damage or x20 fist/knuckle damage; iconic finale bosses use reduced x2 ranged and x5 melee multipliers. Shadow Veil begins ready, but after use it can only be restored by dealing ordinary weapon damage. A full charge requires `400 + 60 × player level` damage, before Class Training bonuses. Ambush and Bleeding damage do not refill the ability, preventing immediate loops, but sustained damage to a boss can earn another Veil during that fight. Waiting provides no charge. Each Class Training rank adds two seconds of duration and 15% more charge from damage.
 - Later perk points purchase three ranks of Vital Core (+10 HP/rank), Scavenger (+10% ammo/rank), Killer Instinct (+2% critical chance/rank), Iron Skin (-3% incoming damage/rank), Blood Drinker (1% damage leech/rank), and a class-specific specialty. A level-20 capstone requires Class Training II.
@@ -110,7 +114,7 @@ For balance testing, open the console and enter `netevent tuin_give_levels 10` t
 
 To test Blood Punch instantly, enter `netevent tuin_test_blood_punch`. This testing command selects Doom Guy and fills Blood Punch; press `V` to use it, then repeat the command whenever another full charge is needed.
 
-For predictable load order, put TuinRPG after maps and content packs. If another gameplay mod uses damage-event rewriting, test that combination: TuinRPG applies only the extra level/stat damage through the generic damage event and never changes weapon or monster classes.
+For predictable load order, put TuinRPG after maps and visual/content packs. The separate `ProjectSIDE_WeaponsEffects_Compat.pk3` must not be loaded with this version because its complete contents are already bundled. Other weapon/gameplay replacements may override or conflict with the integrated ProjectSIDE weapons and are no longer part of the primary supported configuration.
 
 ## Level modes
 
@@ -183,4 +187,4 @@ The `K` character screen is intentionally limited to progression, the Arsenal an
 
 ## Compatibility notes
 
-The mod works automatically with custom actors that correctly identify as hostile monsters using GZDoom's standard monster/shootable flags. Actors that intentionally omit `ISMONSTER`, script all damage outside `DamageMobj`, or clear player inventory during a forced transition may require a future compatibility definition. v0.1 prioritizes stable single-player behavior; data ownership and stat-spending commands are already per-player for later co-op work.
+The mod works automatically with custom actors that correctly identify as hostile monsters using GZDoom's standard monster/shootable flags. Actors that intentionally omit `ISMONSTER`, script all damage outside `DamageMobj`, or clear player inventory during a forced transition may require a future compatibility definition. The integrated ProjectSIDE edition replaces Doom's weapon actors but not monsters, maps, or DoomPlayer. Original ProjectSIDE contributor attribution and the compatibility-edition notes are packaged under `third_party/ProjectSIDE/` and retained in the source tree. Single-player remains the primary tested configuration; data ownership and stat-spending commands are already per-player for later co-op work.

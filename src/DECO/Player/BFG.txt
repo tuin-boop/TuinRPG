@@ -1,0 +1,469 @@
+Actor Z86BFG9000 : BFG9000 replaces BFG9000
+{	
+	Weapon.SlotNumber 7
+	Weapon.BobStyle "Smooth"
+	Weapon.BobRangeX 1.0
+	Weapon.BobRangeY 0.75
+	Weapon.BobSpeed 1.5
+	States
+	{
+	spawn:
+		TNT1 A 0 nodelay A_JumpIf(CallACS("skintoggler")==1, "64spawn")	
+		BFUG A -1
+		loop
+	Ready:
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64ready")
+		BFGG AAAAALLLLLMMMMMLLLLL 1 A_WeaponReady
+		Loop
+	Deselect:
+		TNT1 A 0 A_JumpIf(health <= 0, "DeadDeselect")
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64deselect")
+		TNT1 A 0 a_jumpif(callacs("skintoggler")==2, "bldeselect")
+		BFRD PONMLKJIHGFEDCBA 1 A_Lower
+		Loop
+		
+	BLDeselect:
+		TNT1 A 0 A_JumpIf(health <= 0, "DeadBLDeselect")
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64deselect")
+		BFRD PONMLKJIHGFEDCBA 1 A_Lower
+		Loop
+		
+	DeadDeselect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "DeadBLdeselect")
+		TNT1 A 0 A_JumpIfInventory("GibToken", 1, "Deathgibbed")
+		TNT1 A 0 A_JumpIfInventory("DeathToken", 1, "DeathState")
+		BFGG A 1 A_Lower
+		Loop
+		
+	DeadBLDeselect:
+		TNT1 A 0 A_JumpIfInventory("GibToken", 1, "Deathgibbed")
+		TNT1 A 0 A_JumpIfInventory("DeathToken", 1, "BLDeathState")
+		BFGG A 1 A_Lower
+		Loop
+		
+	Select:
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64select")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==1, "silentselect")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==3, "silentselect")
+		TNT1 A 0 A_PlaySound("weapons/bfg/draw")
+		TNT1 A 0 A_Raise
+		BFRD ABCDEFGHIJKLMNOP 1 A_WeaponReady(WRF_NoFire)
+		goto Ready
+		
+	SilentSelect:
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64select")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==0, "select")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==2, "select")
+		TNT1 A 0 A_Raise
+		BFRD ABCDEFGHIJKLMNOP 1 A_WeaponReady(WRF_NoFire)
+		goto Ready
+		
+    Fire: 
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64fire")
+    	TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "bobfire")
+		TNT1 A 0 A_JumpIf(CallACS("recoiltoggle")==1, "recoilfire")
+
+		BFGG L 2 A_BFGSound
+		BFGG M 2
+		BFGG OPQR 3
+		BFGG RJ 2
+		BFGG KB 1
+		BFGG C 1 A_GunFlash
+		BFGx a 1
+		BFGG DEF 2 
+		BFGG G 2 bright A_FireBFG
+				tnt1 a 0 a_refire
+
+		BFGG H 1 bright offset (0, 37)
+		BFGG H 1 bright offset (0, 37) 
+		BFGG I 1 bright offset (0, 35)
+		BFGG I 1 bright offset (0, 35)
+		BFGG I 1 bright offset (0, 35)
+		BFGG J 3 offset (0, 34)
+		BFGG J 2 A_ReFire		
+		BFGG A 3 offset (0, 33)
+		BFGG A 15
+		goto Ready
+		
+	RecoilFire: 
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "bobrecoilfire")
+		BFGG L 2 A_BFGSound
+		BFGG M 2
+		BFGG OP 3
+		BFGG Q 3 A_quakeex(1,3,1,19,0,5,"misc/null", QF_SCALEUP | QF_WAVE, random(7,10),0,random(7,10))
+		BFGG R 3 
+		BFGG RJ 2
+		BFGG KB 1
+		BFGG C 1 A_GunFlash
+		BFGx a 1
+		BFGG DEF 2
+		BFGG G 2 bright 
+			{
+			A_SetBlend("green", 0.2, 16);				
+			A_FireBFG;
+			A_zoomfactor(0.95, ZOOM_NOSCALETURNING);
+			A_quakeex(3,1,3,10,0,5,"misc/null", QF_SCALEDOWN);
+			a_setpitch(-2.0);
+			}
+		BFGG H 1 bright offset (0, 37)
+			{
+			A_zoomfactor(0.96, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		BFGG H 1 bright offset (0, 37) 
+			{
+			A_zoomfactor(0.97, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		BFGG I 1 bright offset (0, 35)
+			{
+			A_zoomfactor(0.98, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		BFGG I 1 bright offset (0, 35)
+			{
+			A_zoomfactor(0.99, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		BFGG I 1 bright offset (0, 35)
+			{
+			A_zoomfactor(1.00, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.0, SPF_INTERPOLATE);
+			}
+		BFGG J 3 offset (0, 34)
+		BFGG J 2 A_ReFire		
+		BFGG A 3 offset (0, 33)
+		BFGG A 15
+		goto Ready
+
+    Flash:
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==1, "64flash")
+	    BFGW A 2 bright
+    	BFGX HGFE 1 bright A_Light2
+		BFGX DCBA 1 bright A_Light2
+		TNT1 A 0 A_Light0
+    	Goto LightDone
+		
+	bobFire: 
+    	TNT1 A 0 A_JumpIf(CallACS("recoiltoggle")==1, "bobrecoilfire")
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG L 2 A_BFGSound
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG M 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG N 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG O 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG P 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG Q 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG R 5
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG K 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG B 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG C 1 A_GunFlash
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGx a 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG D 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG E 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG F 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG G 2 bright A_FireBFG
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG H 2 bright offset (0, 37)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG I 3 bright offset (0, 35)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 3 offset (0, 34)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 2 A_ReFire		
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG A 3 offset (0, 33)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG A 15
+		goto Ready
+
+	bobRecoilFire: 
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG L 2 A_BFGSound
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BFGG M 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BFGG N 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BFGG O 3
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG P 3 A_quakeex(1,3,1,19,0,5,"misc/null", QF_SCALEUP | QF_WAVE, random(7,10),0,random(7,10))
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG Q 3 
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG R 5
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG K 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG B 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG C 1 A_GunFlash
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGx a 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG D 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG E 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG F 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG G 2
+			{
+			A_SetBlend("green", 0.2, 16);				
+			A_FireBFG;
+			A_zoomfactor(0.95, ZOOM_NOSCALETURNING);
+			A_quakeex(3,1,3,10,0,5,"misc/null", QF_SCALEDOWN);
+			a_setpitch(-2.0);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG H 1 offset (0, 37)
+			{
+			A_zoomfactor(0.96, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG H 1 offset (0, 37) 
+			{
+			A_zoomfactor(0.97, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG I 1 offset (0, 35)
+			{
+			A_zoomfactor(0.98, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG I 1 offset (0, 35)
+			{
+			A_zoomfactor(0.99, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.4, SPF_INTERPOLATE);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG I 1 offset (0, 35)
+			{
+			A_zoomfactor(1.00, ZOOM_NOSCALETURNING);
+			a_setpitch(-0.0, SPF_INTERPOLATE);
+			}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 3 offset (0, 34)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG J 2 A_ReFire		
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG A 3 offset (0, 33)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BFGG A 15
+		goto Ready
+		
+	Deathstate:
+		TNT1 A 0 A_TakeInventory("DeathToken", 1)
+		TNT1 A 0 A_Jump(255, "Deathstate1", "Deathstate2")
+		stop
+		
+	Deathstate1:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED1 ABC 1
+		DED1 DE 1
+		DED1 FGHIJ 2
+		DED1 J 5
+		DED1 LMNOPQRSTU 1
+		DED1 U -1
+		stop
+		
+	Deathstate2:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED3 ABC 1
+		DED3 DE 1
+		DED3 FGHIJ 2
+		DED3 J 5
+		DED3 LMNOPQRSTU 1
+		DED3 U -1
+		stop
+		
+	DeathGibbed:
+		TNT1 A 0
+		TNT1 A 0 A_JumpIf(CallACS("Gibtoggle")==0, +2)
+		TNT1 a 0 a_spawnitemex("gorecontroller")
+		stop
+		
+	BLDeathstate:
+		TNT1 A 0 A_TakeInventory("DeathToken", 1)
+		TNT1 A 0 A_Jump(255, "BLDeathstate1", "BLDeathstate2")
+		stop
+		
+	BLDeathstate1:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED2 ABC 1
+		DED2 DE 1
+		DED2 FGHIJ 2
+		DED2 J 5
+		DED2 LMNOPQRSTU 1
+		DED2 U -1
+		stop
+		
+	BLDeathstate2:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED4 ABC 1
+		DED4 DE 1
+		DED4 FGHIJ 2
+		DED4 J 5
+		DED4 LMNOPQRSTU 1
+		DED4 U -1
+		stop
+		
+		
+		
+////////////////////////////
+//////NINTENDO 64///////////
+////////////////////////////
+		
+		
+	64spawn:
+		TNT1 A 0 A_JumpIf(CallACS("skintoggler")==0, "spawn")
+		BFG9 A -1
+		loop
+	64Ready:
+		BF64 A 1 A_WeaponReady
+		Loop
+	64Deselect:
+		BF64 A 1 A_Lower
+		Loop
+	64Select:
+		BF64 A 1 A_Raise
+		Loop
+		
+	64Fire:
+		TNT1 A 0 A_JumpIf(CallACS("recoiltoggle")==1, "64recoilfire")		
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "64bobfire")		
+		BF64 A 20 A_BFGSound
+		BF64 A 0 Radius_Quake(4, 20, 0, 1, 0)
+		BF64 A 2 A_GunFlash
+		BF64 A 8
+		BF64 D 1 A_FireBFG
+		BF64 D 0 A_Recoil(3)
+		BF64 D 1
+		BF64 EDC 2
+		BF64 BA 1 
+		BF64 A 8
+		BF64 A 20 A_ReFire("64fire")
+		Goto Ready
+	64RecoilFire:
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "64bobrecoilfire")	
+		BF64 A 20 A_BFGSound
+		BF64 A 0 Radius_Quake(4, 20, 0, 1, 0)
+		BF64 A 2 A_GunFlash
+		BF64 A 8
+		BF64 D 1 A_FireBFG
+		BF64 D 0 A_Recoil(3)
+		BF64 D 1 A_SetPitch(pitch-2.0)
+		BF64 E 1 A_SetPitch(pitch-1.6)
+		BF64 E 1 A_SetPitch(pitch+0.6)
+		BF64 D 1 A_SetPitch(pitch+0.6)
+		BF64 D 1 A_SetPitch(pitch+0.6)
+		BF64 C 1 A_SetPitch(pitch+0.6)
+		BF64 C 1 A_SetPitch(pitch+0.4)
+		BF64 B 1 A_SetPitch(pitch+0.4)
+		BF64 A 1 A_SetPitch(pitch+0.4)
+		BF64 A 8
+		BF64 A 20 A_ReFire("64recoilfire")
+		Goto Ready
+		
+	64bobfire:
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 20 A_BFGSound
+		BF64 A 0 Radius_Quake(4, 20, 0, 1, 0)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 2 A_GunFlash
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 A 8
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 D 1 A_FireBFG
+		BF64 D 0 A_Recoil(3)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 D 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 E 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 D 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 C 2
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 B 1
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 1 
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 A 8
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 A 20 A_ReFire("64bobfire")
+		Goto Ready
+		
+	64bobrecoilfire:
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)	
+		BF64 A 20 A_BFGSound
+		BF64 A 0 Radius_Quake(4, 20, 0, 1, 0)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 2 A_GunFlash
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 8
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 D 1 A_FireBFG
+		BF64 D 0 A_Recoil(3)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 D 1 A_SetPitch(pitch-2.0)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 E 1 A_SetPitch(pitch-1.6)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 E 1 A_SetPitch(pitch+0.6)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 D 1 A_SetPitch(pitch+0.6)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 D 1 A_SetPitch(pitch+0.6)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		BF64 C 1 A_SetPitch(pitch+0.6)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 C 1 A_SetPitch(pitch+0.4)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 B 1 A_SetPitch(pitch+0.4)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 1 A_SetPitch(pitch+0.4)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)				
+		BF64 A 8
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		BF64 A 20 A_ReFire("64bobrecoilfire")
+		Goto Ready
+		
+	64Flash:
+		B64F AABCDEFGHH 1 BRIGHT A_Light2
+		TNT1 A 0 A_Light0
+		Goto LightDone
+	}
+}

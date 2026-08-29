@@ -1,0 +1,27 @@
+// Inert placeholders for ProjectSIDE weapon death-state references.
+// The compatibility edition never gives these tokens to the player, so the
+// removed gore/death branches cannot become active.
+Actor DeathToken : Inventory
+{
+	Inventory.MaxAmount 1
+	+Inventory.UNDROPPABLE
+	-Inventory.INVBAR
+}
+
+Actor GibToken : Inventory
+{
+	Inventory.MaxAmount 1
+	+Inventory.UNDROPPABLE
+	-Inventory.INVBAR
+}
+
+Actor GoreController
+{
+	+NOINTERACTION
+	States
+	{
+	Spawn:
+		TNT1 A 1
+		Stop
+	}
+}

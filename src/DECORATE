@@ -1,0 +1,13 @@
+// ProjectSIDE compatibility edition: weapons and weapon effects only.
+#include "DECO/CompatStubs.txt"
+#include "DECO/Player/Melee.txt"
+#include "DECO/Player/Pistol.txt"
+#include "DECO/Player/Rifle.txt"
+#include "DECO/Player/Shotgun.txt"
+#include "DECO/Player/SSG.txt"
+#include "DECO/Player/Chaingun.txt"
+#include "DECO/Player/Rocket.txt"
+#include "DECO/Player/Plasma.txt"
+#include "DECO/Player/BFG.txt"
+#include "DECO/Particles.txt"
+#include "DECO/Projectiles.txt"

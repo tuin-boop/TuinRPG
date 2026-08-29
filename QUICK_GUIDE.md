@@ -1,6 +1,6 @@
 # TuinRPG Quick Guide
 
-TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a merchant to Doom without replacing your maps, weapons or player class.
+TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a merchant to Doom. Its release includes the complete ProjectSIDE compatibility-edition weapon/effect set and quick grenades, while leaving maps, monsters and the player class intact.
 
 ## Controls
 
@@ -10,6 +10,8 @@ TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a
 - **N:** Minimap
 - **Tap E / Use:** Inspect and equip nearby weapon drops or talk to John
 - **Q:** Open the weapon wheel; move the mouse, then press Q, click or Enter to equip
+- **G:** Throw a quick grenade
+- **V:** Use the selected class ability
 
 The keys can be changed under **Customize Controls > Tuin RPG**.
 
@@ -62,4 +64,4 @@ John carries your health, weapons, variants, coins and RPG progress into the nex
 - Compare individual bonuses, not only gear score—a lower score may suit your build better.
 - Legendary, Mythic and Boss glows reveal dangerous enemies before they attack.
 - TuinRPG options let you adjust monster scaling, rarity, loot frequency, HUD styles, minimap size and menu pause behavior.
-- Load TuinRPG after map packs and weapon mods for the best compatibility.
+- Load TuinRPG after map and visual/content packs. Do not load the separate `ProjectSIDE_WeaponsEffects_Compat.pk3`; it is built into TuinRPG.

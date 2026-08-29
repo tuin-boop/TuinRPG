@@ -111,3 +111,14 @@ user float tuin_minimap_opacity = 0.72;
 user float tuin_minimap_horizontal = 0.98;
 user float tuin_minimap_vertical = 0.02;
 user float tuin_minimap_discovery_distance = 4096.0;
+
+// Integrated ProjectSIDE weapon/effect options.
+server int catoggle = 2;
+server int pftoggle = 1;
+server int retoggle = 0;
+server int rmtoggle = 1;
+server int bbtoggle = 1;
+server int wetoggle = 0;
+server int WepSndtoggle = 0;
+server int PuffSNDtoggle = 1;
+server int Prosndtoggle = 1;

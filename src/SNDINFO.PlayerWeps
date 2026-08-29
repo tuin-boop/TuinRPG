@@ -1,0 +1,56 @@
+//Player -----------------------------------------------------------------
+dguyfall			DSPLFALL
+pl_gibbed 			DSSLOP
+
+$playeralias	player	male	*gibbed		pl_gibbed	
+
+vile/raise			DSSLOP
+
+$playersound player male *falling dguyfall
+$playersound	player	male	*pain100	PAINLO
+$playersound	player	male	*pain75		PAINMD
+$playersound	player	male	*pain50		PAINHI
+$playersound	player	male	*pain25		PAINXT
+$playersound	player	male	*xdeath		DEATHBLO
+
+
+
+// Weapon Sounds --------------------------------------------
+
+
+
+//Pistol----------
+
+// Shotgun ----------
+$random weapons/shotgf { DSSHTGN1 DSSHTGN2 }
+DSSHTGN1 DSSHTGN1
+DSSHTGN2 DSSHTGN2 
+
+// SUPER Shotgun------
+$random weapons/sshoto { DSDBOP1 DSDBOP2 }
+DSDBOP1 DSDBOP1
+DSDBOP2 DSDBOP2
+
+$random weapons/sshotl { DSDBLD1 DSDBLD2 }
+DSDBLD1 DSDBLD1
+DSDBLD2 DSDBLD2
+
+$random weapons/sshotc { DSDBCL1 DSDBCL2 }
+DSDBCL1 DSDBCL1
+DSDBCL2 DSDBCL2
+
+$random weapons/sshotf { DSDSHGN1 DSDSHGN2 }
+DSDSHGN1 DSDSHGN1
+DSDSHGN2 DSDSHGN2
+
+// Chaingun--------
+weapons/chngun		DSCHNGUN
+$volume weapons/chngun 0.7
+
+// Rocket Launcher-----
+
+// Plasma Rifle -----
+$volume weapons/plasmaf	0.7
+
+// Bio Force Gun ;)
+

@@ -1,0 +1,449 @@
+ACTOR Rifle : Pistol
+{
+	Weapon.SlotNumber 2
+inventory.pickupmessage "You got the Rifle!"
+decal "bulletchip"
+Weapon.BobStyle "Alpha"
+Weapon.BobSpeed 1.5
+Weapon.BobRangeX 0.5
+Weapon.BobRangeY 0.75
++CHEATNOTWEAPON
+	states
+	{
+	Spawn:
+		RIFL A -1
+		stop
+	Ready:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64ready")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLready")
+		RIF2 A 1 A_WeaponReady
+		Loop
+	Deselect:
+		TNT1 A 0 A_JumpIf(health <= 0, "DeadDeselect")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64deselect")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLdeselect")
+		RF2S ABCDEFGHIJKLMNOP 1 A_Lower
+		Loop
+	DeadDeselect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "DeadBLdeselect")
+		TNT1 A 0 A_JumpIfInventory("GibToken", 1, "Deathgibbed")
+		TNT1 A 0 A_JumpIfInventory("DeathToken", 1, "DeathState")
+		RIF2 A 1 A_Lower
+		Loop
+	Select:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64select")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLselect")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==1, "silentselect")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==3, "silentselect")
+		TNT1 A 0 A_PlaySound("weapons/rifle/draw")
+		RF2S PONMLKJIHGFEDCBA 1 A_Raise
+		Loop
+		
+	SilentSelect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64select")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLselect")
+		RF2S PONMLKJIHGFEDCBA 1 A_Raise
+		Loop
+				
+	Fire:
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "BobFire")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64fire")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLFire")
+		
+		RIF2 A 1
+		RIF2 B 1
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		RIF2 E 3		
+		RIF2 F 3
+		RIF2 G 2  A_ReFire
+		RIF2 H 1
+		RIF2 A 2
+		Goto Ready
+		
+	BobFire:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64Fire")
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLFire")
+		
+		RIF2 AB 1 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIF2 C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIF2 D 1 bright
+		RIF2 EF 3 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIF2 G 2  A_ReFire 
+		RIF2 H 1 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIF2 A 2  A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		Goto Ready
+	Flash:
+		TNT1 A 0 a_jumpif(callacs("skintoggler")==1, "64flash")
+		TNT1 A 0 A_JumpIf(CallACS("RecoilToggle")==1, "Kickflash")
+		TNT1 B 2 Bright A_Light2
+		TNT1 A 1 Bright A_Light1
+		Goto LightDone
+		
+		
+	KickFlash:
+		TNT1 B 2 Bright A_Light2
+		TNT1 A 1 Bright A_Light1
+		TNT1 a 1 a_setpitch(pitch+0.3)
+		TNT1 a 1 a_setpitch(pitch-0.1)
+		TNT1 a 2 a_setpitch(pitch-0.1)
+		TNT1 a 2 a_setpitch(pitch-0.05)
+		TNT1 a 2 a_setpitch(pitch-0.05)
+		Goto LightDone
+		
+	Deathstate:
+		TNT1 A 0 A_TakeInventory("DeathToken", 1)
+		TNT1 A 0 A_Jump(255, "Deathstate1", "Deathstate2")
+		stop
+		
+	Deathstate1:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED1 ABC 1
+		DED1 DE 1
+		DED1 FGHIJ 2
+		DED1 J 5
+		DED1 LMNOPQRSTU 1
+		DED1 U -1
+		stop
+		
+	Deathstate2:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED3 ABC 1
+		DED3 DE 1
+		DED3 FGHIJ 2
+		DED3 J 5
+		DED3 LMNOPQRSTU 1
+		DED3 U -1
+		stop
+		
+	DeathGibbed:
+		TNT1 A 0
+		TNT1 A 0 A_JumpIf(CallACS("Gibtoggle")==0, +2)
+		TNT1 a 0 a_spawnitemex("gorecontroller")
+		stop
+		
+		
+	/////////////////////
+	//BLACK GLOVE RIFLE//
+	/////////////////////
+	
+	blReady:
+		RIFB A 1 A_WeaponReady
+		Loop
+	blDeselect:
+		TNT1 A 0 A_JumpIf(health <= 0, "DeadBLDeselect")
+		RFBS ABCDEFGHIJKLMNOP 1 A_Lower
+		Loop
+		
+	DeadblDeselect:
+		TNT1 A 0 A_JumpIfInventory("GibToken", 1, "Deathgibbed")
+		TNT1 A 0 A_JumpIfInventory("DeathToken", 1, "blDeathState")
+		RIFB A 1 A_Lower
+		Loop
+		
+	BLSelect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64select")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==1, "BLsilentselect")
+		TNT1 A 0 a_jumpif(callacs("WeaponSoundToggle")==3, "BLsilentselect")
+		TNT1 A 0 A_PlaySound("weapons/rifle/draw")
+		RFBS PONMLKJIHGFEDCBA 1 A_Raise
+		Loop
+		
+	BLSilentSelect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==1, "64select")
+		RFBS PONMLKJIHGFEDCBA 1 A_Raise
+		Loop
+		
+	blFire:
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "BobblFire")
+
+		RIFB A 1
+		RIFB B 1
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIFB D 1 bright
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIFB D 1 bright
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RIFB D 1 bright
+		RIFB E 2		
+		RIFB F 2
+		RIFB G 2  A_ReFire
+		RIFB H 1
+		RIFB A 2
+		Goto Ready
+		
+	BobblFire:
+		TNT1 A 0 A_JumpIf(CallACS("RecoilToggle")==1, "BobBlRecoilFire")
+		
+		RIFB AB 1 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB D 1 bright
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB D 1 bright
+		RIFB C 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB D 1 bright
+		RIFB EF 2 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB G 2  A_ReFire 
+		RIFB H 1 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RIFB A 2 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		Goto Ready
+		
+	BLDeathstate:
+		TNT1 A 0 A_TakeInventory("DeathToken", 1)
+		TNT1 A 0 A_Jump(255, "BLDeathstate1", "BLDeathstate2")
+		stop
+		
+	BLDeathstate1:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED2 ABC 1
+		DED2 DE 1
+		DED2 FGHIJ 2
+		DED2 J 5
+		DED2 LMNOPQRSTU 1
+		DED2 U -1
+		stop
+		
+	BLDeathstate2:
+		TNT1 A 0 Offset(0,32)
+		TNT1 A 0 A_StopSound(CHAN_BODY)
+		TNT1 A 0 A_StopSound(CHAN_WEAPON)
+		TNT1 A 0 A_StopSound(CHAN_6)
+		DED4 ABC 1
+		DED4 DE 1
+		DED4 FGHIJ 2
+		DED4 J 5
+		DED4 LMNOPQRSTU 1
+		DED4 U -1
+		stop
+		
+		
+/////////////////////
+//NINTENDO 64 RIFLE//
+/////////////////////
+	64Ready:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLready")
+		RI64 A 1 A_WeaponReady
+		Loop
+	64Deselect:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLdeselect")
+		RI64 A 1 A_Lower
+		Loop
+	64Select:
+		TNT1 A 0 A_JumpIf(CallACS("SkinToggler")==2, "BLselect")
+		RI64 A 1 A_Raise
+		Loop
+
+	64Fire:
+		TNT1 A 0 a_jumpif(callacs("BobToggle")==1, "64BobFire")
+		RI64 A 2
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RI64 C 1 bright 
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RI64 C 1 bright 
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		RI64 C 1 bright 
+		RI64 D 2 bright
+		RI64 E 2		
+		RI64 F 2
+		RI64 G 2  A_ReFire
+		RI64 H 1
+		RI64 A 2
+		Goto Ready
+	
+	64BobFire:	
+		RI64 A 2 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 C 1 bright
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 C 1 bright
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 B 1 bright 
+		{
+			A_FireBullets (5.6, 5.6, 1, 5, "AttackSmoothPuff");
+			A_PlaySound("weapons/pistol", CHAN_WEAPON);
+			A_GunFlash;
+			A_JumpIf(CallACS("CasingToggle")==0, +2);
+			A_spawnitemex ("bulletcasing", 30, 0, 25, random(0,2), random(-4,-6), random(3,5), 0);
+		}
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 C 1 bright
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 D 2 bright
+		RI64 EF 2 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)		
+		TNT1 A 0 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 G 2  A_ReFire 
+		RI64 H 1 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		RI64 A 2 A_WeaponReady(WRF_NoFire|WRF_NoSwitch)
+		Goto Ready
+	
+	64Flash:
+		TNT1 a 2 Bright A_Light2
+		TNT1 a 1 Bright A_Light1
+		Goto LightDone
+		
+	64Flash:
+		TNT1 A 0 A_JumpIf(CallACS("RecoilToggle")==1, "64Kickflash")
+		RF64 A 1 Bright A_Light2
+		RF64 B 1 Bright A_Light1
+		Goto LightDone
+		
+	64KickFlash:
+		RF64 A 1 Bright A_Light2
+		RF64 B 1 Bright A_Light1
+		TNT1 a 1 a_setpitch(pitch+0.3)
+		TNT1 a 1 a_setpitch(pitch-0.1)
+		TNT1 a 2 a_setpitch(pitch-0.1)
+		TNT1 a 2 a_setpitch(pitch-0.05)
+		TNT1 a 2 a_setpitch(pitch-0.05)
+		Goto LightDone
+		}
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.29
+
+- Integrated the complete ProjectSIDE weapons/effects compatibility edition into the main TuinRPG PK3, including its animated weapon replacements, effects, sounds, casings, projectiles and credits.
+- Integrated quick grenades as a standard feature bound to `G`, with two starting grenades, pickups/drops, reserve HUD, first-person throw animation and multi-band explosion.
+- Changed Doom Guy's Blood Punch to use ProjectSIDE's `PKFS` melee frames in a fast dedicated first-person overlay while TuinRPG retains control of cone damage and healing.
+- Merged ProjectSIDE's event handler, controls, CVARs and root definitions so the separate compatibility PK3 is no longer required and must not be loaded alongside TuinRPG.
+
 ## 0.6.20
 
 - Gave Cyberdemons and Spider Masterminds 75% resistance to direct BFG projectiles, tracer/splash damage, and recognizable replacement BFG weapons.
