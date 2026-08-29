@@ -410,7 +410,7 @@ class TuinRPGHandler : EventHandler
 				teammate.A_SetHealth(min(teammate.GetMaxHealth(true), teammate.Health + healing));
 			}
 		}
-		else if (data.PlayerClass == 4 && data.ClassHealClock >= max(140, 350 - data.PerkClassMastery * 60))
+		else if (data.PlayerClass == 4 && data.ClassHealClock >= 350)
 		{
 			data.ClassHealClock = 0;
 			if (pawn.Health > 0) pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + 1));
@@ -790,7 +790,9 @@ class TuinRPGHandler : EventHandler
 				SpawnBloodPunchImpact(victim);
 			}
 		}
-		int healing = min(75, int(totalDamage * 0.20 + 0.5));
+		double healingRate = data.PerkCapstone ? 0.30 : 0.20;
+		int healingCap = data.PerkCapstone ? 110 : 75;
+		int healing = min(healingCap, int(totalDamage * healingRate + 0.5));
 		if (healing > 0 && pawn.Health > 0)
 			pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
 		if (targetsHit > 0)
@@ -964,15 +966,15 @@ class TuinRPGHandler : EventHandler
 		case 5: rank = data.PerkBloodDrinker; break;
 		case 6: rank = data.PerkClassMastery; break;
 		case 7:
-			if (data.PerkCapstone) { SetLootNotification(playerNumber, "CLASS CAPSTONE ALREADY UNLOCKED", 0); return; }
+			if (data.PerkCapstone) { SetLootNotification(playerNumber, "CLASS ULTIMATE ALREADY UNLOCKED", 0); return; }
 			if (data.PlayerLevel < 20 || data.PerkClassMastery < 2)
 			{
-				SetLootNotification(playerNumber, "CAPSTONE REQUIRES LEVEL 20 AND CLASS TRAINING II", 0);
+				SetLootNotification(playerNumber, "ULTIMATE REQUIRES LEVEL 20 AND CLASS TRAINING II", 0);
 				return;
 			}
 			data.PerkCapstone = true;
 			data.UnspentSkillPoints--;
-			SetLootNotification(playerNumber, "CLASS CAPSTONE UNLOCKED", 5);
+			SetLootNotification(playerNumber, "CLASS ULTIMATE UNLOCKED", 5);
 			return;
 		default: return;
 		}
@@ -3613,9 +3615,6 @@ class TuinRPGHandler : EventHandler
 			if (variantIndex >= 0)
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
-			if (playerData && playerData.PlayerClass == 4 && playerData.PerkCapstone && players[killer].mo &&
-				players[killer].mo.Health > 0)
-				players[killer].mo.A_SetHealth(min(players[killer].mo.GetMaxHealth(true), players[killer].mo.Health + 3));
 			TryDropWeapon(e.Thing, data, killer);
 		}
 		SpawnCoinReward(e.Thing, data);

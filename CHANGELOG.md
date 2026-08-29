@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.34
+
+- Refocused Doom Guy Class Training on Blood Punch: its three ranks now build charge 10%, 20%, and 30% faster instead of changing passive regeneration timing.
+- Renamed Class Capstone to **Class Ultimate** throughout the interface and notifications.
+- Reworked Doom Guy's level-20 Ultimate to build Blood Punch 45% faster and heal 30% of damage dealt up to 110 health, replacing the unrelated heal-per-kill bonus.
+- Rebuilt the permanent class-selection comparison into aligned Class, Role, Core Traits, and Specialty columns with shorter, clearer descriptions and a narrower framed panel.
+
 ## 0.6.33
 
 - Added a smooth 16-tic fist raise after the equipped weapon finishes lowering; the Blood Punch stance no longer pops abruptly onto the screen.

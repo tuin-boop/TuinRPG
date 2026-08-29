@@ -496,7 +496,8 @@ class TuinPlayerData : Inventory
 	void AddDoomBloodPunchCharge(int damage)
 	{
 		if (PlayerClass != 4 || damage <= 0 || DoomBloodPunchCharge >= 100) return;
-		double exact = damage * 100.0 / DoomBloodPunchDamageRequired() + DoomBloodPunchChargeRemainder;
+		double chargeRate = PerkCapstone ? 1.45 : 1.0 + PerkClassMastery * 0.10;
+		double exact = damage * chargeRate * 100.0 / DoomBloodPunchDamageRequired() + DoomBloodPunchChargeRemainder;
 		int gained = int(exact);
 		DoomBloodPunchChargeRemainder = exact - gained;
 		DoomBloodPunchCharge = min(100, DoomBloodPunchCharge + gained);

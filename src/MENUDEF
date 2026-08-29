@@ -271,7 +271,7 @@ OptionMenu "TuinRPGPerks"
 	StaticText " "
 	Submenu "GENERAL PERKS: UNIVERSAL UPGRADES", "TuinRPGGeneralPerks"
 	Submenu "CLASS TRAINING: THREE CLASS-SPECIFIC RANKS", "TuinRPGClassTraining"
-	Submenu "CLASS CAPSTONE: FINAL LEVEL-20 CLASS POWER", "TuinRPGClassCapstone"
+	Submenu "CLASS ULTIMATE: FINAL LEVEL-20 CLASS POWER", "TuinRPGClassCapstone"
 	Class "TuinRPGPerkMenu"
 }
 
@@ -301,7 +301,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "TANK: +3% DAMAGE RESISTANCE", 1
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
 	StaticText "DAMAGE DEALER: +3% DAMAGE", 1
-	StaticText "DOOM GUY: HEALTH REGENERATION TRIGGERS FASTER", 1
+	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
 	StaticText "ROGUE: +2% CRIT + LONGER VEIL + MORE DAMAGE CHARGE", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
@@ -310,7 +310,7 @@ OptionMenu "TuinRPGClassTraining"
 
 OptionMenu "TuinRPGClassCapstone"
 {
-	Title "CLASS CAPSTONE"
+	Title "CLASS ULTIMATE"
 	Position 54
 	StaticText "THE FINAL PERK FOR YOUR CHOSEN CLASS", 1
 	StaticText "COST: 1 PERK POINT", 1
@@ -319,10 +319,10 @@ OptionMenu "TuinRPGClassCapstone"
 	StaticText "TANK: LAST STAND BELOW 30% HEALTH", 1
 	StaticText "HEALER: DOUBLE ALL CLASS HEALING", 1
 	StaticText "DAMAGE DEALER: CRITICAL HITS DEAL 2.5X DAMAGE", 1
-	StaticText "DOOM GUY: HEAL 3 HEALTH PER KILL", 1
+	StaticText "DOOM GUY: +45% BLOOD PUNCH CHARGE | HEALS 30% DAMAGE", 1
 	StaticText "ROGUE: AMBUSH DEALS X6 RANGED / X30 FIST DAMAGE", 1
 	StaticText " "
-	Command "UNLOCK YOUR CLASS CAPSTONE", "netevent tuin_buy_perk 7"
+	Command "UNLOCK YOUR CLASS ULTIMATE", "netevent tuin_buy_perk 7"
 	Class "TuinRPGPerkMenu"
 }
 

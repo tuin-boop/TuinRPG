@@ -218,7 +218,7 @@ class TuinRPGCharacterMenu : OptionMenu
 			data.PerkVitalCore, data.PerkScavenger, data.PerkKillerInstinct),
 			DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 7, String.Format(
-			"IRON SKIN %d | BLOOD DRINKER %d | CLASS TRAINING %d | CAPSTONE %s",
+			"IRON SKIN %d | BLOOD DRINKER %d | CLASS TRAINING %d | ULTIMATE %s",
 			data.PerkIronSkin, data.PerkBloodDrinker, data.PerkClassMastery,
 			data.PerkCapstone ? "YES" : "NO"), DTA_ScaleX, scale, DTA_ScaleY, scale);
 
@@ -370,23 +370,56 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 {
 	override int Draw(OptionMenuDescriptor desc, int y, int indent, bool selected)
 	{
-		string details;
+		string role;
+		string traits;
+		string ability;
 		if (mLabel ~== "TANK")
-			details = "300 BASE HP   |   50% RESISTANCE / DAMAGE   |   +50% AMMO   |   V: OVERDRIVE";
+		{
+			role = "BULWARK";
+			traits = "300 HP | 50% RESIST | -50% DMG | +50% AMMO";
+			ability = "V: OVERDRIVE";
+		}
 		else if (mLabel ~== "HEALER")
-			details = "TEAM SUPPORT   |   HEAL 5 HP / 2 SEC   |   -25% DAMAGE   |   +25% AMMO";
+		{
+			role = "COMBAT MEDIC";
+			traits = "HEAL 5 HP / 2S | -25% DMG | +25% AMMO";
+			ability = "PASSIVE HEALING";
+		}
 		else if (mLabel ~== "DAMAGE DEALER")
-			details = "GLASS CANNON   |   +30% DAMAGE   |   -25% MAX HP   |   +10% DAMAGE TAKEN";
+		{
+			role = "GLASS CANNON";
+			traits = "+30% DMG | -25% HP | +10% DMG TAKEN";
+			ability = "HEAVY CRITICALS";
+		}
 		else if (mLabel ~== "DOOM GUY")
-			details = "BALANCED FIGHTER   |   +10% DAMAGE   |   10% RESISTANCE   |   V: BLOOD PUNCH + HEAL";
+		{
+			role = "SLAYER";
+			traits = "+10% DMG | 10% RESIST | REGEN 1 HP / 10S";
+			ability = "V: BLOOD PUNCH";
+		}
 		else
-			details = "AMBUSHER   |   +5% CRIT   |   CRITS BLEED   |   -20% MAX HP   |   VEIL: X4 RANGED / X20 FISTS";
+		{
+			role = "AMBUSHER";
+			traits = "+5% CRIT | CRITS BLEED | -20% HP";
+			ability = "V: SHADOW VEIL";
+		}
 
 		int center = Screen.GetWidth() / 2;
-		int classX = center - 660;
-		int detailX = center - 330;
+		int classX = center - 650;
+		int roleX = center - 450;
+		int traitsX = center - 190;
+		int abilityX = center + 410;
+		if (mLabel ~== "TANK")
+		{
+			drawText(classX, y - 28, Font.CR_GOLD, "CLASS");
+			drawText(roleX, y - 28, Font.CR_GOLD, "ROLE");
+			drawText(traitsX, y - 28, Font.CR_GOLD, "CORE TRAITS");
+			drawText(abilityX, y - 28, Font.CR_GOLD, "SPECIALTY");
+		}
 		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE, mLabel);
-		drawText(detailX, y, selected ? Font.CR_RED : Font.CR_GOLD, details);
+		drawText(roleX, y, selected ? Font.CR_RED : Font.CR_GOLD, role);
+		drawText(traitsX, y, selected ? Font.CR_RED : Font.CR_GOLD, traits);
+		drawText(abilityX, y, selected ? Font.CR_RED : Font.CR_GOLD, ability);
 		return classX - 16 * CleanXfac_1;
 	}
 }
@@ -415,7 +448,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 	{
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
-		int panelWidth = min(width - 48, 1800);
+		int panelWidth = min(width - 72, 1660);
 		int panelHeight = min(height - 90, 430);
 		int panelX = (width - panelWidth) / 2;
 		int panelY = 36;
@@ -423,7 +456,9 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		Screen.DrawLineFrame(Color(0, 0, 0), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(170, 116, 26), panelX + 7, panelY + 7,
 			panelWidth - 14, panelHeight - 14, 2);
-		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 370, panelY + 112, 2, 224);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 475, panelY + 104, 2, 232);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 215, panelY + 104, 2, 232);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 + 385, panelY + 104, 2, 232);
 		Super.Drawer();
 	}
 }
