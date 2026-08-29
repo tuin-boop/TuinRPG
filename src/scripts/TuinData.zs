@@ -436,6 +436,11 @@ class TuinPlayerData : Inventory
 	bool TankOverdriveActive;
 	int TankOverdriveTics;
 	Actor TankOverdriveOwner;
+	int DoomBloodPunchCharge;
+	double DoomBloodPunchChargeRemainder;
+	bool DoomBloodPunchInitialized;
+	bool DoomBloodPunchReadyNotified;
+	int DoomBloodPunchFlashTics;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
 	double ClassAmmoRemainder[32];
@@ -473,6 +478,21 @@ class TuinPlayerData : Inventory
 		TankOverdriveChargeRemainder = exact - gained;
 		TankOverdriveCharge = min(100, TankOverdriveCharge + gained);
 		if (TankOverdriveCharge < 100) TankReadyNotified = false;
+	}
+
+	clearscope int DoomBloodPunchDamageRequired()
+	{
+		return 500 + max(1, PlayerLevel) * 40;
+	}
+
+	void AddDoomBloodPunchCharge(int damage)
+	{
+		if (PlayerClass != 4 || damage <= 0 || DoomBloodPunchCharge >= 100) return;
+		double exact = damage * 100.0 / DoomBloodPunchDamageRequired() + DoomBloodPunchChargeRemainder;
+		int gained = int(exact);
+		DoomBloodPunchChargeRemainder = exact - gained;
+		DoomBloodPunchCharge = min(100, DoomBloodPunchCharge + gained);
+		if (DoomBloodPunchCharge < 100) DoomBloodPunchReadyNotified = false;
 	}
 
 	clearscope int FindEquippedVariant(class<Weapon> weaponType)

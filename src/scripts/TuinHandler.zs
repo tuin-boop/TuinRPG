@@ -255,6 +255,18 @@ class TuinRPGHandler : EventHandler
 			SetLootNotification(playerNumber, "SHADOW VEIL READY", 4);
 	}
 
+	void AddDoomBloodPunchCharge(int playerNumber, TuinPlayerData data, int damage)
+	{
+		if (!data || data.PlayerClass != 4 || damage <= 0 || data.DoomBloodPunchCharge >= 100) return;
+		int oldCharge = data.DoomBloodPunchCharge;
+		data.AddDoomBloodPunchCharge(damage);
+		if (oldCharge < 100 && data.DoomBloodPunchCharge >= 100)
+		{
+			data.DoomBloodPunchReadyNotified = true;
+			SetLootNotification(playerNumber, "BLOOD PUNCH READY - PRESS V", 4);
+		}
+	}
+
 	TuinPlayerData EnsurePlayerData(int playerNumber)
 	{
 		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return null;
@@ -601,6 +613,107 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
+	void SpawnBloodPunchCone(Actor pawn)
+	{
+		if (!pawn) return;
+		for (int angleStep = -50; angleStep <= 50; angleStep += 20)
+		{
+			double particleAngle = pawn.Angle + angleStep;
+			for (int distance = 28; distance <= 224; distance += 28)
+			{
+				double spread = 0.20 + distance / 224.0;
+				pawn.A_SpawnParticle((distance / 28) & 1 ? Color(255, 24, 8) : Color(190, 0, 0),
+					SPF_FULLBRIGHT | SPF_FACECAMERA, 10, 4.0 + spread * 4.0, 0,
+					cos(particleAngle) * distance, sin(particleAngle) * distance,
+					pawn.Height * (0.35 + spread * 0.15),
+					cos(particleAngle) * 2.8, sin(particleAngle) * 2.8, 0.25,
+					0, 0, 0.04, 0.90, 0.09, 0.30);
+			}
+		}
+	}
+
+	void SpawnBloodPunchImpact(Actor victim)
+	{
+		if (!victim) return;
+		for (int i = 0; i < 10; i++)
+		{
+			double particleAngle = i * 36.0;
+			victim.A_SpawnParticle(Color(255, 35, 12), SPF_FULLBRIGHT | SPF_FACECAMERA,
+				12, 5.0, 0, 0, 0, victim.Height * 0.55,
+				cos(particleAngle) * 4.5, sin(particleAngle) * 4.5,
+				1.0 + (i & 3) * 0.5, 0, 0, -0.12, 1.0, 0.08, -0.20);
+		}
+	}
+
+	void ActivateDoomBloodPunch(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 4 || data.DoomBloodPunchCharge < 100) return;
+		data.DoomBloodPunchCharge = 0;
+		data.DoomBloodPunchChargeRemainder = 0.0;
+		data.DoomBloodPunchReadyNotified = false;
+		data.DoomBloodPunchFlashTics = 6;
+		SpawnBloodPunchCone(pawn);
+		pawn.A_RemoveLight('TuinBloodPunchGlow');
+		pawn.A_AttachLight('TuinBloodPunchGlow', DynamicLight.PulseLight, Color(255, 16, 4), 76, 76,
+			DynamicLight.LF_ATTENUATE, (24, 0, pawn.Height * 0.50), 0.20);
+		pawn.A_StartSound("weapons/punch", CHAN_WEAPON);
+
+		int baseDamage = min(650, 140 + max(1, data.PlayerLevel) * 14);
+		int totalDamage = 0;
+		int targetsHit = 0;
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				if (!victim.bISMONSTER || victim.bFRIENDLY || victim.Health <= 0 ||
+					pawn.Distance2D(victim) > 240.0 ||
+					abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(victim, true))) > 55.0) continue;
+				double pawnCenter = pawn.Pos.z + pawn.Height * 0.5;
+				double victimCenter = victim.Pos.z + victim.Height * 0.5;
+				if (abs(pawnCenter - victimCenter) > 128.0 || !pawn.CheckSight(victim, SF_IGNOREWATERBOUNDARY)) continue;
+				int healthBefore = max(0, victim.Health);
+				victim.DamageMobj(pawn, pawn, baseDamage, 'TuinBloodPunch');
+				int dealt = max(0, healthBefore - max(0, victim.Health));
+				if (dealt <= 0) continue;
+				totalDamage += dealt;
+				targetsHit++;
+				SpawnBloodPunchImpact(victim);
+			}
+		}
+		int healing = min(75, int(totalDamage * 0.20 + 0.5));
+		if (healing > 0 && pawn.Health > 0)
+			pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
+		if (targetsHit > 0)
+			SetLootNotification(playerNumber, String.Format("BLOOD PUNCH! %d HIT - HEALED %d", targetsHit, healing), 5);
+		else SetLootNotification(playerNumber, "BLOOD PUNCH MISSED - BUILD CHARGE", 0);
+	}
+
+	void ApplyDoomBloodPunch(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		if (!data.DoomBloodPunchInitialized)
+		{
+			data.DoomBloodPunchInitialized = true;
+			data.DoomBloodPunchCharge = 0;
+		}
+		if (data.PlayerClass != 4 || pawn.Health <= 0)
+		{
+			data.DoomBloodPunchFlashTics = 0;
+			pawn.A_RemoveLight('TuinBloodPunchGlow');
+			return;
+		}
+		if (data.DoomBloodPunchCharge >= 100 && !data.DoomBloodPunchReadyNotified)
+		{
+			data.DoomBloodPunchReadyNotified = true;
+			SetLootNotification(playerNumber, "BLOOD PUNCH READY - PRESS V", 4);
+		}
+		if (data.DoomBloodPunchFlashTics > 0)
+		{
+			data.DoomBloodPunchFlashTics--;
+			if (data.DoomBloodPunchFlashTics <= 0) pawn.A_RemoveLight('TuinBloodPunchGlow');
+		}
+	}
+
 	void ChoosePlayerClass(int playerNumber, int chosenClass)
 	{
 		let data = EnsurePlayerData(playerNumber);
@@ -632,6 +745,14 @@ class TuinRPGHandler : EventHandler
 			data.TankOverdriveActive = false;
 			data.TankOverdriveTics = 0;
 			data.TankReadyNotified = false;
+		}
+		else if (chosenClass == 4)
+		{
+			data.DoomBloodPunchInitialized = true;
+			data.DoomBloodPunchCharge = 0;
+			data.DoomBloodPunchChargeRemainder = 0.0;
+			data.DoomBloodPunchReadyNotified = false;
+			data.DoomBloodPunchFlashTics = 0;
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -3122,6 +3243,7 @@ class TuinRPGHandler : EventHandler
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
 		double targetBaseDamageFactor = 1.0;
+		bool bloodPunchAttack = e.DamageType == 'TuinBloodPunch';
 		if ((e.Thing is 'Cyberdemon' || e.Thing is 'SpiderMastermind') &&
 			IsBFGDamage(e.Inflictor, e.DamageSource, e.DamageType))
 			targetBaseDamageFactor = 0.25;
@@ -3195,8 +3317,8 @@ class TuinRPGHandler : EventHandler
 				if (playerBaseDamageFactor < 1.0)
 					e.NewDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 				multiplier *= 1.0 + playerData.Strength * 0.02;
-				int variantIndex = ActiveWeaponVariantIndex(attacker, playerData);
-				if (victimData && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+				int variantIndex = bloodPunchAttack ? -1 : ActiveWeaponVariantIndex(attacker, playerData);
+				if (victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
 				{
 					multiplier *= playerData.PlayerClass == 3 && playerData.PerkCapstone ? 2.5 : 2.0;
@@ -3238,6 +3360,8 @@ class TuinRPGHandler : EventHandler
 				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
 				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
+			if (attackData && attackData.PlayerClass == 4 && !bloodPunchAttack)
+				AddDoomBloodPunchCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
@@ -3699,6 +3823,7 @@ class TuinRPGHandler : EventHandler
 			ApplyClassRegeneration(i, players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
+			ApplyDoomBloodPunch(i, players[i].mo, playerData);
 			ApplyFlashlight(players[i].mo, playerData);
 			ApplyHeldGodlyGlow(i, playerData);
 			ApplyAgility(i, playerData);
@@ -3795,9 +3920,18 @@ class TuinRPGHandler : EventHandler
 					SetLootNotification(e.Player, String.Format("OVERDRIVE CHARGE: %d%%", rogueData.TankOverdriveCharge), 0);
 				return;
 			}
+			if (rogueData && pawn && rogueData.PlayerClass == 4)
+			{
+				if (rogueData.DoomBloodPunchCharge >= 100)
+					ActivateDoomBloodPunch(e.Player, pawn, rogueData);
+				else
+					SetLootNotification(e.Player, String.Format("BLOOD PUNCH CHARGE: %d%% - DEAL DAMAGE",
+						rogueData.DoomBloodPunchCharge), 0);
+				return;
+			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
 			{
-				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK OR ROGUE", 0);
+				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK, DOOM GUY, OR ROGUE", 0);
 				return;
 			}
 			if (rogueData.RogueVeiled)
@@ -4132,7 +4266,8 @@ class TuinRPGHandler : EventHandler
 			double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
 			panelY = playerStatusY + int(34 * statusScale) + 7;
 			let targetPlayerData = GetPlayerData(players[playerNumber].mo);
-			if (targetPlayerData && (targetPlayerData.PlayerClass == 1 || targetPlayerData.PlayerClass == 5))
+			if (targetPlayerData && (targetPlayerData.PlayerClass == 1 || targetPlayerData.PlayerClass == 4 ||
+				targetPlayerData.PlayerClass == 5))
 				panelY += int(22 * statusScale) + 5;
 			panelWidth = mapSize;
 		}
@@ -4245,6 +4380,36 @@ class TuinRPGHandler : EventHandler
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
 	}
 
+	ui void DrawDoomBloodPunchStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 4) return;
+		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		string status = data.DoomBloodPunchCharge < 100 ?
+			String.Format("BLOOD PUNCH CHARGE  %d%%  -  DEAL DAMAGE", data.DoomBloodPunchCharge) :
+			"BLOOD PUNCH READY  -  PRESS V";
+		int statusColor = data.DoomBloodPunchCharge < 100 ? Font.CR_GOLD : Font.CR_GREEN;
+		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		int panelX = screenWidth - panelWidth - 10;
+		int panelY = 10;
+		if (CVInt('tuin_minimap_enabled', 1))
+		{
+			int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, screenHeight - 32));
+			double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
+			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+			panelWidth = mapSize;
+		}
+		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
+		Screen.DrawLineFrame(Color(210, 20, 12), panelX, panelY, panelWidth, int(20 * scale), 2);
+		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
+		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
+			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+	}
+
 	ui void DrawCurrentTargetAffixes(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
@@ -4282,6 +4447,7 @@ class TuinRPGHandler : EventHandler
 		DrawDamageNumbers(e, pnum, font, sw, sh);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
 		DrawTankStatus(pnum, font, sw, sh, hudScale);
+		DrawDoomBloodPunchStatus(pnum, font, sw, sh, hudScale);
 		DrawCurrentTargetPanel(pnum, font, sw, sh, hudScale);
 		DrawCurrentTargetAffixes(pnum, font, sw, sh, hudScale);
 		if (DifficultyNoticeTics[pnum] > 0 && DifficultyNoticeTitle[pnum].Length())

@@ -378,7 +378,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		else if (mLabel ~== "DAMAGE DEALER")
 			details = "GLASS CANNON   |   +30% DAMAGE   |   -25% MAX HP   |   +10% DAMAGE TAKEN";
 		else if (mLabel ~== "DOOM GUY")
-			details = "BALANCED FIGHTER   |   +10% DAMAGE   |   10% RESISTANCE   |   REGEN 1 HP / 10 SEC";
+			details = "BALANCED FIGHTER   |   +10% DAMAGE   |   10% RESISTANCE   |   V: BLOOD PUNCH + HEAL";
 		else
 			details = "AMBUSHER   |   +5% CRIT   |   CRITS BLEED   |   -20% MAX HP   |   VEIL: X4 RANGED / X20 FISTS";
 
