@@ -5,7 +5,7 @@ class TuinRPGHandler : EventHandler
 	const TUIN_MAX_DAMAGE_NUMBERS = 64;
 	const TUIN_DAMAGE_NUMBER_LIFETIME = 42;
 	const TUIN_MAX_ROGUE_WANDERERS = 128;
-	const TUIN_MAX_PROCESSED_GRENADES = 64;
+	const TUIN_MAX_TRACKED_GRENADES = 64;
 	int NextMonsterID;
 	int MapsVisited;
 	int PreviousLoadedCampaignMap;
@@ -58,8 +58,12 @@ class TuinRPGHandler : EventHandler
 	Actor RogueWanderActor[TUIN_MAX_ROGUE_WANDERERS];
 	int RogueWanderPlayer[TUIN_MAX_ROGUE_WANDERERS];
 	int NextRogueWanderer;
-	Actor ProcessedBossGrenade[TUIN_MAX_PROCESSED_GRENADES];
-	int NextProcessedBossGrenade;
+	Actor TrackedGrenade[TUIN_MAX_TRACKED_GRENADES];
+	Vector3 TrackedGrenadePosition[TUIN_MAX_TRACKED_GRENADES];
+	Actor TrackedGrenadeSource[TUIN_MAX_TRACKED_GRENADES];
+	bool TrackedGrenadeActive[TUIN_MAX_TRACKED_GRENADES];
+	bool TrackedGrenadeImpactApplied[TUIN_MAX_TRACKED_GRENADES];
+	int NextTrackedGrenade;
 	int PoisonTics[TUIN_MAX_PLAYERS];
 	int PoisonDamage[TUIN_MAX_PLAYERS];
 	Actor PoisonSource[TUIN_MAX_PLAYERS];
@@ -973,44 +977,98 @@ class TuinRPGHandler : EventHandler
 		return typeName.IndexOf("grenade") >= 0;
 	}
 
-	bool BossGrenadeAlreadyProcessed(Actor grenade)
+	void ApplyGrenadeBossImpact(Vector3 explosionPosition, Actor source, Actor inflictor = null)
 	{
-		for (int i = 0; i < TUIN_MAX_PROCESSED_GRENADES; i++)
-			if (ProcessedBossGrenade[i] == grenade) return true;
+		foreach (bossSector: level.Sectors)
+		{
+			for (Actor boss = bossSector.thinglist; boss; boss = boss.snext)
+			{
+				Vector3 offset = boss.Pos - explosionPosition;
+				if (boss.Health <= 0 || !(boss is 'Cyberdemon' || boss is 'SpiderMastermind') ||
+					offset.Length() > 192.0) continue;
+				let bossData = GetMonsterData(boss);
+				int scaledHealth = bossData ? max(1, bossData.ScaledMaxHealth) : max(1, boss.GetMaxHealth(true));
+				// Iconic bosses may swallow all or nearly all native radius damage. Add a
+				// controlled impact component: 2% scaled HP, bounded for balance. Existing
+				// armor, Tank output penalties, and other damage rules still apply.
+				int impactDamage = clamp(int(scaledHealth * 0.02 + 0.5), 128, 500);
+				boss.DamageMobj(inflictor, source, impactDamage, 'TuinGrenadeBossImpact');
+			}
+		}
+	}
+
+	bool GrenadeTouchesIconicBoss(Actor grenade)
+	{
+		if (!grenade) return false;
+		foreach (bossSector: level.Sectors)
+		{
+			for (Actor boss = bossSector.thinglist; boss; boss = boss.snext)
+			{
+				if (boss.Health <= 0 || !(boss is 'Cyberdemon' || boss is 'SpiderMastermind')) continue;
+				// Fast external grenades can move a full tic and bounce before their
+				// origins overlap. Keep one movement-step of tolerance so contact is
+				// registered just before the engine reverses their velocity.
+				double contactDistance = boss.Radius + grenade.Radius + 48.0;
+				bool verticalContact = grenade.Pos.z + grenade.Height >= boss.Pos.z - 8.0 &&
+					grenade.Pos.z <= boss.Pos.z + boss.Height + 8.0;
+				if (verticalContact && grenade.Distance2D(boss) <= contactDistance) return true;
+			}
+		}
 		return false;
 	}
 
 	void UpdateGrenadeBossDamage()
 	{
-		// Real projectiles clear bMISSILE as they enter their death animation, so
-		// identify exploding grenades by their active Death state instead.
-		if ((level.Time & 1) != 0) return;
+		// Track live grenades before their projectile flag is cleared. Custom grenade
+		// actors may skip observable death states entirely, so a vanished tracked
+		// grenade is also treated as an explosion at its last known position.
+		for (int i = 0; i < TUIN_MAX_TRACKED_GRENADES; i++)
+		{
+			if (!TrackedGrenadeActive[i]) continue;
+			Actor grenade = TrackedGrenade[i];
+			if (!grenade)
+			{
+				if (!TrackedGrenadeImpactApplied[i])
+					ApplyGrenadeBossImpact(TrackedGrenadePosition[i], TrackedGrenadeSource[i]);
+				TrackedGrenadeActive[i] = false;
+				continue;
+			}
+			TrackedGrenadePosition[i] = grenade.Pos;
+			if (grenade.Target) TrackedGrenadeSource[i] = grenade.Target;
+			if (!TrackedGrenadeImpactApplied[i] && GrenadeTouchesIconicBoss(grenade))
+			{
+				ApplyGrenadeBossImpact(grenade.Pos, TrackedGrenadeSource[i], grenade);
+				TrackedGrenadeImpactApplied[i] = true;
+			}
+			if (!TrackedGrenadeImpactApplied[i] && grenade.CurState)
+			{
+				State deathState = grenade.FindState('Death');
+				if (deathState && grenade.CurState.InStateSequence(deathState))
+				{
+					ApplyGrenadeBossImpact(grenade.Pos, TrackedGrenadeSource[i], grenade);
+					TrackedGrenadeImpactApplied[i] = true;
+				}
+			}
+		}
+
 		foreach (sector: level.Sectors)
 		{
 			for (Actor grenade = sector.thinglist; grenade; grenade = grenade.snext)
 			{
-				if (!grenade.CurState || BossGrenadeAlreadyProcessed(grenade)) continue;
-				State deathState = grenade.FindState('Death');
-				if (!deathState || !grenade.CurState.InStateSequence(deathState) ||
-					!IsGrenadeDamage(grenade, grenade.DamageType)) continue;
-				ProcessedBossGrenade[NextProcessedBossGrenade] = grenade;
-				NextProcessedBossGrenade = (NextProcessedBossGrenade + 1) % TUIN_MAX_PROCESSED_GRENADES;
-				Actor source = grenade.Target;
-				foreach (bossSector: level.Sectors)
+				if (!grenade.bMISSILE || !IsGrenadeDamage(grenade, grenade.DamageType)) continue;
+				bool alreadyTracked = false;
+				for (int i = 0; i < TUIN_MAX_TRACKED_GRENADES; i++)
 				{
-					for (Actor boss = bossSector.thinglist; boss; boss = boss.snext)
-					{
-						if (boss.Health <= 0 || !(boss is 'Cyberdemon' || boss is 'SpiderMastermind') ||
-							grenade.Distance3D(boss) > 160.0 || !grenade.CheckSight(boss, SF_IGNOREWATERBOUNDARY)) continue;
-						let bossData = GetMonsterData(boss);
-						int scaledHealth = bossData ? max(1, bossData.ScaledMaxHealth) : max(1, boss.GetMaxHealth(true));
-						// Iconic bosses may swallow all or nearly all native radius damage. Add a
-						// controlled impact component: 2% scaled HP, bounded for balance. Existing
-						// armor, Tank output penalties, and other damage rules still apply.
-						int impactDamage = clamp(int(scaledHealth * 0.02 + 0.5), 128, 500);
-						boss.DamageMobj(grenade, source, impactDamage, 'TuinGrenadeBossImpact');
-					}
+					if (TrackedGrenadeActive[i] && TrackedGrenade[i] == grenade) { alreadyTracked = true; break; }
 				}
+				if (alreadyTracked) continue;
+				int slot = NextTrackedGrenade;
+				NextTrackedGrenade = (NextTrackedGrenade + 1) % TUIN_MAX_TRACKED_GRENADES;
+				TrackedGrenade[slot] = grenade;
+				TrackedGrenadePosition[slot] = grenade.Pos;
+				TrackedGrenadeSource[slot] = grenade.Target;
+				TrackedGrenadeActive[slot] = true;
+				TrackedGrenadeImpactApplied[slot] = false;
 			}
 		}
 	}
