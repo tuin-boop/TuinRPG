@@ -653,3 +653,35 @@ class TuinPlayerData : Inventory
 		+INVENTORY.KEEPDEPLETED
 	}
 }
+
+// A real PSprite provider keeps Blood Punch in the same first-person render
+// path as weapons. The handler places one of these states on a temporary
+// overlay layer without changing the player's equipped weapon.
+class TuinBloodPunchOverlayWeapon : Weapon
+{
+	Default
+	{
+		Inventory.MaxAmount 0;
+		Weapon.SelectionOrder 0;
+		+INVENTORY.UNDROPPABLE;
+	}
+
+	States
+	{
+	Enhanced:
+		PUN3 A 1 Bright;
+		PUN3 B 1 Bright;
+		PUN3 D 2 Bright;
+		PUN3 E 2 Bright;
+		PUN3 G 1 Bright;
+		PUN3 H 1 Bright;
+		Stop;
+	Classic:
+		PUNG B 2 Bright;
+		PUNG C 2 Bright;
+		PUNG D 2 Bright;
+		PUNG C 1 Bright;
+		PUNG B 1 Bright;
+		Stop;
+	}
+}

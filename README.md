@@ -108,6 +108,8 @@ PowerShell creates the distributable `TuinRPG.pk3` directly from `src`:
 
 For balance testing, open the console and enter `netevent tuin_give_levels 10` to grant ten player levels. The command accepts 1-100 levels at a time and awards the same stat points and every-fifth-level perk points as ordinary leveling. Open the character screen with `K`, then choose **Class and Perks** to select a permanent class and spend later points.
 
+To test Blood Punch instantly, enter `netevent tuin_test_blood_punch`. This testing command selects Doom Guy and fills Blood Punch; press `V` to use it, then repeat the command whenever another full charge is needed.
+
 For predictable load order, put TuinRPG after maps and content packs. If another gameplay mod uses damage-event rewriting, test that combination: TuinRPG applies only the extra level/stat damage through the generic damage event and never changes weapon or monster classes.
 
 ## Level modes

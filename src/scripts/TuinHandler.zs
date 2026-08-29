@@ -659,6 +659,10 @@ class TuinRPGHandler : EventHandler
 			let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
 			if (weaponSprite) weaponSprite.alpha = 0.0;
 			if (flashSprite) flashSprite.alpha = 0.0;
+			let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
+			bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
+			State punchState = enhancedKnuckles ? punchProvider.FindState('Enhanced') : punchProvider.FindState('Classic');
+			pawn.player.SetPsprite(90, punchState);
 		}
 		SpawnBloodPunchCone(pawn);
 		pawn.A_RemoveLight('TuinBloodPunchGlow');
@@ -3986,6 +3990,23 @@ class TuinRPGHandler : EventHandler
 			GiveTestLevels(e.Player, e.Args[0] > 0 ? e.Args[0] : 1);
 			return;
 		}
+		if (e.Name ~== "tuin_test_blood_punch")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 4;
+				testData.DoomBloodPunchInitialized = true;
+				testData.DoomBloodPunchCharge = 100;
+				testData.DoomBloodPunchChargeRemainder = 0.0;
+				testData.DoomBloodPunchReadyNotified = true;
+				ApplyClassHealth(testPawn, testData);
+				testPawn.A_Log("BLOOD PUNCH TEST READY. Press V to punch. Repeat this command to refill it.");
+				SetLootNotification(e.Player, "BLOOD PUNCH TEST READY - PRESS V", 4);
+			}
+			return;
+		}
 		if (e.Name ~== "tuin_test_finale_boss")
 		{
 			if (!TryPromoteFinaleBoss(true) && players[e.Player].mo)
@@ -4445,32 +4466,6 @@ class TuinRPGHandler : EventHandler
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
 	}
 
-	ui void DrawBloodPunchAnimation(TuinPlayerData data, int screenWidth, int screenHeight)
-	{
-		if (!data || data.PlayerClass != 4 || data.DoomBloodPunchFlashTics <= 0) return;
-		int tics = data.DoomBloodPunchFlashTics;
-		bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
-		string frameName;
-		if (enhancedKnuckles)
-			frameName = tics >= 8 ? "PUN3A0" : tics >= 7 ? "PUN3B0" :
-				tics >= 5 ? "PUN3D0" : tics >= 3 ? "PUN3E0" :
-				tics >= 2 ? "PUN3G0" : "PUN3H0";
-		else
-			frameName = tics >= 8 ? "PUNGB0" : tics >= 6 ? "PUNGC0" :
-				tics >= 3 ? "PUNGD0" : tics >= 2 ? "PUNGC0" : "PUNGB0";
-		TextureID punchFrame = TexMan.CheckForTexture(frameName, TexMan.Type_Sprite);
-		if (!punchFrame.IsValid()) return;
-		Vector2 sourceSize = TexMan.GetScaledSize(punchFrame);
-		double animationScale = screenHeight / 200.0 * 1.18;
-		int drawWidth = max(1, int(sourceSize.x * animationScale));
-		int drawHeight = max(1, int(sourceSize.y * animationScale));
-		int drawX = (screenWidth - drawWidth) / 2;
-		int drawY = screenHeight - drawHeight + int(4 * animationScale);
-		Screen.DrawTexture(punchFrame, false, drawX, drawY,
-			DTA_DestWidth, drawWidth, DTA_DestHeight, drawHeight, DTA_NOOFFSET, true,
-			DTA_ColorOverlay, Color(105, 255, 18, 8), DTA_Alpha, 1.0);
-	}
-
 	ui void DrawCurrentTargetAffixes(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
@@ -4509,7 +4504,6 @@ class TuinRPGHandler : EventHandler
 		{
 			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 8.0;
 			Screen.Dim(Color(155, 0, 0), flashStrength, 0, 0, sw, sh);
-			DrawBloodPunchAnimation(overlayData, sw, sh);
 		}
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
