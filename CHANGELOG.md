@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.35
+
+- Replaced the cramped four-column class comparison with a two-pane RPG layout: a compact selectable class list on the left and a spacious selected-class card on the right.
+- Split every class description into clearly aligned Role, Core Bonuses, Tradeoff, Class Ability, Class Training, and Class Ultimate rows.
+- Added the complete Doom Guy Blood Punch training and Ultimate values directly to the selection card while keeping all descriptions clear of the Specialty/HUD area.
+
 ## 0.6.34
 
 - Refocused Doom Guy Class Training on Blood Punch: its three ranks now build charge 10%, 20%, and 30% faster instead of changing passive regeneration timing.

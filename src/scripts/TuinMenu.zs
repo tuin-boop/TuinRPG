@@ -371,55 +371,79 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 	override int Draw(OptionMenuDescriptor desc, int y, int indent, bool selected)
 	{
 		string role;
-		string traits;
+		string bonuses;
+		string tradeoff;
 		string ability;
+		string training;
+		string ultimate;
 		if (mLabel ~== "TANK")
 		{
 			role = "BULWARK";
-			traits = "300 HP | 50% RESIST | -50% DMG | +50% AMMO";
-			ability = "V: OVERDRIVE";
+			bonuses = "300 BASE HP | 50% DAMAGE RESISTANCE | +50% AMMO";
+			tradeoff = "WEAPON DAMAGE REDUCED BY 50%";
+			ability = "V: OVERDRIVE - DAMAGE + FIRE SPEED FOR 10 SEC";
+			training = "+3% DAMAGE RESISTANCE PER RANK";
+			ultimate = "LAST STAND BELOW 30% HEALTH";
 		}
 		else if (mLabel ~== "HEALER")
 		{
 			role = "COMBAT MEDIC";
-			traits = "HEAL 5 HP / 2S | -25% DMG | +25% AMMO";
-			ability = "PASSIVE HEALING";
+			bonuses = "HEAL THE TEAM 5 HP EVERY 2 SEC | +25% AMMO";
+			tradeoff = "WEAPON DAMAGE REDUCED BY 25%";
+			ability = "PASSIVE TEAM HEALING - NO ACTIVATION NEEDED";
+			training = "+1 HEALTH PER HEALING PULSE PER RANK";
+			ultimate = "DOUBLE ALL CLASS HEALING";
 		}
 		else if (mLabel ~== "DAMAGE DEALER")
 		{
 			role = "GLASS CANNON";
-			traits = "+30% DMG | -25% HP | +10% DMG TAKEN";
-			ability = "HEAVY CRITICALS";
+			bonuses = "+30% WEAPON DAMAGE";
+			tradeoff = "-25% MAX HEALTH | TAKE 10% MORE DAMAGE";
+			ability = "HIGH-DAMAGE CRITICAL-HIT SPECIALIST";
+			training = "+3% WEAPON DAMAGE PER RANK";
+			ultimate = "CRITICAL HITS DEAL 2.5X DAMAGE";
 		}
 		else if (mLabel ~== "DOOM GUY")
 		{
 			role = "SLAYER";
-			traits = "+10% DMG | 10% RESIST | REGEN 1 HP / 10S";
-			ability = "V: BLOOD PUNCH";
+			bonuses = "+10% DAMAGE | 10% RESISTANCE | REGEN 1 HP / 10 SEC";
+			tradeoff = "NO MAJOR DRAWBACKS";
+			ability = "HOLD V TO READY BLOOD PUNCH - RELEASE TO STRIKE";
+			training = "BLOOD PUNCH CHARGE +10% / +20% / +30%";
+			ultimate = "+45% CHARGE | HEAL 30% DAMAGE, MAX 110 HP";
 		}
 		else
 		{
 			role = "AMBUSHER";
-			traits = "+5% CRIT | CRITS BLEED | -20% HP";
-			ability = "V: SHADOW VEIL";
+			bonuses = "+5% CRITICAL CHANCE | CRITICAL HITS CAUSE BLEEDING";
+			tradeoff = "-20% MAXIMUM HEALTH";
+			ability = "V: SHADOW VEIL - ATTACK FROM STEALTH TO AMBUSH";
+			training = "+2% CRIT | LONGER VEIL | FASTER CHARGE PER RANK";
+			ultimate = "AMBUSH: X6 RANGED DAMAGE / X30 FIST DAMAGE";
 		}
 
 		int center = Screen.GetWidth() / 2;
 		int classX = center - 650;
-		int roleX = center - 450;
-		int traitsX = center - 190;
-		int abilityX = center + 410;
+		int detailX = center - 250;
+		int valueX = center + 20;
 		if (mLabel ~== "TANK")
+			drawText(classX, y - 28, Font.CR_GOLD, "SELECT A CLASS");
+		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE,
+			selected ? String.Format("> %s", mLabel) : String.Format("  %s", mLabel));
+		if (selected)
 		{
-			drawText(classX, y - 28, Font.CR_GOLD, "CLASS");
-			drawText(roleX, y - 28, Font.CR_GOLD, "ROLE");
-			drawText(traitsX, y - 28, Font.CR_GOLD, "CORE TRAITS");
-			drawText(abilityX, y - 28, Font.CR_GOLD, "SPECIALTY");
+			drawText(detailX, 132, Font.CR_RED, String.Format("%s  //  %s", mLabel, role));
+			drawText(detailX, 178, Font.CR_WHITE, "CORE BONUSES");
+			drawText(valueX, 178, Font.CR_GOLD, bonuses);
+			drawText(detailX, 218, Font.CR_WHITE, "TRADEOFF");
+			drawText(valueX, 218, Font.CR_GOLD, tradeoff);
+			drawText(detailX, 258, Font.CR_WHITE, "CLASS ABILITY");
+			drawText(valueX, 258, Font.CR_GOLD, ability);
+			drawText(detailX, 298, Font.CR_WHITE, "CLASS TRAINING");
+			drawText(valueX, 298, Font.CR_GOLD, training);
+			drawText(detailX, 338, Font.CR_WHITE, "CLASS ULTIMATE");
+			drawText(valueX, 338, Font.CR_GOLD, ultimate);
 		}
-		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE, mLabel);
-		drawText(roleX, y, selected ? Font.CR_RED : Font.CR_GOLD, role);
-		drawText(traitsX, y, selected ? Font.CR_RED : Font.CR_GOLD, traits);
-		drawText(abilityX, y, selected ? Font.CR_RED : Font.CR_GOLD, ability);
 		return classX - 16 * CleanXfac_1;
 	}
 }
@@ -449,16 +473,14 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
 		int panelWidth = min(width - 72, 1660);
-		int panelHeight = min(height - 90, 430);
+		int panelHeight = min(height - 72, 500);
 		int panelX = (width - panelWidth) / 2;
 		int panelY = 36;
 		Screen.Dim(Color(0, 0, 0), 0.96, panelX, panelY, panelWidth, panelHeight);
 		Screen.DrawLineFrame(Color(0, 0, 0), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(170, 116, 26), panelX + 7, panelY + 7,
 			panelWidth - 14, panelHeight - 14, 2);
-		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 475, panelY + 104, 2, 232);
-		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 215, panelY + 104, 2, 232);
-		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 + 385, panelY + 104, 2, 232);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 330, panelY + 94, 2, panelHeight - 118);
 		Super.Drawer();
 	}
 }
