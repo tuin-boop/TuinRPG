@@ -5,6 +5,7 @@ class TuinRPGHandler : EventHandler
 	const TUIN_MAX_DAMAGE_NUMBERS = 64;
 	const TUIN_DAMAGE_NUMBER_LIFETIME = 42;
 	const TUIN_MAX_ROGUE_WANDERERS = 128;
+	const TUIN_MAX_PROCESSED_GRENADES = 64;
 	int NextMonsterID;
 	int MapsVisited;
 	int PreviousLoadedCampaignMap;
@@ -57,6 +58,8 @@ class TuinRPGHandler : EventHandler
 	Actor RogueWanderActor[TUIN_MAX_ROGUE_WANDERERS];
 	int RogueWanderPlayer[TUIN_MAX_ROGUE_WANDERERS];
 	int NextRogueWanderer;
+	Actor ProcessedBossGrenade[TUIN_MAX_PROCESSED_GRENADES];
+	int NextProcessedBossGrenade;
 	int PoisonTics[TUIN_MAX_PLAYERS];
 	int PoisonDamage[TUIN_MAX_PLAYERS];
 	Actor PoisonSource[TUIN_MAX_PLAYERS];
@@ -523,6 +526,7 @@ class TuinRPGHandler : EventHandler
 		data.TankReadyNotified = true;
 		data.TankOverdriveChargeRemainder = 0.0;
 		pawn.A_RemoveLight('TuinTankOverdriveGlow');
+		pawn.GiveInventory('TuinTankOverdriveFiringSpeed', 1);
 		pawn.A_AttachLight('TuinTankOverdriveGlow', DynamicLight.PulseLight, Color(255, 24, 8), 62, 128,
 			DynamicLight.LF_ATTENUATE, (0, 0, pawn.Height * 0.52), 0.45);
 		SetLootNotification(playerNumber, "TANK OVERDRIVE - 10 SECONDS", 5);
@@ -539,7 +543,11 @@ class TuinRPGHandler : EventHandler
 		if (data.TankOverdriveOwner != pawn)
 		{
 			bool interrupted = data.TankOverdriveActive;
-			if (data.TankOverdriveOwner) data.TankOverdriveOwner.A_RemoveLight('TuinTankOverdriveGlow');
+			if (data.TankOverdriveOwner)
+			{
+				data.TankOverdriveOwner.A_RemoveLight('TuinTankOverdriveGlow');
+				data.TankOverdriveOwner.TakeInventory('TuinTankOverdriveFiringSpeed', 1);
+			}
 			data.TankOverdriveOwner = pawn;
 			data.TankOverdriveActive = false;
 			data.TankOverdriveTics = 0;
@@ -552,6 +560,7 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.PlayerClass != 1 || pawn.Health <= 0)
 		{
+			pawn.TakeInventory('TuinTankOverdriveFiringSpeed', 1);
 			if (data.TankOverdriveActive || data.TankOverdriveTics > 0)
 			{
 				data.TankOverdriveActive = false;
@@ -572,6 +581,8 @@ class TuinRPGHandler : EventHandler
 			}
 			return;
 		}
+		if (!pawn.FindInventory('TuinTankOverdriveFiringSpeed'))
+			pawn.GiveInventory('TuinTankOverdriveFiringSpeed', 1);
 		data.TankOverdriveTics--;
 		if (data.TankOverdriveTics <= 0)
 		{
@@ -581,6 +592,7 @@ class TuinRPGHandler : EventHandler
 			data.TankOverdriveChargeRemainder = 0.0;
 			data.TankReadyNotified = false;
 			pawn.A_RemoveLight('TuinTankOverdriveGlow');
+			pawn.TakeInventory('TuinTankOverdriveFiringSpeed', 1);
 			SetLootNotification(playerNumber, "OVERDRIVE ENDED - BUILD CHARGE", 0);
 		}
 	}
@@ -959,6 +971,44 @@ class TuinRPGHandler : EventHandler
 		}
 		string typeName = String.Format("%s", damageType).MakeLower();
 		return typeName.IndexOf("grenade") >= 0;
+	}
+
+	bool BossGrenadeAlreadyProcessed(Actor grenade)
+	{
+		for (int i = 0; i < TUIN_MAX_PROCESSED_GRENADES; i++)
+			if (ProcessedBossGrenade[i] == grenade) return true;
+		return false;
+	}
+
+	void UpdateGrenadeBossDamage()
+	{
+		foreach (sector: level.Sectors)
+		{
+			for (Actor grenade = sector.thinglist; grenade; grenade = grenade.snext)
+			{
+				if (!grenade.bMISSILE || !grenade.CurState || !IsGrenadeDamage(grenade, grenade.DamageType) ||
+					BossGrenadeAlreadyProcessed(grenade)) continue;
+				State deathState = grenade.FindState('Death');
+				if (!deathState || !grenade.CurState.InStateSequence(deathState)) continue;
+				ProcessedBossGrenade[NextProcessedBossGrenade] = grenade;
+				NextProcessedBossGrenade = (NextProcessedBossGrenade + 1) % TUIN_MAX_PROCESSED_GRENADES;
+				Actor source = grenade.Target;
+				foreach (bossSector: level.Sectors)
+				{
+					for (Actor boss = bossSector.thinglist; boss; boss = boss.snext)
+					{
+						if (boss.Health <= 0 || !(boss is 'Cyberdemon' || boss is 'SpiderMastermind') ||
+							grenade.Distance3D(boss) > 160.0 || !grenade.CheckSight(boss, SF_IGNOREWATERBOUNDARY)) continue;
+						let bossData = GetMonsterData(boss);
+						if (bossData && bossData.LastGrenadeDamageTime > 0 &&
+							bossData.LastGrenadeDamageTime >= level.Time - 1) continue;
+						// Doom's iconic bosses ignore radius damage. Grenades have no direct-hit
+						// component, so reproduce one standard 128-point explosion hit for them.
+						boss.DamageMobj(grenade, source, 128, 'TuinGrenadeBossImpact');
+					}
+				}
+			}
+		}
 	}
 
 	clearscope static bool IsBFGDamage(Actor inflictor, Actor source, Name damageType)
@@ -2991,6 +3041,9 @@ class TuinRPGHandler : EventHandler
 		if (victimData)
 		{
 			if (attacker >= 0) victimData.LastPlayerNumber = attacker;
+			if ((e.Thing is 'Cyberdemon' || e.Thing is 'SpiderMastermind') &&
+				IsGrenadeDamage(e.Inflictor, e.DamageType))
+				victimData.LastGrenadeDamageTime = level.Time;
 			// A healer under fire cannot sustain itself until it has avoided damage for two seconds.
 			victimData.HealerSelfLockTics = 70;
 		}
@@ -3363,9 +3416,10 @@ class TuinRPGHandler : EventHandler
 		double speedBonus = data.Agility * 0.02;
 		int variantIndex = data.FindEquippedVariant((class<Weapon>)(weapon.GetClass()));
 		if (variantIndex >= 0) speedBonus += data.VariantHastePercent[variantIndex] * 0.01;
-		if (data.PlayerClass == 1 && data.TankOverdriveActive) speedBonus += 1.50;
-		// Normal haste remains capped at +75%; Tank Overdrive raises the safe combined ceiling to +200%.
-		double speedCap = data.PlayerClass == 1 && data.TankOverdriveActive ? 2.0 : 0.75;
+		if (data.PlayerClass == 1 && data.TankOverdriveActive) speedBonus += 0.50;
+		// The engine power doubles every weapon state, including one-tic rocket states.
+		// This manual remainder supplies the other +50%; gear may raise the combined ceiling to +200%.
+		double speedCap = data.PlayerClass == 1 && data.TankOverdriveActive ? 1.0 : 0.75;
 		AgilityAccumulator[playerNumber] += min(speedCap, speedBonus);
 		int extraSteps = 0;
 		while (AgilityAccumulator[playerNumber] >= 1.0 && extraSteps < 2 && psp.CurState && psp.Tics > 0)
@@ -3509,6 +3563,7 @@ class TuinRPGHandler : EventHandler
 
 	override void WorldTick()
 	{
+		UpdateGrenadeBossDamage();
 		for (int damageNumber = 0; damageNumber < TUIN_MAX_DAMAGE_NUMBERS; damageNumber++)
 		{
 			if (DamageNumberTics[damageNumber] > 0)

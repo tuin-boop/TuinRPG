@@ -18,6 +18,7 @@ class TuinMonsterData : Inventory
 	int XPValue;
 	int UniqueID;
 	int LastPlayerNumber;
+	int LastGrenadeDamageTime;
 	int AffixFlags;
 	int RegenClock;
 	int SwiftClock;
@@ -373,6 +374,17 @@ class TuinMonsterData : Inventory
 		+INVENTORY.UNDROPPABLE
 		+INVENTORY.UNCLEARABLE
 		+INVENTORY.KEEPDEPLETED
+	}
+}
+
+class TuinTankOverdriveFiringSpeed : PowerDoubleFiringSpeed
+{
+	Default
+	{
+		Powerup.Duration 0x7FFFFFFF;
+		Inventory.InterHubAmount 0;
+		+INVENTORY.UNDROPPABLE
+		+INVENTORY.UNCLEARABLE
 	}
 }
 
