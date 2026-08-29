@@ -623,9 +623,9 @@ class TuinRPGHandler : EventHandler
 			{
 				double spread = 0.20 + distance / 224.0;
 				pawn.A_SpawnParticle((distance / 28) & 1 ? Color(255, 24, 8) : Color(190, 0, 0),
-					SPF_FULLBRIGHT | SPF_FACECAMERA, 10, 4.0 + spread * 4.0, 0,
+					SPF_FULLBRIGHT | SPF_FACECAMERA, 13, 7.0 + spread * 5.0, 0,
 					cos(particleAngle) * distance, sin(particleAngle) * distance,
-					pawn.Height * (0.35 + spread * 0.15),
+					pawn.Height * (0.60 + spread * 0.15),
 					cos(particleAngle) * 2.8, sin(particleAngle) * 2.8, 0.25,
 					0, 0, 0.04, 0.90, 0.09, 0.30);
 			}
@@ -651,11 +651,11 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchCharge = 0;
 		data.DoomBloodPunchChargeRemainder = 0.0;
 		data.DoomBloodPunchReadyNotified = false;
-		data.DoomBloodPunchFlashTics = 6;
+		data.DoomBloodPunchFlashTics = 10;
 		SpawnBloodPunchCone(pawn);
 		pawn.A_RemoveLight('TuinBloodPunchGlow');
 		pawn.A_AttachLight('TuinBloodPunchGlow', DynamicLight.PulseLight, Color(255, 16, 4), 76, 76,
-			DynamicLight.LF_ATTENUATE, (24, 0, pawn.Height * 0.50), 0.20);
+			DynamicLight.LF_ATTENUATE, (32, 0, pawn.Height * 0.62), 0.32);
 		pawn.A_StartSound("weapons/punch", CHAN_WEAPON);
 
 		int baseDamage = min(650, 140 + max(1, data.PlayerLevel) * 14);
@@ -4410,6 +4410,32 @@ class TuinRPGHandler : EventHandler
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
 	}
 
+	ui void DrawBloodPunchAnimation(TuinPlayerData data, int screenWidth, int screenHeight)
+	{
+		if (!data || data.PlayerClass != 4 || data.DoomBloodPunchFlashTics <= 0) return;
+		int tics = data.DoomBloodPunchFlashTics;
+		bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
+		string frameName;
+		if (enhancedKnuckles)
+			frameName = tics >= 9 ? "PUN3A0" : tics >= 8 ? "PUN3B0" :
+				tics >= 6 ? "PUN3D0" : tics >= 4 ? "PUN3E0" :
+				tics >= 2 ? "PUN3G0" : "PUN3H0";
+		else
+			frameName = tics >= 9 ? "PUNGB0" : tics >= 7 ? "PUNGC0" :
+				tics >= 4 ? "PUNGD0" : tics >= 2 ? "PUNGC0" : "PUNGB0";
+		TextureID punchFrame = TexMan.CheckForTexture(frameName, TexMan.Type_Sprite);
+		if (!punchFrame.IsValid()) return;
+		Vector2 sourceSize = TexMan.GetScaledSize(punchFrame);
+		double animationScale = screenHeight / 200.0 * 1.18;
+		int drawWidth = max(1, int(sourceSize.x * animationScale));
+		int drawHeight = max(1, int(sourceSize.y * animationScale));
+		int drawX = (screenWidth - drawWidth) / 2;
+		int drawY = screenHeight - drawHeight + int(4 * animationScale);
+		Screen.DrawTexture(punchFrame, false, drawX, drawY,
+			DTA_DestWidth, drawWidth, DTA_DestHeight, drawHeight, DTA_NOOFFSET, true,
+			DTA_ColorOverlay, Color(105, 255, 18, 8), DTA_Alpha, 1.0);
+	}
+
 	ui void DrawCurrentTargetAffixes(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
@@ -4443,6 +4469,13 @@ class TuinRPGHandler : EventHandler
 		int sh = Screen.GetHeight();
 		Font font = SmallFont;
 		double hudScale = clamp(CVFloat('tuin_hud_scale', 1.5), 1.25, 3.0);
+		let overlayData = GetPlayerData(players[pnum].mo);
+		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomBloodPunchFlashTics > 0)
+		{
+			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 10.0;
+			Screen.Dim(Color(155, 0, 0), flashStrength, 0, 0, sw, sh);
+			DrawBloodPunchAnimation(overlayData, sw, sh);
+		}
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
