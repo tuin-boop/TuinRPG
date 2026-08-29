@@ -364,7 +364,10 @@ class TuinRPGHandler : EventHandler
 	void ApplyClassAmmoBonus(Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
-		double rate = (data.PlayerClass == 1 ? 0.50 : data.PlayerClass == 2 ? 0.25 : 0.0) +
+		// Tank weapons deal half damage outside Overdrive, so double their ammo
+		// pickups to keep sustained damage roughly neutral without granting
+		// passive regeneration or removing the need to manage ammunition.
+		double rate = (data.PlayerClass == 1 ? 1.00 : data.PlayerClass == 2 ? 0.25 : 0.0) +
 			data.PerkScavenger * 0.10;
 		if (rate <= 0.0) return;
 		for (Inventory item = pawn.Inv; item; item = item.Inv)

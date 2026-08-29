@@ -379,7 +379,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		if (mLabel ~== "TANK")
 		{
 			role = "BULWARK";
-			bonuses = "300 BASE HP | 50% DAMAGE RESISTANCE | +50% AMMO";
+			bonuses = "300 BASE HP | 50% DAMAGE RESISTANCE | +100% AMMO";
 			tradeoff = "WEAPON DAMAGE REDUCED BY 50%";
 			ability = "V: OVERDRIVE - DAMAGE + FIRE SPEED FOR 10 SEC";
 			training = "+3% DAMAGE RESISTANCE PER RANK";

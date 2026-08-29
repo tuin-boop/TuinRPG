@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.36
+
+- Increased the Tank's ammunition pickup bonus from 50% to 100%, matching the class's 50% weapon-damage penalty while preserving ammo management.
+
 ## 0.6.35
 
 - Replaced the cramped four-column class comparison with a two-pane RPG layout: a compact selectable class list on the left and a spacious selected-class card on the right.
