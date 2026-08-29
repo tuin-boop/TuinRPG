@@ -142,6 +142,8 @@ Rogue Bleeding halves all monster healing while it remains active, including Hea
 
 TuinRPG's added player damage uses diminishing overflow during half-second bursts against stronger enemies. Base weapon damage is never reduced. Rare-through-Mythic monsters receive the first 25% of maximum health in RPG bonus damage normally and only 25% of overflow; ordinary RPG bosses use a 15% threshold with 20% overflow, while iconic finale bosses use an 8% threshold with 15% overflow. Grouping damage into a short burst prevents BFG tracers, shotgun pellets, and rapid attacks from receiving a fresh threshold for every individual hit.
 
+Cyberdemons and Spider Masterminds have 75% BFG resistance as an innate species trait. Direct BFG projectiles, tracer/splash damage, and recognizable replacement BFG weapons deal 25% damage to them. Other weapons remain fully effective, encouraging a broader arsenal without making any weapon mandatory.
+
 Affix effect strengths have their own tuning submenu. Forced/scripted damage bypasses Armored and player Endurance so telefrags and mandatory map logic remain reliable.
 
 ## Signature attacks

@@ -224,6 +224,10 @@ class TuinMonsterData : Inventory
 
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
+		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && Owner &&
+			(Owner is 'Cyberdemon' || Owner is 'SpiderMastermind') &&
+			TuinRPGHandler.IsBFGDamage(inflictor, source, damageType))
+			newdamage = max(1, int(newdamage * 0.25 + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && (AffixFlags & AFFIX_ARMORED))
 		{
 			let cv = CVar.FindCVar('tuin_affix_armored_reduction');

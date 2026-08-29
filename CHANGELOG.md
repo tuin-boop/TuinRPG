@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.20
+
+- Gave Cyberdemons and Spider Masterminds 75% resistance to direct BFG projectiles, tracer/splash damage, and recognizable replacement BFG weapons.
+- Applied the resistance to both original weapon damage and its derived TuinRPG bonuses while leaving every other weapon and monster unchanged.
+- Added class-name, damage-type, projectile-name, and visible weapon-tag recognition for compatibility with BFG replacement mods.
+- Displayed `BFG RESIST 75%` in the current-target information for both resistant species.
+
 ## 0.6.19
 
 - Added half-second diminishing-overflow windows for TuinRPG bonus damage, preventing critical BFG tracers, shotgun pellets, and rapid bursts from bypassing boss protection as separate hits.

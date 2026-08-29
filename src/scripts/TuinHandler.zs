@@ -861,6 +861,30 @@ class TuinRPGHandler : EventHandler
 		return typeName.IndexOf("grenade") >= 0;
 	}
 
+	clearscope static bool IsBFGDamage(Actor inflictor, Actor source, Name damageType)
+	{
+		string typeName = String.Format("%s", damageType).MakeLower();
+		if (typeName.IndexOf("bfg") >= 0) return true;
+		if (inflictor)
+		{
+			string projectileName = String.Format("%s", inflictor.GetClassName()).MakeLower();
+			if (projectileName.IndexOf("bfg") >= 0) return true;
+		}
+		// This fallback supports weapon replacements whose projectile or damage type
+		// is custom but whose class name or visible weapon tag still identifies a BFG.
+		if (source && source.player)
+		{
+			let ready = source.player.ReadyWeapon;
+			if (ready)
+			{
+				string weaponClass = String.Format("%s", ready.GetClassName()).MakeLower();
+				string weaponTag = ready.GetTag(ready.GetClassName()).MakeLower();
+				if (weaponClass.IndexOf("bfg") >= 0 || weaponTag.IndexOf("bfg") >= 0) return true;
+			}
+		}
+		return false;
+	}
+
 	clearscope static int StoredWeaponVariantScore(TuinPlayerData data, int index)
 	{
 		if (!data || index < 0 || index >= data.WeaponVariantCount) return 0;
@@ -2211,6 +2235,8 @@ class TuinRPGHandler : EventHandler
 		if (data.AffixFlags & TuinMonsterData.AFFIX_HEALER) result.AppendFormat("%sHEALER", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_WARDING) result.AppendFormat("%sWARDING", result.Length() ? "  |  " : "");
 		else if (data.WardTics > 0) result.AppendFormat("%sWARDED", result.Length() ? "  |  " : "");
+		if (data.Owner && (data.Owner is 'Cyberdemon' || data.Owner is 'SpiderMastermind'))
+			result.AppendFormat("%sBFG RESIST 75%%", result.Length() ? "  |  " : "");
 		if (data.BleedPulsesRemaining > 0) result.AppendFormat("%sBLEEDING", result.Length() ? "  |  " : "");
 		return result;
 	}
@@ -2883,6 +2909,10 @@ class TuinRPGHandler : EventHandler
 		if (ApplyingBonusDamage) return;
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
+		double targetBaseDamageFactor = 1.0;
+		if ((e.Thing is 'Cyberdemon' || e.Thing is 'SpiderMastermind') &&
+			IsBFGDamage(e.Inflictor, e.DamageSource, e.DamageType))
+			targetBaseDamageFactor = 0.25;
 		bool wasCritical = false;
 		bool rogueAmbushAttack = false;
 		int victimHealthBefore = e.Thing.Health;
@@ -2969,7 +2999,8 @@ class TuinRPGHandler : EventHandler
 						multiplier *= 1.0 + playerData.VariantExecutionPercent[variantIndex] * 0.01;
 					if (playerData.VariantLeechPercent[variantIndex] > 0 && victimData && players[attacker].mo && players[attacker].mo.Health > 0)
 					{
-						int healing = max(1, int(e.Damage * playerData.VariantLeechPercent[variantIndex] * 0.01 + 0.5));
+						int healing = max(1, int(e.Damage * targetBaseDamageFactor *
+							playerData.VariantLeechPercent[variantIndex] * 0.01 + 0.5));
 						players[attacker].mo.A_SetHealth(min(players[attacker].mo.GetMaxHealth(true), players[attacker].mo.Health + healing));
 					}
 				}
@@ -2986,8 +3017,9 @@ class TuinRPGHandler : EventHandler
 		}
 		if (victimData && attacker >= 0)
 		{
-			int baseDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
-			int totalDamage = baseDamage + max(0, bonusDamage);
+			int baseDamage = max(1, int(e.Damage * playerBaseDamageFactor * targetBaseDamageFactor + 0.5));
+			int effectiveBonusDamage = int(max(0, bonusDamage) * targetBaseDamageFactor + 0.5);
+			int totalDamage = baseDamage + effectiveBonusDamage;
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
 			let attackData = EnsurePlayerData(attacker);
 			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack)
