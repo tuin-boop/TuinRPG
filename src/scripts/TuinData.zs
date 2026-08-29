@@ -441,6 +441,7 @@ class TuinPlayerData : Inventory
 	bool DoomBloodPunchInitialized;
 	bool DoomBloodPunchReadyNotified;
 	int DoomBloodPunchFlashTics;
+	bool DoomBloodPunchWeaponHidden;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
 	double ClassAmmoRemainder[32];

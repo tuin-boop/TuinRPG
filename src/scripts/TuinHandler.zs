@@ -651,7 +651,15 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchCharge = 0;
 		data.DoomBloodPunchChargeRemainder = 0.0;
 		data.DoomBloodPunchReadyNotified = false;
-		data.DoomBloodPunchFlashTics = 10;
+		data.DoomBloodPunchFlashTics = 8;
+		data.DoomBloodPunchWeaponHidden = true;
+		if (pawn.player)
+		{
+			let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+			let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
+			if (weaponSprite) weaponSprite.alpha = 0.0;
+			if (flashSprite) flashSprite.alpha = 0.0;
+		}
 		SpawnBloodPunchCone(pawn);
 		pawn.A_RemoveLight('TuinBloodPunchGlow');
 		pawn.A_AttachLight('TuinBloodPunchGlow', DynamicLight.PulseLight, Color(255, 16, 4), 76, 76,
@@ -699,6 +707,14 @@ class TuinRPGHandler : EventHandler
 		if (data.PlayerClass != 4 || pawn.Health <= 0)
 		{
 			data.DoomBloodPunchFlashTics = 0;
+			if (data.DoomBloodPunchWeaponHidden && pawn.player)
+			{
+				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+				let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
+				if (weaponSprite) weaponSprite.alpha = 1.0;
+				if (flashSprite) flashSprite.alpha = 1.0;
+			}
+			data.DoomBloodPunchWeaponHidden = false;
 			pawn.A_RemoveLight('TuinBloodPunchGlow');
 			return;
 		}
@@ -709,8 +725,26 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.DoomBloodPunchFlashTics > 0)
 		{
+			if (pawn.player)
+			{
+				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+				let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
+				if (weaponSprite) weaponSprite.alpha = 0.0;
+				if (flashSprite) flashSprite.alpha = 0.0;
+			}
 			data.DoomBloodPunchFlashTics--;
-			if (data.DoomBloodPunchFlashTics <= 0) pawn.A_RemoveLight('TuinBloodPunchGlow');
+			if (data.DoomBloodPunchFlashTics <= 0)
+			{
+				if (pawn.player)
+				{
+					let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+					let flashSprite = pawn.player.FindPSprite(PSP_FLASH);
+					if (weaponSprite) weaponSprite.alpha = 1.0;
+					if (flashSprite) flashSprite.alpha = 1.0;
+				}
+				data.DoomBloodPunchWeaponHidden = false;
+				pawn.A_RemoveLight('TuinBloodPunchGlow');
+			}
 		}
 	}
 
@@ -753,6 +787,7 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchChargeRemainder = 0.0;
 			data.DoomBloodPunchReadyNotified = false;
 			data.DoomBloodPunchFlashTics = 0;
+			data.DoomBloodPunchWeaponHidden = false;
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -4417,12 +4452,12 @@ class TuinRPGHandler : EventHandler
 		bool enhancedKnuckles = TexMan.CheckForTexture("PUN3A0", TexMan.Type_Sprite).IsValid();
 		string frameName;
 		if (enhancedKnuckles)
-			frameName = tics >= 9 ? "PUN3A0" : tics >= 8 ? "PUN3B0" :
-				tics >= 6 ? "PUN3D0" : tics >= 4 ? "PUN3E0" :
+			frameName = tics >= 8 ? "PUN3A0" : tics >= 7 ? "PUN3B0" :
+				tics >= 5 ? "PUN3D0" : tics >= 3 ? "PUN3E0" :
 				tics >= 2 ? "PUN3G0" : "PUN3H0";
 		else
-			frameName = tics >= 9 ? "PUNGB0" : tics >= 7 ? "PUNGC0" :
-				tics >= 4 ? "PUNGD0" : tics >= 2 ? "PUNGC0" : "PUNGB0";
+			frameName = tics >= 8 ? "PUNGB0" : tics >= 6 ? "PUNGC0" :
+				tics >= 3 ? "PUNGD0" : tics >= 2 ? "PUNGC0" : "PUNGB0";
 		TextureID punchFrame = TexMan.CheckForTexture(frameName, TexMan.Type_Sprite);
 		if (!punchFrame.IsValid()) return;
 		Vector2 sourceSize = TexMan.GetScaledSize(punchFrame);
@@ -4472,7 +4507,7 @@ class TuinRPGHandler : EventHandler
 		let overlayData = GetPlayerData(players[pnum].mo);
 		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomBloodPunchFlashTics > 0)
 		{
-			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 10.0;
+			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 8.0;
 			Screen.Dim(Color(155, 0, 0), flashStrength, 0, 0, sw, sh);
 			DrawBloodPunchAnimation(overlayData, sw, sh);
 		}
