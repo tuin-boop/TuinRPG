@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.33
+
+- Added a smooth 16-tic fist raise after the equipped weapon finishes lowering; the Blood Punch stance no longer pops abruptly onto the screen.
+- Reset the ProjectSIDE fist psprite to the centered native weapon origin and animate it from `WEAPONBOTTOM` to `WEAPONTOP`, preventing the held and attack frames from inheriting an out-of-bounds lowered position.
+- Queued an early `V` release until the fists finish raising, preserving the complete switch and punch animations.
+
 ## 0.6.32
 
 - Fixed the E2M1 runtime abort caused by UZDoom rejecting key-binding changes outside menu code.

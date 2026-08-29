@@ -653,6 +653,13 @@ class TuinRPGHandler : EventHandler
 		// interpreted in normal 320x200 weapon space. A generic overlay layer
 		// anchors these wide sprites at the screen edge instead.
 		pawn.player.SetPsprite(PSP_WEAPON, punchProvider.FindState('ProjectSIDEReady'));
+		let fistSprite = pawn.player.FindPSprite(PSP_WEAPON);
+		if (fistSprite)
+		{
+			fistSprite.x = 0;
+			fistSprite.y = WEAPONBOTTOM;
+			fistSprite.ResetInterpolation();
+		}
 	}
 
 	void RestoreDoomBloodPunchWeapon(Actor pawn, TuinPlayerData data, bool raiseWeapon = true)
@@ -692,6 +699,7 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchReleaseQueued = false;
 		data.DoomBloodPunchImpactDone = false;
 		data.DoomBloodPunchPrepareTics = 0;
+		data.DoomBloodPunchFistRaiseTics = 0;
 		data.DoomBloodPunchAttackTics = 0;
 		data.DoomBloodPunchFlashTics = 0;
 		data.DoomBloodPunchWeaponHidden = false;
@@ -702,7 +710,8 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!pawn || !pawn.player || !data || data.PlayerClass != 4 ||
 			data.DoomBloodPunchCharge < 100 || data.DoomBloodPunchHolding ||
-			data.DoomBloodPunchPrepareTics > 0 || data.DoomBloodPunchAttackTics > 0) return;
+			data.DoomBloodPunchPrepareTics > 0 || data.DoomBloodPunchFistRaiseTics > 0 ||
+			data.DoomBloodPunchAttackTics > 0) return;
 		data.DoomBloodPunchCharge = 0;
 		data.DoomBloodPunchChargeRemainder = 0.0;
 		data.DoomBloodPunchReadyNotified = false;
@@ -710,6 +719,7 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchReleaseQueued = false;
 		data.DoomBloodPunchImpactDone = false;
 		data.DoomBloodPunchPrepareTics = 16;
+		data.DoomBloodPunchFistRaiseTics = 0;
 		data.DoomBloodPunchAttackTics = 0;
 		data.DoomBloodPunchFlashTics = 0;
 		data.DoomBloodPunchWeaponHidden = false;
@@ -727,16 +737,26 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchImpactDone = false;
 		data.DoomBloodPunchAttackTics = 22;
 		data.DoomBloodPunchFlashTics = 22;
+		data.DoomBloodPunchFistRaiseTics = 0;
 		let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
 		pawn.player.SetPsprite(PSP_WEAPON, punchProvider.FindState('ProjectSIDEPunch'));
+		let fistSprite = pawn.player.FindPSprite(PSP_WEAPON);
+		if (fistSprite)
+		{
+			fistSprite.x = 0;
+			fistSprite.y = WEAPONTOP;
+			fistSprite.ResetInterpolation();
+		}
 	}
 
 	void ReleaseDoomBloodPunch(Actor pawn, TuinPlayerData data)
 	{
-		if (!pawn || !data || (!data.DoomBloodPunchHolding && data.DoomBloodPunchPrepareTics <= 0)) return;
+		if (!pawn || !data || (!data.DoomBloodPunchHolding &&
+			data.DoomBloodPunchPrepareTics <= 0 && data.DoomBloodPunchFistRaiseTics <= 0)) return;
 		data.DoomBloodPunchHolding = false;
 		data.DoomBloodPunchReleaseQueued = true;
-		if (data.DoomBloodPunchPrepareTics <= 0) StartDoomBloodPunchAttack(pawn, data);
+		if (data.DoomBloodPunchPrepareTics <= 0 && data.DoomBloodPunchFistRaiseTics <= 0)
+			StartDoomBloodPunchAttack(pawn, data);
 	}
 
 	void ExecuteDoomBloodPunchImpact(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -800,6 +820,7 @@ class TuinRPGHandler : EventHandler
 		if (data.PlayerClass != 4 || pawn.Health <= 0)
 		{
 			if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0 ||
+				data.DoomBloodPunchFistRaiseTics > 0 ||
 				data.DoomBloodPunchAttackTics > 0 || data.DoomBloodPunchWeaponHidden)
 				RestoreDoomBloodPunchWeapon(pawn, data, false);
 			return;
@@ -824,6 +845,27 @@ class TuinRPGHandler : EventHandler
 				pawn.player.SetPsprite(PSP_WEAPON, null);
 				data.DoomBloodPunchWeaponHidden = true;
 				ShowDoomBloodPunchReadyFists(pawn);
+				data.DoomBloodPunchFistRaiseTics = 16;
+			}
+		}
+		else if (data.DoomBloodPunchWeaponHidden && data.DoomBloodPunchFistRaiseTics > 0 && pawn.player)
+		{
+			if (!pawn.player.FindPSprite(PSP_WEAPON)) ShowDoomBloodPunchReadyFists(pawn);
+			let fistSprite = pawn.player.FindPSprite(PSP_WEAPON);
+			if (fistSprite)
+			{
+				int raisingStep = 17 - data.DoomBloodPunchFistRaiseTics;
+				fistSprite.x = 0;
+				fistSprite.y = max(double(WEAPONTOP), double(WEAPONBOTTOM) - raisingStep * 6.0);
+			}
+			data.DoomBloodPunchFistRaiseTics--;
+			if (data.DoomBloodPunchFistRaiseTics <= 0)
+			{
+				if (fistSprite)
+				{
+					fistSprite.y = WEAPONTOP;
+					fistSprite.ResetInterpolation();
+				}
 				if (data.DoomBloodPunchReleaseQueued) StartDoomBloodPunchAttack(pawn, data);
 			}
 		}
@@ -886,6 +928,7 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchReleaseQueued = false;
 			data.DoomBloodPunchImpactDone = false;
 			data.DoomBloodPunchPrepareTics = 0;
+			data.DoomBloodPunchFistRaiseTics = 0;
 			data.DoomBloodPunchAttackTics = 0;
 		}
 		data.ClassHealClock = 0;
@@ -4551,7 +4594,8 @@ class TuinRPGHandler : EventHandler
 		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
 		string status;
 		int statusColor;
-		if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0)
+		if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0 ||
+			data.DoomBloodPunchFistRaiseTics > 0)
 		{
 			status = "BLOOD PUNCH ARMED  -  RELEASE V TO STRIKE";
 			statusColor = Font.CR_GREEN;

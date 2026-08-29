@@ -446,6 +446,7 @@ class TuinPlayerData : Inventory
 	bool DoomBloodPunchReleaseQueued;
 	bool DoomBloodPunchImpactDone;
 	int DoomBloodPunchPrepareTics;
+	int DoomBloodPunchFistRaiseTics;
 	int DoomBloodPunchAttackTics;
 	double DoomBloodPunchWeaponStartY;
 	class<Ammo> ClassAmmoType[32];
