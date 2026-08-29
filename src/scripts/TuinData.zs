@@ -18,7 +18,6 @@ class TuinMonsterData : Inventory
 	int XPValue;
 	int UniqueID;
 	int LastPlayerNumber;
-	int LastGrenadeDamageTime;
 	int AffixFlags;
 	int RegenClock;
 	int SwiftClock;

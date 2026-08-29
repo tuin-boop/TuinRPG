@@ -982,14 +982,17 @@ class TuinRPGHandler : EventHandler
 
 	void UpdateGrenadeBossDamage()
 	{
+		// Real projectiles clear bMISSILE as they enter their death animation, so
+		// identify exploding grenades by their active Death state instead.
+		if ((level.Time & 1) != 0) return;
 		foreach (sector: level.Sectors)
 		{
 			for (Actor grenade = sector.thinglist; grenade; grenade = grenade.snext)
 			{
-				if (!grenade.bMISSILE || !grenade.CurState || !IsGrenadeDamage(grenade, grenade.DamageType) ||
-					BossGrenadeAlreadyProcessed(grenade)) continue;
+				if (!grenade.CurState || BossGrenadeAlreadyProcessed(grenade)) continue;
 				State deathState = grenade.FindState('Death');
-				if (!deathState || !grenade.CurState.InStateSequence(deathState)) continue;
+				if (!deathState || !grenade.CurState.InStateSequence(deathState) ||
+					!IsGrenadeDamage(grenade, grenade.DamageType)) continue;
 				ProcessedBossGrenade[NextProcessedBossGrenade] = grenade;
 				NextProcessedBossGrenade = (NextProcessedBossGrenade + 1) % TUIN_MAX_PROCESSED_GRENADES;
 				Actor source = grenade.Target;
@@ -1000,11 +1003,12 @@ class TuinRPGHandler : EventHandler
 						if (boss.Health <= 0 || !(boss is 'Cyberdemon' || boss is 'SpiderMastermind') ||
 							grenade.Distance3D(boss) > 160.0 || !grenade.CheckSight(boss, SF_IGNOREWATERBOUNDARY)) continue;
 						let bossData = GetMonsterData(boss);
-						if (bossData && bossData.LastGrenadeDamageTime > 0 &&
-							bossData.LastGrenadeDamageTime >= level.Time - 1) continue;
-						// Doom's iconic bosses ignore radius damage. Grenades have no direct-hit
-						// component, so reproduce one standard 128-point explosion hit for them.
-						boss.DamageMobj(grenade, source, 128, 'TuinGrenadeBossImpact');
+						int scaledHealth = bossData ? max(1, bossData.ScaledMaxHealth) : max(1, boss.GetMaxHealth(true));
+						// Iconic bosses may swallow all or nearly all native radius damage. Add a
+						// controlled impact component: 2% scaled HP, bounded for balance. Existing
+						// armor, Tank output penalties, and other damage rules still apply.
+						int impactDamage = clamp(int(scaledHealth * 0.02 + 0.5), 128, 500);
+						boss.DamageMobj(grenade, source, impactDamage, 'TuinGrenadeBossImpact');
 					}
 				}
 			}
@@ -3041,9 +3045,6 @@ class TuinRPGHandler : EventHandler
 		if (victimData)
 		{
 			if (attacker >= 0) victimData.LastPlayerNumber = attacker;
-			if ((e.Thing is 'Cyberdemon' || e.Thing is 'SpiderMastermind') &&
-				IsGrenadeDamage(e.Inflictor, e.DamageType))
-				victimData.LastGrenadeDamageTime = level.Time;
 			// A healer under fire cannot sustain itself until it has avoided damage for two seconds.
 			victimData.HealerSelfLockTics = 70;
 		}
