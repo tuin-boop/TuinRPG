@@ -1,0 +1,12 @@
+$random tuin/riot/fire { tuin/riot/fire1 tuin/riot/fire2 tuin/riot/fire3 }
+tuin/riot/fire1 RFIRE1
+tuin/riot/fire2 RFIRE2
+tuin/riot/fire3 RFIRE3
+tuin/riot/pumpback RCKBCK
+tuin/riot/pumpforward RCKFWD
+
+tuin/minigun/start MGSTRT
+tuin/minigun/fire  MGFIRE
+tuin/minigun/stop  MGSTOP
+tuin/minigun/chain MGCHAIN
+tuin/minigun/reload MGLOAD

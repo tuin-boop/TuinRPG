@@ -1,0 +1,16 @@
+Riot Shotgun and Minigun resource attribution
+=============================================
+
+The first-person sprites, pickup sprites, and sounds used by TuinRPG's Riot
+Shotgun and Minigun are adapted from li-gnrcwpn.pk3 (Lippeth Generic Weapons /
+Weapons of Saturn), supplied by the project owner for integration.
+
+The upstream credits state that Lippeth granted permission to use resources.
+Relevant credited contributors and sources include Lippeth, Tormentor667,
+Mike12, perkristian, JoeyTD, Captain J, SgtMarkIV, wildweasel, Ed the Bat,
+Patriot1776, LedIris, faslrn, Beautiful Doom, Brutal Doom, Demon Eclipse,
+Accessories to Murder, DOOMRL Arsenal, Killing Floor, Return to Castle
+Wolfenstein, Doom 3, Raven Software, 2015 Inc., and Valve.
+
+TuinRPG does not import the upstream weapon code or reload systems. It uses
+only the relevant visual and audio resources with original TuinRPG behavior.

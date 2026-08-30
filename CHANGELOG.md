@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.40
+
+- Added the Riot Shotgun as a distinct rare shotgun conversion. It fires five pellets instead of seven with wider spread, consumes one shell, has no magazine reload, and uses its own weapon artwork and randomized firing sound.
+- Added the Minigun as a distinct rare chaingun conversion. It uses an eight-tic spin-up, fires one three-damage round every two tics, consumes bullets twice as quickly as the regular chaingun, and reloads its internal 100-round belt with dedicated artwork and sounds.
+- Standard Shotgun and Chaingun variant drops each have an independent 8% default chance to become their special counterpart. Both chances are configurable under Weapon Loot, and both weapons have direct testing commands.
+- Added attribution for the adapted Lippeth Generic Weapons resources.
+- Restored the supplied weapons' deliberate rhythm after play testing: the Riot Shotgun requires a fresh trigger pull and plays its complete pump sequence, while the Minigun spins up before alternating its firing frames and winds down or reloads afterward.
+- Restored the Riot Shotgun's missing pump frames and exact interpolated recoil/pump offsets so the weapon remains anchored on screen throughout its animation.
+- Slowed the Riot Shotgun's complete firing cycle from 23 to 28 tics, preserving the approved recoil and pump animation while adding roughly 20% more settled recovery time.
+
 ## 0.6.39
 
 - Reduced the world-space knuckles weapon-drop sprite by 30% without changing its first-person size, pickup behavior, or glow.

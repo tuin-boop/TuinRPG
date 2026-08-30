@@ -187,12 +187,16 @@ OptionMenu "TuinRPGWeaponLootOptions"
 	StaticText "Escape or right-click cancels", 1
 	Option "Weapon variant drops", "tuin_weapon_drops_enabled", "OnOff"
 	Slider "Base drop chance (%)", "tuin_weapon_drop_chance", 0.0, 10.0, 0.25, 2
+	Slider "Shotgun becomes Riot Shotgun (%)", "tuin_riot_shotgun_chance", 0.0, 25.0, 1.0, 0
+	Slider "Chaingun becomes Minigun (%)", "tuin_minigun_chance", 0.0, 25.0, 1.0, 0
 	Slider "Drop lifetime (seconds)", "tuin_weapon_drop_lifetime", 15, 600, 15
 	Slider "Maximum inspection distance", "tuin_weapon_inspect_distance", 128, 2048, 32
 	Slider "Automatic nearby inspection", "tuin_weapon_near_inspect_distance", 64, 320, 16
 	StaticText "Normal default: 1.5%; rarity improves odds", 1
 	StaticText "Any monster can very rarely drop Mythic gear", 1
 	Command "Testing: drop Mythic current weapon", "netevent tuin_test_weapon_drop"
+	Command "Testing: drop Riot Shotgun", "netevent tuin_test_riot_shotgun"
+	Command "Testing: drop Minigun", "netevent tuin_test_minigun"
 	Command "Reset weapon loot to normal", "netevent tuin_reset_weapon_loot"
 	Submenu "Open Arsenal", "TuinRPGArsenal"
 }

@@ -1599,6 +1599,18 @@ class TuinRPGHandler : EventHandler
 	TuinWeaponDrop SpawnRolledWeaponDrop(Vector3 position, class<Weapon> weaponType, int itemLevel, int quality)
 	{
 		if (!weaponType) return null;
+		class<Weapon> shotgunType = (class<Weapon>)(Actor.GetReplacement('Shotgun'));
+		class<Weapon> chaingunType = (class<Weapon>)(Actor.GetReplacement('Chaingun'));
+		if ((weaponType == 'Shotgun' || weaponType == shotgunType) &&
+			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_riot_shotgun_chance', 8.0), 0.0, 100.0))
+		{
+			weaponType = (class<Weapon>)(FindClass('TuinRiotShotgun', 'Weapon'));
+		}
+		else if ((weaponType == 'Chaingun' || weaponType == chaingunType) &&
+			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_minigun_chance', 8.0), 0.0, 100.0))
+		{
+			weaponType = (class<Weapon>)(FindClass('TuinMinigun', 'Weapon'));
+		}
 		let lootDrop = TuinWeaponDrop(Actor.Spawn('TuinWeaponDrop', position, NO_REPLACE));
 		if (!lootDrop) return null;
 		lootDrop.VariantID = ++NextLootID;
@@ -2102,7 +2114,7 @@ class TuinRPGHandler : EventHandler
 				if (reward)
 				{
 					data.ShopDialogue = String.Format("John: The wheel says %s. Press E to inspect your %s.",
-						WeaponQualityName(quality), WeaponBaseName(weaponType));
+						WeaponQualityName(quality), WeaponBaseName(reward.WeaponType));
 					success = true;
 				}
 			}
@@ -2124,6 +2136,8 @@ class TuinRPGHandler : EventHandler
 		while (lootDrop = TuinWeaponDrop(it.Next())) lootDrop.Destroy();
 		SetServerInt('tuin_weapon_drops_enabled', 1);
 		SetServerFloat('tuin_weapon_drop_chance', 1.50);
+		SetServerFloat('tuin_riot_shotgun_chance', 8.0);
+		SetServerFloat('tuin_minigun_chance', 8.0);
 		SetServerInt('tuin_weapon_drop_lifetime', 90);
 		SetServerFloat('tuin_weapon_inspect_distance', 256.0);
 		SetServerFloat('tuin_weapon_near_inspect_distance', 80.0);
@@ -4424,6 +4438,21 @@ class TuinRPGHandler : EventHandler
 				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 64.0, sin(pawn.Angle) * 64.0, 8.0);
 				SpawnRolledWeaponDrop(position, (class<Weapon>)(ready.GetClass()), max(1, testData.PlayerLevel), 5);
 				SetLootNotification(e.Player, "MYTHIC TEST WEAPON SPAWNED", 5);
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_test_riot_shotgun" || e.Name ~== "tuin_test_minigun")
+		{
+			let pawn = players[e.Player].mo;
+			let testData = EnsurePlayerData(e.Player);
+			if (pawn && testData)
+			{
+				Name specialName = e.Name ~== "tuin_test_riot_shotgun" ? 'TuinRiotShotgun' : 'TuinMinigun';
+				class<Weapon> specialType = (class<Weapon>)(FindClass(specialName, 'Weapon'));
+				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 64.0, sin(pawn.Angle) * 64.0, 8.0);
+				let reward = SpawnRolledWeaponDrop(position, specialType, max(1, testData.PlayerLevel), 5);
+				if (reward) SetLootNotification(e.Player,
+					String.Format("MYTHIC %s TEST DROP SPAWNED", WeaponBaseName(specialType)), 5);
 			}
 			return;
 		}
