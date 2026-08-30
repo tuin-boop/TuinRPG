@@ -68,7 +68,7 @@ Later points buy three ranks of **Vital Core**, **Scavenger**, **Killer Instinct
 - Integrated quick grenades on `G`: two starting grenades, five maximum (eight with a backpack), physical pickups/drops, a first-person pin-and-throw animation and a multi-band blast
 - Progressive or fully random monster levels with configurable bounds/variance
 - Hybrid progressive scaling that keeps map progression primary while letting monsters partially catch up when the player is far ahead; higher rarities and occasional surge rolls create threatening outliers
-- An optional Hell Director that evaluates damage taken at 25%, 50% and 75% kills and can awaken an Elite, Legendary or Mythic threat; rare successful checks can send a translucent Assassin Imp to an older player trail position
+- An optional Hell Director that evaluates damage taken at 25%, 50% and 75% kills and can awaken an Elite, Legendary or Mythic threat; rare successful checks can send a translucent Assassin Imp to an older player trail position. At the same checkpoints, critically low reserves can silently upgrade one untouched, out-of-sight Clip, Shell, Rocket or Cell pickup into its large-box equivalent. The reserve threshold scales from 40% on enemy-heavy maps down to 15% with fewer than ten monsters remaining, and shuts off below four survivors.
 - Configurable monster health and outgoing-damage scaling
 - Crosshair-targeted monster name, level, health bar, and exact HP
 - Optional world-space monster bars with live HP, rarity colors, level/name and compact affix labels

@@ -2979,6 +2979,112 @@ class TuinRPGHandler : EventHandler
 		return false;
 	}
 
+	clearscope static Name DirectorAmmoType(int family)
+	{
+		switch (family)
+		{
+		case 0: return 'Clip';
+		case 1: return 'Shell';
+		case 2: return 'RocketAmmo';
+		case 3: return 'Cell';
+		default: return 'None';
+		}
+	}
+
+	clearscope static Name DirectorSmallAmmoPickup(int family)
+	{
+		return DirectorAmmoType(family);
+	}
+
+	clearscope static Name DirectorLargeAmmoPickup(int family)
+	{
+		switch (family)
+		{
+		case 0: return 'ClipBox';
+		case 1: return 'ShellBox';
+		case 2: return 'RocketBox';
+		case 3: return 'CellPack';
+		default: return 'None';
+		}
+	}
+
+	double DirectorAmmoReserveRatio(int family)
+	{
+		Name ammoType = DirectorAmmoType(family);
+		int current;
+		int maximum;
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
+			let ammo = Ammo(players[playerNumber].mo.FindInventory(ammoType));
+			if (!ammo || ammo.MaxAmount <= 0) continue;
+			current += max(0, ammo.Amount);
+			maximum += ammo.MaxAmount;
+		}
+		return maximum > 0 ? clamp(double(current) / maximum, 0.0, 1.0) : -1.0;
+	}
+
+	Actor FindDirectorSmallAmmoPickup(int family)
+	{
+		Name pickupType = DirectorSmallAmmoPickup(family);
+		Actor candidate;
+		int choices;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor pickup;
+		while (pickup = Actor(iterator.Next()))
+		{
+			let pickupInventory = Inventory(pickup);
+			if (pickup.GetClassName() != pickupType || !pickupInventory || pickupInventory.Owner || pickup.bDROPPED) continue;
+			bool visibleToPlayer = false;
+			for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+			{
+				if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
+				if (players[playerNumber].mo.CheckSight(pickup, SF_IGNOREWATERBOUNDARY))
+				{
+					visibleToPlayer = true;
+					break;
+				}
+			}
+			if (visibleToPlayer) continue;
+			choices++;
+			if (Random[TuinRPGDirectorAmmo](1, choices) == 1) candidate = pickup;
+		}
+		return candidate;
+	}
+
+	// Quietly convert one remaining stock pickup in the weakest carried ammo
+	// family to its large-box equivalent. This never adds ammo directly to a
+	// player and cannot affect grenades or unknown weapon-mod ammunition.
+	bool UpgradeLowAmmoPickup(int remainingMonsters)
+	{
+		if (remainingMonsters < 4) return false;
+		double reserveThreshold = remainingMonsters >= 40 ? 0.40 :
+			remainingMonsters >= 20 ? 0.35 : remainingMonsters >= 10 ? 0.25 : 0.15;
+		int chosenFamily = -1;
+		double chosenRatio = 1.0;
+		Actor chosenPickup;
+		for (int family = 0; family < 4; family++)
+		{
+			double ratio = DirectorAmmoReserveRatio(family);
+			if (ratio < 0.0 || ratio >= reserveThreshold || ratio >= chosenRatio) continue;
+			Actor pickup = FindDirectorSmallAmmoPickup(family);
+			if (!pickup) continue;
+			chosenFamily = family;
+			chosenRatio = ratio;
+			chosenPickup = pickup;
+		}
+		if (chosenFamily < 0 || !chosenPickup) return false;
+
+		Actor upgraded = Actor.Spawn(DirectorLargeAmmoPickup(chosenFamily), chosenPickup.Pos, NO_REPLACE);
+		if (!upgraded) return false;
+		upgraded.Angle = chosenPickup.Angle;
+		upgraded.Pitch = chosenPickup.Pitch;
+		upgraded.Roll = chosenPickup.Roll;
+		upgraded.Vel = chosenPickup.Vel;
+		chosenPickup.Destroy();
+		return true;
+	}
+
 	void UpdateHellDirector()
 	{
 		if (!CVInt('tuin_director_enabled', 1) || DirectorCheckpoint >= 3 ||
@@ -2986,6 +3092,7 @@ class TuinRPGHandler : EventHandler
 		int threshold = (DirectorCheckpoint + 1) * 25;
 		if (level.killed_monsters * 100 < level.total_monsters * threshold) return;
 		DirectorCheckpoint++;
+		UpgradeLowAmmoPickup(max(0, level.total_monsters - level.killed_monsters));
 
 		int damageTaken = 0;
 		int healthBudget = 0;

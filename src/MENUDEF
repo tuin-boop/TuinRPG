@@ -59,6 +59,7 @@ OptionMenu "TuinRPGOptions"
 	Slider "Damage gained per level", "tuin_damage_scale", 0.0, 0.10, 0.001, 3
 	Option "Adaptive Hell Director", "tuin_director_enabled", "OnOff"
 	StaticText "At 25/50/75% kills, easy runs awaken stronger enemies", 1
+	StaticText "Low reserves quietly improve one remaining ammo pickup", 1
 	Slider "Director minimum map monsters", "tuin_director_min_monsters", 8, 50, 1
 	Slider "Rare Assassin Imp chance (%)", "tuin_director_assassin_chance", 0.0, 25.0, 1.0, 1
 	StaticText " "

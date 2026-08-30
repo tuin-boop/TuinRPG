@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.38
+
+- Added a silent Hell Director ammo safety pass at 25%, 50%, and 75% kills. When the team's weakest carried stock-ammo reserve is running low, one remaining small pickup of that family can become its large-box equivalent.
+- Supported upgrades are Clip to Bullet Box, Shells to Shell Box, Rocket to Rocket Box, and Cell to Cell Pack. Grenades and unknown custom ammo are deliberately excluded.
+- The reserve threshold now considers how many monsters remain: 40% with at least 40 enemies, 35% with 20-39, 25% with 10-19, and 15% with 4-9. No rescue occurs with fewer than four enemies.
+- The Director adds no ammo directly to players and performs at most one ammo upgrade per checkpoint. It only changes untouched, map-placed pickups that are currently out of sight of every player; collected and player-dropped ammunition is never considered.
+
 ## 0.6.37
 
 - Added the Healer's Field Supply class ability: press V to throw one random Health Bonus, Stimpack, or Medikit forward, with a 2% chance to produce a Soulsphere.
