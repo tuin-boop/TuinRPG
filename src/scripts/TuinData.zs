@@ -32,6 +32,10 @@ class TuinMonsterData : Inventory
 	int BleedPlayerNumber;
 	int BleedResistanceTics;
 	int BleedDamageRemaining;
+	int BurnPulsesRemaining;
+	int BurnNextTime;
+	int BurnPlayerNumber;
+	int BurnDamageRemaining;
 	int RPGBonusWindowEndTime;
 	int RPGBonusWindowRawDamage;
 	int SignatureProfile;
@@ -625,7 +629,8 @@ class TuinPlayerData : Inventory
 		// The active pass belongs to the attacker's inventory. Apply the Tank's
 		// weapon-output rule here so both stock and custom weapons use the same
 		// reliable 50% / 125% factors before the hit reaches its target.
-		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed')
+		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed' &&
+			damageType != 'TuinRocketBurn' && damageType != 'TuinPlasmaArc')
 			newdamage = max(1, int(newdamage * (TankOverdriveActive ? 1.25 : 0.50) + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED))
 		{

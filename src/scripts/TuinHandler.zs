@@ -54,6 +54,7 @@ class TuinRPGHandler : EventHandler
 	int DamageNumberPlayer[TUIN_MAX_DAMAGE_NUMBERS];
 	bool DamageNumberCritical[TUIN_MAX_DAMAGE_NUMBERS];
 	bool DamageNumberBleed[TUIN_MAX_DAMAGE_NUMBERS];
+	int DamageNumberElement[TUIN_MAX_DAMAGE_NUMBERS];
 	double DamageNumberCurl[TUIN_MAX_DAMAGE_NUMBERS];
 	int NextDamageNumber;
 	Actor RogueWanderActor[TUIN_MAX_ROGUE_WANDERERS];
@@ -1347,6 +1348,30 @@ class TuinRPGHandler : EventHandler
 		}
 		string typeName = String.Format("%s", damageType).MakeLower();
 		return typeName.IndexOf("grenade") >= 0;
+	}
+
+	clearscope static bool IsPlayerRocketDamage(Actor inflictor, Name damageType)
+	{
+		if (!inflictor || !inflictor.bMISSILE || IsGrenadeDamage(inflictor, damageType)) return false;
+		if (inflictor is 'Rocket') return true;
+		// ProjectSIDE's SmoothRocket is a standalone replacement rather than a
+		// Rocket subclass, so also recognize rocket-named missile actors.
+		string projectileName = String.Format("%s", inflictor.GetClassName()).MakeLower();
+		return projectileName.IndexOf("rocket") >= 0;
+	}
+
+	clearscope static bool IsPlayerPlasmaDamage(Actor inflictor)
+	{
+		return inflictor && inflictor is 'PlasmaBall';
+	}
+
+	clearscope static bool RocketHitWasDirect(Actor projectile, Actor victim)
+	{
+		if (!projectile || !victim) return false;
+		double contactDistance = projectile.Radius + victim.Radius + 12.0;
+		bool verticalContact = projectile.Pos.z + projectile.Height >= victim.Pos.z - 12.0 &&
+			projectile.Pos.z <= victim.Pos.z + victim.Height + 12.0;
+		return verticalContact && projectile.Distance2D(victim) <= contactDistance;
 	}
 
 	void ApplyGrenadeBossImpact(Vector3 explosionPosition, Actor source, Actor inflictor = null)
@@ -3517,6 +3542,9 @@ class TuinRPGHandler : EventHandler
 			data.BleedPlayerNumber = -1;
 			data.BleedResistanceTics = 0;
 			data.BleedDamageRemaining = 0;
+			data.BurnPulsesRemaining = 0;
+			data.BurnPlayerNumber = -1;
+			data.BurnDamageRemaining = 0;
 			if (e.Thing.Health > 0 && e.Thing.Health < data.ScaledMaxHealth) e.Thing.A_SetHealth(data.ScaledMaxHealth);
 		}
 		else InitializeMonster(e.Thing);
@@ -3536,7 +3564,8 @@ class TuinRPGHandler : EventHandler
 		return data;
 	}
 
-	void SpawnDamageNumber(int playerNumber, Actor victim, int amount, bool critical, bool bleeding = false)
+	void SpawnDamageNumber(int playerNumber, Actor victim, int amount, bool critical, bool bleeding = false,
+		int element = 0)
 	{
 		if (!CVInt('tuin_damage_numbers', 1) || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS ||
 			!victim || amount <= 0) return;
@@ -3546,7 +3575,7 @@ class TuinRPGHandler : EventHandler
 		{
 			if (DamageNumberTics[i] >= TUIN_DAMAGE_NUMBER_LIFETIME - 3 &&
 				DamageNumberPlayer[i] == playerNumber && DamageNumberVictim[i] == victim &&
-				DamageNumberBleed[i] == bleeding)
+				DamageNumberBleed[i] == bleeding && DamageNumberElement[i] == element)
 			{
 				DamageNumberAmount[i] += amount;
 				DamageNumberCritical[i] = DamageNumberCritical[i] || critical;
@@ -3564,6 +3593,7 @@ class TuinRPGHandler : EventHandler
 		DamageNumberPlayer[slot] = playerNumber;
 		DamageNumberCritical[slot] = critical;
 		DamageNumberBleed[slot] = bleeding;
+		DamageNumberElement[slot] = element;
 		DamageNumberCurl[slot] = FRandom[TuinRPGDamageNumber](-1.0, 1.0);
 	}
 
@@ -3582,6 +3612,47 @@ class TuinRPGHandler : EventHandler
 		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) * 0.24 + 0.5));
 		data.BleedDamageRemaining = min(triggeringCriticalDamage, healthCap);
 		data.LastPlayerNumber = playerNumber;
+	}
+
+	void ApplyRocketBurn(int playerNumber, TuinMonsterData data, int triggeringDamage, bool directImpact)
+	{
+		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
+		double percent = directImpact ? 0.16 : 0.08;
+		int addedDamage = max(1, int(triggeringDamage * percent + 0.5));
+		data.BurnDamageRemaining = min(2000000000, data.BurnDamageRemaining + addedDamage);
+		if (data.BurnPulsesRemaining <= 0) data.BurnNextTime = level.Time + 35;
+		data.BurnPulsesRemaining = 4;
+		data.BurnPlayerNumber = playerNumber;
+		data.LastPlayerNumber = playerNumber;
+	}
+
+	void ApplyPlasmaArc(int playerNumber, Actor primaryVictim, Actor source, Actor inflictor,
+		int triggeringDamage)
+	{
+		if (!primaryVictim || primaryVictim.Health <= 0 || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
+		int arcDamage = max(1, int(triggeringDamage * 0.20 + 0.5));
+		foreach (arcSector: level.Sectors)
+		{
+			for (Actor victim = arcSector.thinglist; victim; victim = victim.snext)
+			{
+				if (victim == primaryVictim || victim.Health <= 0 || !GetMonsterData(victim) ||
+					victim.bFRIENDLY || primaryVictim.Distance3D(victim) > 96.0 ||
+					!primaryVictim.CheckSight(victim, SF_IGNOREWATERBOUNDARY)) continue;
+				int healthBefore = victim.Health;
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(inflictor, source, arcDamage, 'TuinPlasmaArc');
+				ApplyingBonusDamage = false;
+				int damageDone = min(healthBefore, max(0, healthBefore - victim.Health));
+				if (damageDone > 0)
+				{
+					SpawnDamageNumber(playerNumber, victim, damageDone, false, false, 2);
+					let victimData = GetMonsterData(victim);
+					if (victimData) victimData.LastPlayerNumber = playerNumber;
+				}
+			}
+		}
 	}
 
 	int DiminishRPGBonusDamage(Actor victim, TuinMonsterData data, int rawBonusDamage)
@@ -3640,6 +3711,39 @@ class TuinRPGHandler : EventHandler
 					data.BleedPlayerNumber = -1;
 					data.BleedDamageRemaining = 0;
 					data.BleedResistanceTics = 12 * 35;
+				}
+			}
+		}
+	}
+
+	void UpdateMonsterBurns()
+	{
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				let data = GetMonsterData(victim);
+				if (!data || data.BurnPulsesRemaining <= 0 || victim.Health <= 0 ||
+					level.Time < data.BurnNextTime) continue;
+				int attacker = data.BurnPlayerNumber;
+				Actor source = attacker >= 0 && attacker < TUIN_MAX_PLAYERS && playerInGame[attacker] ?
+					players[attacker].mo : null;
+				int requestedDamage = max(1, (data.BurnDamageRemaining + data.BurnPulsesRemaining - 1) /
+					data.BurnPulsesRemaining);
+				data.BurnDamageRemaining = max(0, data.BurnDamageRemaining - requestedDamage);
+				int healthBefore = victim.Health;
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(source, source, requestedDamage, 'TuinRocketBurn');
+				ApplyingBonusDamage = false;
+				int damageDone = min(healthBefore, max(0, healthBefore - victim.Health));
+				if (damageDone > 0) SpawnDamageNumber(attacker, victim, damageDone, false, false, 1);
+				data.BurnPulsesRemaining--;
+				data.BurnNextTime += 35;
+				if (data.BurnPulsesRemaining <= 0 || data.BurnDamageRemaining <= 0)
+				{
+					data.BurnPulsesRemaining = 0;
+					data.BurnPlayerNumber = -1;
+					data.BurnDamageRemaining = 0;
 				}
 			}
 		}
@@ -3784,6 +3888,11 @@ class TuinRPGHandler : EventHandler
 			int effectiveBonusDamage = int(max(0, bonusDamage) * targetBaseDamageFactor + 0.5);
 			int totalDamage = baseDamage + effectiveBonusDamage;
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
+			if (IsPlayerRocketDamage(e.Inflictor, e.DamageType))
+				ApplyRocketBurn(attacker, victimData, totalDamage,
+					RocketHitWasDirect(e.Inflictor, e.Thing));
+			else if (IsPlayerPlasmaDamage(e.Inflictor))
+				ApplyPlasmaArc(attacker, e.Thing, e.DamageSource, e.Inflictor, totalDamage);
 			let attackData = EnsurePlayerData(attacker);
 			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack)
 				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
@@ -4210,7 +4319,11 @@ class TuinRPGHandler : EventHandler
 				}
 			}
 		}
-		if ((level.Time % 7) == 0) UpdateMonsterBleeds();
+		if ((level.Time % 7) == 0)
+		{
+			UpdateMonsterBleeds();
+			UpdateMonsterBurns();
+		}
 		if (EpisodeTravelTics > 0)
 		{
 			EpisodeTravelTics--;
@@ -4716,6 +4829,8 @@ class TuinRPGHandler : EventHandler
 			Screen.DrawText(font, Font.CR_BLACK, x + 2, y + 2, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);
 			int numberColor = DamageNumberBleed[i] ? Font.CR_RED :
+				DamageNumberElement[i] == 1 ? Font.CR_ORANGE :
+				DamageNumberElement[i] == 2 ? Font.CR_CYAN :
 				(DamageNumberCritical[i] ? Font.CR_GOLD : Font.CR_WHITE);
 			Screen.DrawText(font, numberColor, x, y, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);

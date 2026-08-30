@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.42
+
+- Rocket impacts now ignite damaged monsters for four seconds. The directly struck monster receives a burn worth 16% of its final impact damage, while other monsters caught by the explosion receive an 8% burn based on the damage dealt to each of them.
+- Plasma Rifle shots now arc 20% of their final impact damage to other visible monsters within 96 map units of the struck target.
+- Elemental follow-up damage cannot critically hit or recursively trigger more elemental damage. Existing Armor and Warding reductions still apply.
+- Added distinct floating-number colors: rocket burn pulses are orange and plasma arc damage is plasma blue.
+
 ## 0.6.41
 
 - Added a once-per-map emergency ammo rescue for each stock ammo family. If the entire active team reaches zero carried bullets, shells, rockets, or cells while at least four monsters remain, the Hell Director can silently upgrade one matching untouched pickup to its large-box version.
