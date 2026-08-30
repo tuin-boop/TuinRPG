@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.41
+
+- Added a once-per-map emergency ammo rescue for each stock ammo family. If the entire active team reaches zero carried bullets, shells, rockets, or cells while at least four monsters remain, the Hell Director can silently upgrade one matching untouched pickup to its large-box version.
+- Emergency rescues work independently of the normal 25%, 50%, and 75% kill checkpoints, including after all three checkpoints have passed.
+- The rescue never grants ammunition directly, never changes visible, collected, or dropped pickups, and retries later if the only matching pickup is currently visible. A successful rescue consumes that ammo family's single allowance for the map.
+- Empty Miniguns now dry-fire, display `OUT OF BULLETS`, and trigger the normal automatic weapon switch instead of silently doing nothing.
+
 ## 0.6.40
 
 - Added the Riot Shotgun as a distinct rare shotgun conversion. It fires five pellets instead of seven with wider spread, consumes one shell, has no magazine reload, and uses its own weapon artwork and randomized firing sound.

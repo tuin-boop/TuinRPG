@@ -21,6 +21,7 @@ class TuinRPGHandler : EventHandler
 	int AppliedDifficultyMode;
 	bool MonsterLevelsSynchronized;
 	int DirectorCheckpoint;
+	bool DirectorEmergencyAmmoUsed[4];
 	int DirectorDamageTaken[TUIN_MAX_PLAYERS];
 	Vector3 DirectorTrailPosition[TUIN_MAX_PLAYERS];
 	bool DirectorTrailValid[TUIN_MAX_PLAYERS];
@@ -3066,6 +3067,61 @@ class TuinRPGHandler : EventHandler
 		return candidate;
 	}
 
+	bool DirectorAmmoFamilyEmpty(int family)
+	{
+		Name ammoName = DirectorAmmoType(family);
+		class<Ammo> ammoType = (class<Ammo>)(FindClass(ammoName, 'Ammo'));
+		if (!ammoType) return false;
+		bool relevant;
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
+			let pawn = players[playerNumber].mo;
+			let ammo = Ammo(pawn.FindInventory(ammoType));
+			if (ammo && ammo.Amount > 0) return false;
+			for (Inventory item = pawn.Inv; item; item = item.Inv)
+			{
+				let weapon = Weapon(item);
+				if (weapon && (weapon.AmmoType1 == ammoType || weapon.AmmoType2 == ammoType))
+				{
+					relevant = true;
+					break;
+				}
+			}
+		}
+		return relevant;
+	}
+
+	bool UpgradeDirectorAmmoPickup(int family, Actor pickup)
+	{
+		if (!pickup) return false;
+		Actor upgraded = Actor.Spawn(DirectorLargeAmmoPickup(family), pickup.Pos, NO_REPLACE);
+		if (!upgraded) return false;
+		upgraded.Angle = pickup.Angle;
+		upgraded.Pitch = pickup.Pitch;
+		upgraded.Roll = pickup.Roll;
+		upgraded.Vel = pickup.Vel;
+		pickup.Destroy();
+		return true;
+	}
+
+	// Once per stock-ammo family and map, an empty reserve may receive one
+	// silent rescue conversion. Failed attempts remain eligible so a pickup
+	// that is currently visible can be upgraded later after it leaves sight.
+	bool TryEmergencyAmmoUpgrade(int remainingMonsters)
+	{
+		if (remainingMonsters < 4) return false;
+		for (int family = 0; family < 4; family++)
+		{
+			if (DirectorEmergencyAmmoUsed[family] || !DirectorAmmoFamilyEmpty(family)) continue;
+			Actor pickup = FindDirectorSmallAmmoPickup(family);
+			if (!UpgradeDirectorAmmoPickup(family, pickup)) continue;
+			DirectorEmergencyAmmoUsed[family] = true;
+			return true;
+		}
+		return false;
+	}
+
 	// Quietly convert one remaining stock pickup in the weakest carried ammo
 	// family to its large-box equivalent. This never adds ammo directly to a
 	// player and cannot affect grenades or unknown weapon-mod ammunition.
@@ -3089,24 +3145,24 @@ class TuinRPGHandler : EventHandler
 		}
 		if (chosenFamily < 0 || !chosenPickup) return false;
 
-		Actor upgraded = Actor.Spawn(DirectorLargeAmmoPickup(chosenFamily), chosenPickup.Pos, NO_REPLACE);
-		if (!upgraded) return false;
-		upgraded.Angle = chosenPickup.Angle;
-		upgraded.Pitch = chosenPickup.Pitch;
-		upgraded.Roll = chosenPickup.Roll;
-		upgraded.Vel = chosenPickup.Vel;
-		chosenPickup.Destroy();
-		return true;
+		return UpgradeDirectorAmmoPickup(chosenFamily, chosenPickup);
 	}
 
 	void UpdateHellDirector()
 	{
-		if (!CVInt('tuin_director_enabled', 1) || DirectorCheckpoint >= 3 ||
+		if (!CVInt('tuin_director_enabled', 1)) return;
+		int remainingMonsters = max(0, level.total_monsters - level.killed_monsters);
+		bool emergencyUpgraded;
+		if ((level.Time % 35) == 0)
+			emergencyUpgraded = TryEmergencyAmmoUpgrade(remainingMonsters);
+		if (DirectorCheckpoint >= 3 ||
 			level.total_monsters < max(8, CVInt('tuin_director_min_monsters', 12))) return;
 		int threshold = (DirectorCheckpoint + 1) * 25;
 		if (level.killed_monsters * 100 < level.total_monsters * threshold) return;
 		DirectorCheckpoint++;
-		UpgradeLowAmmoPickup(max(0, level.total_monsters - level.killed_monsters));
+		// Do not perform a second conversion when the emergency check happened
+		// on the exact same tic as a regular 25/50/75 percent checkpoint.
+		if (!emergencyUpgraded) UpgradeLowAmmoPickup(remainingMonsters);
 
 		int damageTaken = 0;
 		int healthBudget = 0;
@@ -3374,6 +3430,7 @@ class TuinRPGHandler : EventHandler
 		CurrentLoadedCampaignMap = 0;
 		MonsterLevelsSynchronized = false;
 		DirectorCheckpoint = 0;
+		for (int family = 0; family < 4; family++) DirectorEmergencyAmmoUsed[family] = false;
 		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 		{
 			DirectorDamageTaken[i] = 0;
@@ -3400,6 +3457,7 @@ class TuinRPGHandler : EventHandler
 			JohnMerchant = null;
 			MonsterLevelsSynchronized = false;
 			DirectorCheckpoint = 0;
+			for (int family = 0; family < 4; family++) DirectorEmergencyAmmoUsed[family] = false;
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 			{
 				DirectorDamageTaken[i] = 0;

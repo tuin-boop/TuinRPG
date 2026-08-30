@@ -422,7 +422,7 @@ ACTOR TuinMinigun : Z86Chaingun
 		TNT1 A 0 A_GiveInventory("TuinMinigunRounds", 100)
 	ReadyLoadedCheck:
 		TNT1 A 0 A_JumpIfInventory("TuinMinigunRounds", 1, "ReadyLoop")
-		TNT1 A 0 A_JumpIfNoAmmo("ReadyLoop")
+		TNT1 A 0 A_JumpIfNoAmmo("Empty")
 		Goto Reload
 	ReadyLoop:
 		VLCN A 1 A_WeaponReady(WRF_ALLOWRELOAD)
@@ -440,7 +440,7 @@ ACTOR TuinMinigun : Z86Chaingun
 	Fire:
 		TNT1 A 0 A_JumpIfInventory("TuinMinigunRounds", 1, +2)
 		Goto Reload
-		TNT1 A 0 A_JumpIfNoAmmo("ReadyLoop")
+		TNT1 A 0 A_JumpIfNoAmmo("Empty")
 		TNT1 A 0 A_PlaySound("tuin/minigun/start", CHAN_AUTO)
 		VLCN B 2
 		VLCN CD 1
@@ -450,7 +450,7 @@ ACTOR TuinMinigun : Z86Chaingun
 	Hold:
 		TNT1 A 0 A_JumpIfInventory("TuinMinigunRounds", 1, +2)
 		Goto Reload
-		TNT1 A 0 A_JumpIfNoAmmo("WindDown")
+		TNT1 A 0 A_JumpIfNoAmmo("EmptyWindDown")
 		VLCS A 1
 		{
 			A_PlaySound("tuin/minigun/fire", CHAN_WEAPON);
@@ -473,7 +473,7 @@ ACTOR TuinMinigun : Z86Chaingun
 		Goto Ready
 
 	Reload:
-		TNT1 A 0 A_JumpIfNoAmmo("ReadyLoop")
+		TNT1 A 0 A_JumpIfNoAmmo("Empty")
 		TNT1 A 0 A_PlaySound("tuin/minigun/chain", CHAN_AUTO)
 		RCLD ABCDEEE 1
 		TNT1 A 0 A_PlaySound("tuin/minigun/reload", CHAN_AUTO)
@@ -481,6 +481,15 @@ ACTOR TuinMinigun : Z86Chaingun
 		NGLD GHIJKL 2
 		TNT1 A 0 A_GiveInventory("TuinMinigunRounds", 100)
 		Goto Ready
+
+	EmptyWindDown:
+		TNT1 A 0 A_PlaySound("tuin/minigun/stop", CHAN_AUTO)
+	Empty:
+		TNT1 A 0 A_PlaySound("weapons/pistol/dryf", CHAN_WEAPON)
+		TNT1 A 0 A_Print("OUT OF BULLETS")
+		TNT1 A 0 A_CheckReload
+		VLCN A 3
+		Goto ReadyLoop
 
 	Flash:
 		CHAF A 1 Bright A_Light2
