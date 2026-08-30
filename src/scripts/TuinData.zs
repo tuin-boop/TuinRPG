@@ -408,6 +408,7 @@ class TuinPlayerData : Inventory
 	int UnspentSkillPoints;
 	int PlayerClass;
 	int ClassHealClock;
+	int HealerSupplyCooldownTics;
 	int PerkVitalCore;
 	int PerkScavenger;
 	int PerkKillerInstinct;

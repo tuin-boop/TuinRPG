@@ -390,7 +390,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			role = "COMBAT MEDIC";
 			bonuses = "HEAL THE TEAM 5 HP EVERY 2 SEC | +25% AMMO";
 			tradeoff = "WEAPON DAMAGE REDUCED BY 25%";
-			ability = "PASSIVE TEAM HEALING - NO ACTIVATION NEEDED";
+			ability = "V: FIELD SUPPLY - TOSS ONE RANDOM HEALING PICKUP";
 			training = "+1 HEALTH PER HEALING PULSE PER RANK";
 			ultimate = "DOUBLE ALL CLASS HEALING";
 		}

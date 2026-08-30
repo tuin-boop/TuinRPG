@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.37
+
+- Added the Healer's Field Supply class ability: press V to throw one random Health Bonus, Stimpack, or Medikit forward, with a 2% chance to produce a Soulsphere.
+- Field Supply has a 20-second cooldown, reports its remaining time when pressed early, and announces when it is ready again.
+- Added a green-and-blue supply-toss effect so the thrown healing item is easy to spot.
+
 ## 0.6.36
 
 - Increased the Tank's ammunition pickup bonus from 50% to 100%, matching the class's 50% weapon-damage penalty while preserving ammo management.

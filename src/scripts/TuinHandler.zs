@@ -230,6 +230,11 @@ class TuinRPGHandler : EventHandler
 		return 350;
 	}
 
+	clearscope static int HealerSupplyCooldown()
+	{
+		return 700;
+	}
+
 	void AddTankDamageCharge(int playerNumber, TuinPlayerData data, int damage)
 	{
 		if (!data || data.PlayerClass != 1 || data.TankOverdriveActive || damage <= 0) return;
@@ -401,6 +406,12 @@ class TuinRPGHandler : EventHandler
 	void ApplyClassRegeneration(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data || data.PlayerClass == 0) return;
+		if (data.PlayerClass == 2 && data.HealerSupplyCooldownTics > 0)
+		{
+			data.HealerSupplyCooldownTics--;
+			if (data.HealerSupplyCooldownTics == 0)
+				SetLootNotification(playerNumber, "FIELD SUPPLY READY - PRESS V", 4);
+		}
 		data.ClassHealClock++;
 		if (data.PlayerClass == 2 && data.ClassHealClock >= 70)
 		{
@@ -418,6 +429,63 @@ class TuinRPGHandler : EventHandler
 			data.ClassHealClock = 0;
 			if (pawn.Health > 0) pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + 1));
 		}
+	}
+
+	void ActivateHealerSupplyToss(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 2 || pawn.Health <= 0) return;
+		if (data.HealerSupplyCooldownTics > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("FIELD SUPPLY: %.1f SEC",
+				data.HealerSupplyCooldownTics / 35.0), 0);
+			return;
+		}
+
+		int roll = Random[TuinHealerSupply](1, 100);
+		class<Actor> pickupType;
+		string pickupName;
+		if (roll <= 2)
+		{
+			pickupType = 'Soulsphere';
+			pickupName = "SOULSPHERE";
+		}
+		else if (roll <= 32)
+		{
+			pickupType = 'HealthBonus';
+			pickupName = "HEALTH BONUS";
+		}
+		else if (roll <= 67)
+		{
+			pickupType = 'Stimpack';
+			pickupName = "STIMPACK";
+		}
+		else
+		{
+			pickupType = 'Medikit';
+			pickupName = "MEDIKIT";
+		}
+
+		Vector3 spawnPosition = pawn.Pos + (cos(pawn.Angle) * 26.0, sin(pawn.Angle) * 26.0,
+			max(20.0, pawn.Height * 0.58));
+		Actor pickup = Actor.Spawn(pickupType, spawnPosition, ALLOW_REPLACE);
+		if (!pickup)
+		{
+			SetLootNotification(playerNumber, "FIELD SUPPLY COULD NOT FIND ROOM", 0);
+			return;
+		}
+		pickup.bDROPPED = true;
+		pickup.Vel = (cos(pawn.Angle) * 10.0, sin(pawn.Angle) * 10.0, 5.5) + pawn.Vel * 0.35;
+		pickup.Angle = pawn.Angle;
+		data.HealerSupplyCooldownTics = HealerSupplyCooldown();
+		for (int particle = 0; particle < 14; particle++)
+		{
+			pawn.A_SpawnParticle(particle & 1 ? Color(40, 255, 100) : Color(80, 190, 255),
+				SPF_FULLBRIGHT | SPF_FACECAMERA, 12, 7.0, 0,
+				cos(pawn.Angle) * 20.0, sin(pawn.Angle) * 20.0, pawn.Height * 0.55,
+				FRandom[TuinHealerSupply](-1.5, 1.5), FRandom[TuinHealerSupply](-1.5, 1.5),
+				FRandom[TuinHealerSupply](0.5, 3.0), 0, 0, -0.04, 0.08);
+		}
+		SetLootNotification(playerNumber, String.Format("FIELD SUPPLY: %s - 20 SEC COOLDOWN", pickupName), 5);
 	}
 
 	void BreakRogueVeil(int playerNumber, TuinPlayerData data, bool preserveAmbush = false)
@@ -4097,6 +4165,11 @@ class TuinRPGHandler : EventHandler
 			bool legacyAbilityBind = e.Name ~== "tuin_rogue_shadow_veil";
 			let rogueData = EnsurePlayerData(e.Player);
 			let pawn = players[e.Player].mo;
+			if (rogueData && pawn && rogueData.PlayerClass == 2)
+			{
+				ActivateHealerSupplyToss(e.Player, pawn, rogueData);
+				return;
+			}
 			if (rogueData && pawn && rogueData.PlayerClass == 1)
 			{
 				if (rogueData.TankOverdriveActive)
@@ -4122,7 +4195,7 @@ class TuinRPGHandler : EventHandler
 			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
 			{
-				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK, DOOM GUY, OR ROGUE", 0);
+				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK, HEALER, DOOM GUY, OR ROGUE", 0);
 				return;
 			}
 			if (rogueData.RogueVeiled)
@@ -4500,6 +4573,36 @@ class TuinRPGHandler : EventHandler
 			DTA_ScaleX, statsScale, DTA_ScaleY, statsScale);
 	}
 
+	ui void DrawHealerSupplyStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 2) return;
+		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		string status = data.HealerSupplyCooldownTics > 0 ?
+			String.Format("FIELD SUPPLY  %.1f SEC", data.HealerSupplyCooldownTics / 35.0) :
+			"FIELD SUPPLY READY  -  PRESS V";
+		int statusColor = data.HealerSupplyCooldownTics > 0 ? Font.CR_GOLD : Font.CR_GREEN;
+		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		int panelX = screenWidth - panelWidth - 10;
+		int panelY = 10;
+		if (CVInt('tuin_minimap_enabled', 1))
+		{
+			int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, screenHeight - 32));
+			double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
+			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+			panelWidth = mapSize;
+		}
+		Screen.Dim(Color(2, 14, 9), 0.94, panelX, panelY, panelWidth, int(20 * scale));
+		Screen.DrawLineFrame(Color(35, 210, 105), panelX, panelY, panelWidth, int(20 * scale), 2);
+		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
+		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
+			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+	}
+
 	ui void DrawRogueStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
 		if (menuactive || !players[playerNumber].mo) return;
@@ -4699,6 +4802,7 @@ class TuinRPGHandler : EventHandler
 		}
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
+		DrawHealerSupplyStatus(pnum, font, sw, sh, hudScale);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
 		DrawTankStatus(pnum, font, sw, sh, hudScale);
 		DrawDoomBloodPunchStatus(pnum, font, sw, sh, hudScale);
