@@ -54,7 +54,7 @@ class TuinWeaponDrop : Actor
 		if (unarmedPickup)
 		{
 			SetState(FindState('KnucklePickup'), true);
-			Scale = (0.70, 0.70);
+			Scale = (0.49, 0.49);
 			Tics = -1;
 		}
 		Color col = QualityColor(Quality);

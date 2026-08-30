@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.39
+
+- Reduced the world-space knuckles weapon-drop sprite by 30% without changing its first-person size, pickup behavior, or glow.
+
 ## 0.6.38
 
 - Added a silent Hell Director ammo safety pass at 25%, 50%, and 75% kills. When the team's weakest carried stock-ammo reserve is running low, one remaining small pickup of that family can become its large-box equivalent.
