@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.46
+
+- Replaced Death Sentence's exact crosshair line trace with a forgiving 70-degree forward Judgment cone reaching at least 3,072 map units.
+- One activation now selects up to three visible monsters, prioritizing crosshair alignment and then distance, so fast lateral targets no longer make the ability feel unreliable.
+- Every sentenced target receives its own red skull, damage bonus, timer, and Final Verdict explosion. Killing one does not remove the sentence from the others.
+- No Appeals refunds 25% Judgment only once per multi-target cast, preventing three executions from tripling the refund.
+- Updated the Executioner HUD, target panel, notifications, and class description for plural sentenced targets.
+
 ## 0.6.45
 
 - Added a custom blood-red demonic skull sprite that bobs and pulses above the monster carrying Death Sentence, including moving and flying targets.

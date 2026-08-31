@@ -399,7 +399,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			role = "PRIORITY KILLER";
 			bonuses = "+30% WEAPON DAMAGE";
 			tradeoff = "-25% MAX HEALTH | TAKE 10% MORE DAMAGE";
-			ability = "V: DEATH SENTENCE - MARK AND EXECUTE ONE TARGET";
+			ability = "V: JUDGE UP TO 3 TARGETS IN A FORWARD CONE";
 			training = "JUDGMENT CHARGE +10% / +20% / +30%";
 			ultimate = "NO APPEALS: STRONGER MARK | 12 SEC | 25% REFUND";
 		}

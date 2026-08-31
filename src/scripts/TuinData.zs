@@ -470,6 +470,10 @@ class TuinPlayerData : Inventory
 	Actor ExecutionerMarkedTarget;
 	Actor ExecutionerMarkVisual;
 	int ExecutionerMarkTics;
+	Actor ExecutionerExtraMarkedTarget[2];
+	Actor ExecutionerExtraMarkVisual[2];
+	int ExecutionerExtraMarkTics[2];
+	bool ExecutionerRefundGranted;
 	int DoomBloodPunchCharge;
 	double DoomBloodPunchChargeRemainder;
 	bool DoomBloodPunchInitialized;
@@ -527,9 +531,17 @@ class TuinPlayerData : Inventory
 		return 500 + max(1, PlayerLevel) * 50;
 	}
 
+	clearscope bool HasActiveExecutionerMark()
+	{
+		if (ExecutionerMarkedTarget && ExecutionerMarkTics > 0) return true;
+		for (int i = 0; i < 2; i++)
+			if (ExecutionerExtraMarkedTarget[i] && ExecutionerExtraMarkTics[i] > 0) return true;
+		return false;
+	}
+
 	void AddExecutionerCharge(int damage)
 	{
-		if (PlayerClass != 3 || ExecutionerMarkTics > 0 || damage <= 0 || ExecutionerCharge >= 100) return;
+		if (PlayerClass != 3 || HasActiveExecutionerMark() || damage <= 0 || ExecutionerCharge >= 100) return;
 		double chargeRate = 1.0 + PerkClassMastery * 0.10;
 		double exact = damage * chargeRate * 100.0 / ExecutionerDamageRequired() +
 			ExecutionerChargeRemainder;

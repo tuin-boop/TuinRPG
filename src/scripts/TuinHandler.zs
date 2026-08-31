@@ -247,7 +247,7 @@ class TuinRPGHandler : EventHandler
 		TuinMonsterData victimData, Actor victim)
 	{
 		if (!playerData || !victimData || !victim || playerData.PlayerClass != 3 ||
-			playerData.ExecutionerMarkTics <= 0 || playerData.ExecutionerMarkedTarget != victim)
+			ExecutionerMarkSlotForTarget(playerData, victim) < 0)
 			return 0.0;
 		bool bossTarget = victimData.MonsterRarity >= 6 || IsIconicEpisodeBoss(victim);
 		return playerData.PerkCapstone ? (bossTarget ? 0.15 : 0.35) :
@@ -263,6 +263,65 @@ class TuinRPGHandler : EventHandler
 		case 4: return 'TuinExecutionerMark4'; case 5: return 'TuinExecutionerMark5';
 		case 6: return 'TuinExecutionerMark6'; default: return 'TuinExecutionerMark7';
 		}
+	}
+
+	Actor ExecutionerMarkTarget(TuinPlayerData data, int slot)
+	{
+		if (!data || slot < 0 || slot >= 3) return null;
+		return slot == 0 ? data.ExecutionerMarkedTarget : data.ExecutionerExtraMarkedTarget[slot - 1];
+	}
+
+	Actor ExecutionerMarkVisual(TuinPlayerData data, int slot)
+	{
+		if (!data || slot < 0 || slot >= 3) return null;
+		return slot == 0 ? data.ExecutionerMarkVisual : data.ExecutionerExtraMarkVisual[slot - 1];
+	}
+
+	int ExecutionerMarkTime(TuinPlayerData data, int slot)
+	{
+		if (!data || slot < 0 || slot >= 3) return 0;
+		return slot == 0 ? data.ExecutionerMarkTics : data.ExecutionerExtraMarkTics[slot - 1];
+	}
+
+	void SetExecutionerMarkSlot(TuinPlayerData data, int slot, Actor target, Actor visual, int tics)
+	{
+		if (!data || slot < 0 || slot >= 3) return;
+		if (slot == 0)
+		{
+			data.ExecutionerMarkedTarget = target;
+			data.ExecutionerMarkVisual = visual;
+			data.ExecutionerMarkTics = tics;
+		}
+		else
+		{
+			data.ExecutionerExtraMarkedTarget[slot - 1] = target;
+			data.ExecutionerExtraMarkVisual[slot - 1] = visual;
+			data.ExecutionerExtraMarkTics[slot - 1] = tics;
+		}
+	}
+
+	int ExecutionerMarkSlotForTarget(TuinPlayerData data, Actor target)
+	{
+		if (!data || !target) return -1;
+		for (int slot = 0; slot < 3; slot++)
+			if (ExecutionerMarkTarget(data, slot) == target && ExecutionerMarkTime(data, slot) > 0)
+				return slot;
+		return -1;
+	}
+
+	int ExecutionerActiveMarkCount(TuinPlayerData data)
+	{
+		int count;
+		for (int slot = 0; slot < 3; slot++)
+			if (ExecutionerMarkTarget(data, slot) && ExecutionerMarkTime(data, slot) > 0) count++;
+		return count;
+	}
+
+	int ExecutionerMaxMarkTime(TuinPlayerData data)
+	{
+		int result;
+		for (int slot = 0; slot < 3; slot++) result = max(result, ExecutionerMarkTime(data, slot));
+		return result;
 	}
 
 	void AddTankDamageCharge(int playerNumber, TuinPlayerData data, int damage)
@@ -305,7 +364,7 @@ class TuinRPGHandler : EventHandler
 	void AddExecutionerDamageCharge(int playerNumber, TuinPlayerData data, int damage)
 	{
 		if (!data || data.PlayerClass != 3 || damage <= 0 || data.ExecutionerCharge >= 100 ||
-			data.ExecutionerMarkTics > 0) return;
+			data.HasActiveExecutionerMark()) return;
 		int oldCharge = data.ExecutionerCharge;
 		data.AddExecutionerCharge(damage);
 		if (oldCharge < 100 && data.ExecutionerCharge >= 100)
@@ -315,69 +374,89 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
-	Actor FindExecutionerTarget(Actor pawn)
+	int FindExecutionerTargets(Actor pawn, out Actor first, out Actor second, out Actor third)
 	{
-		if (!pawn || pawn.Health <= 0) return null;
-		FLineTraceData trace;
-		double distance = max(64.0, CVFloat('tuin_healthbar_distance', 2048.0));
-		if (!pawn.LineTrace(pawn.Angle, distance, pawn.Pitch, 0, pawn.Height * 0.5, data: trace)) return null;
-		Actor target = trace.HitActor;
-		return target && target.Health > 0 && !target.bFRIENDLY && GetMonsterData(target) ? target : null;
+		first = null; second = null; third = null;
+		if (!pawn || pawn.Health <= 0) return 0;
+		double firstScore = 1000000000.0;
+		double secondScore = 1000000000.0;
+		double thirdScore = 1000000000.0;
+		double maxRange = max(3072.0, CVFloat('tuin_healthbar_distance', 2048.0));
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (candidate == pawn || candidate.Health <= 0 || candidate.bFRIENDLY ||
+				!GetMonsterData(candidate)) continue;
+			double distance = pawn.Distance3D(candidate);
+			if (distance > maxRange || !pawn.CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+			double yawDifference = abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(candidate, true)));
+			if (yawDifference > 35.0) continue;
+			// Crosshair alignment matters most, with distance breaking close scores.
+			double score = yawDifference * 80.0 + distance * 0.02;
+			if (score < firstScore)
+			{
+				third = second; thirdScore = secondScore;
+				second = first; secondScore = firstScore;
+				first = candidate; firstScore = score;
+			}
+			else if (score < secondScore)
+			{
+				third = second; thirdScore = secondScore;
+				second = candidate; secondScore = score;
+			}
+			else if (score < thirdScore)
+			{
+				third = candidate; thirdScore = score;
+			}
+		}
+		return first ? (third ? 3 : (second ? 2 : 1)) : 0;
+	}
+
+	void ClearExecutionerMarkSlot(int playerNumber, TuinPlayerData data, int slot)
+	{
+		if (!data || slot < 0 || slot >= 3) return;
+		Actor target = ExecutionerMarkTarget(data, slot);
+		Actor visual = ExecutionerMarkVisual(data, slot);
+		if (target) target.A_RemoveLight(ExecutionerMarkLightName(playerNumber));
+		if (visual) visual.Destroy();
+		SetExecutionerMarkSlot(data, slot, null, null, 0);
 	}
 
 	void ClearExecutionerMark(int playerNumber, TuinPlayerData data)
 	{
 		if (!data) return;
-		if (data.ExecutionerMarkedTarget)
-			data.ExecutionerMarkedTarget.A_RemoveLight(ExecutionerMarkLightName(playerNumber));
-		if (data.ExecutionerMarkVisual) data.ExecutionerMarkVisual.Destroy();
-		data.ExecutionerMarkedTarget = null;
-		data.ExecutionerMarkVisual = null;
-		data.ExecutionerMarkTics = 0;
+		for (int slot = 0; slot < 3; slot++) ClearExecutionerMarkSlot(playerNumber, data, slot);
+	}
+
+	void UpdateExecutionerSkullMarkerSlot(int playerNumber, TuinPlayerData data, int slot)
+	{
+		Actor target = ExecutionerMarkTarget(data, slot);
+		int tics = ExecutionerMarkTime(data, slot);
+		if (!target || tics <= 0) return;
+		Actor visual = ExecutionerMarkVisual(data, slot);
+		if (!visual)
+			visual = Actor.Spawn('TuinExecutionerSkullMarker',
+				target.Pos + (0, 0, target.Height + 20), NO_REPLACE);
+		if (!visual) return;
+		SetExecutionerMarkSlot(data, slot, target, visual, tics);
+		double bob = 20.0 + sin((level.Time + playerNumber * 9 + slot * 13) * 7.0) * 3.0;
+		visual.SetOrigin(target.Pos + (0, 0, target.Height + bob), false);
+		visual.Alpha = 0.78 +
+			(sin((level.Time + playerNumber * 5 + slot * 11) * 10.0) + 1.0) * 0.10;
 	}
 
 	void UpdateExecutionerSkullMarker(int playerNumber, TuinPlayerData data)
 	{
-		if (!data || !data.ExecutionerMarkedTarget || data.ExecutionerMarkTics <= 0) return;
-		Actor target = data.ExecutionerMarkedTarget;
-		if (!data.ExecutionerMarkVisual)
-			data.ExecutionerMarkVisual = Actor.Spawn('TuinExecutionerSkullMarker',
-				target.Pos + (0, 0, target.Height + 20), NO_REPLACE);
-		if (!data.ExecutionerMarkVisual) return;
-		double bob = 20.0 + sin((level.Time + playerNumber * 9) * 7.0) * 3.0;
-		data.ExecutionerMarkVisual.SetOrigin(target.Pos + (0, 0, target.Height + bob), false);
-		data.ExecutionerMarkVisual.Alpha = 0.78 +
-			(sin((level.Time + playerNumber * 5) * 10.0) + 1.0) * 0.10;
+		if (!data) return;
+		for (int slot = 0; slot < 3; slot++) UpdateExecutionerSkullMarkerSlot(playerNumber, data, slot);
 	}
 
-	void ActivateExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
+	void MarkExecutionerTarget(int playerNumber, TuinPlayerData data, int slot, Actor target)
 	{
-		if (!pawn || !data || data.PlayerClass != 3 || pawn.Health <= 0) return;
-		if (data.ExecutionerMarkTics > 0 && data.ExecutionerMarkedTarget)
-		{
-			SetLootNotification(playerNumber, String.Format("DEATH SENTENCE ACTIVE: %.1f SEC",
-				data.ExecutionerMarkTics / 35.0), 0);
-			return;
-		}
-		if (data.ExecutionerCharge < 100)
-		{
-			SetLootNotification(playerNumber, String.Format("JUDGMENT CHARGE: %d%% - DEAL DAMAGE",
-				data.ExecutionerCharge), 0);
-			return;
-		}
-		Actor target = FindExecutionerTarget(pawn);
-		if (!target)
-		{
-			SetLootNotification(playerNumber, "CHOOSE YOUR TARGET - AIM AT A MONSTER", 0);
-			return;
-		}
-		ClearExecutionerMark(playerNumber, data);
-		data.ExecutionerCharge = 0;
-		data.ExecutionerChargeRemainder = 0.0;
-		data.ExecutionerReadyNotified = false;
-		data.ExecutionerMarkedTarget = target;
-		data.ExecutionerMarkTics = ExecutionerMarkDuration(data);
-		UpdateExecutionerSkullMarker(playerNumber, data);
+		if (!data || !target || slot < 0 || slot >= 3) return;
+		SetExecutionerMarkSlot(data, slot, target, null, ExecutionerMarkDuration(data));
+		UpdateExecutionerSkullMarkerSlot(playerNumber, data, slot);
 		target.A_AttachLight(ExecutionerMarkLightName(playerNumber), DynamicLight.PulseLight,
 			Color(255, 18, 12), 54, 104, DynamicLight.LF_ATTENUATE,
 			(0, 0, target.Height * 0.58), 0.32);
@@ -389,7 +468,41 @@ class TuinRPGHandler : EventHandler
 				cos(particleAngle) * (target.Radius + 8), sin(particleAngle) * (target.Radius + 8),
 				target.Height * 0.55, 0, 0, 1.4, 0, 0, -0.08, 1.0, 0.05, -0.20);
 		}
-		SetLootNotification(playerNumber, "DEATH SENTENCE PASSED", 5);
+	}
+
+	void ActivateExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 3 || pawn.Health <= 0) return;
+		int activeMarks = ExecutionerActiveMarkCount(data);
+		if (activeMarks > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("DEATH SENTENCE: %d TARGET%s - %.1f SEC",
+				activeMarks, activeMarks == 1 ? "" : "S", ExecutionerMaxMarkTime(data) / 35.0), 0);
+			return;
+		}
+		if (data.ExecutionerCharge < 100)
+		{
+			SetLootNotification(playerNumber, String.Format("JUDGMENT CHARGE: %d%% - DEAL DAMAGE",
+				data.ExecutionerCharge), 0);
+			return;
+		}
+		Actor first, second, third;
+		int targetCount = FindExecutionerTargets(pawn, first, second, third);
+		if (targetCount <= 0)
+		{
+			SetLootNotification(playerNumber, "CHOOSE YOUR TARGETS - FACE A MONSTER", 0);
+			return;
+		}
+		ClearExecutionerMark(playerNumber, data);
+		data.ExecutionerCharge = 0;
+		data.ExecutionerChargeRemainder = 0.0;
+		data.ExecutionerReadyNotified = false;
+		data.ExecutionerRefundGranted = false;
+		MarkExecutionerTarget(playerNumber, data, 0, first);
+		if (second) MarkExecutionerTarget(playerNumber, data, 1, second);
+		if (third) MarkExecutionerTarget(playerNumber, data, 2, third);
+		SetLootNotification(playerNumber, String.Format("DEATH SENTENCE - %d TARGET%s JUDGED",
+			targetCount, targetCount == 1 ? "" : "S"), 5);
 	}
 
 	void ApplyExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -400,20 +513,24 @@ class TuinRPGHandler : EventHandler
 			ClearExecutionerMark(playerNumber, data);
 			return;
 		}
-		if (data.ExecutionerMarkTics <= 0 || !data.ExecutionerMarkedTarget ||
-			data.ExecutionerMarkedTarget.Health <= 0)
+		bool hadMarks = data.HasActiveExecutionerMark();
+		for (int slot = 0; slot < 3; slot++)
 		{
-			ClearExecutionerMark(playerNumber, data);
-			return;
+			Actor target = ExecutionerMarkTarget(data, slot);
+			int tics = ExecutionerMarkTime(data, slot);
+			if (!target || target.Health <= 0 || tics <= 0)
+			{
+				if (target || ExecutionerMarkVisual(data, slot) || tics > 0)
+					ClearExecutionerMarkSlot(playerNumber, data, slot);
+				continue;
+			}
+			tics--;
+			SetExecutionerMarkSlot(data, slot, target, ExecutionerMarkVisual(data, slot), tics);
+			if (tics <= 0) ClearExecutionerMarkSlot(playerNumber, data, slot);
+			else UpdateExecutionerSkullMarkerSlot(playerNumber, data, slot);
 		}
-		data.ExecutionerMarkTics--;
-		if (data.ExecutionerMarkTics <= 0)
-		{
-			ClearExecutionerMark(playerNumber, data);
+		if (hadMarks && !data.HasActiveExecutionerMark())
 			SetLootNotification(playerNumber, "DEATH SENTENCE EXPIRED - BUILD JUDGMENT", 0);
-			return;
-		}
-		UpdateExecutionerSkullMarker(playerNumber, data);
 	}
 
 	TuinPlayerData EnsurePlayerData(int playerNumber)
@@ -1139,7 +1256,15 @@ class TuinRPGHandler : EventHandler
 			data.ExecutionerChargeRemainder = 0.0;
 			data.ExecutionerReadyNotified = false;
 			data.ExecutionerMarkedTarget = null;
+			data.ExecutionerMarkVisual = null;
 			data.ExecutionerMarkTics = 0;
+			for (int i = 0; i < 2; i++)
+			{
+				data.ExecutionerExtraMarkedTarget[i] = null;
+				data.ExecutionerExtraMarkVisual[i] = null;
+				data.ExecutionerExtraMarkTics[i] = 0;
+			}
+			data.ExecutionerRefundGranted = false;
 		}
 		else if (chosenClass == 4)
 		{
@@ -4112,7 +4237,7 @@ class TuinRPGHandler : EventHandler
 	}
 
 	void TriggerFinalVerdict(int playerNumber, Actor corpse, TuinMonsterData corpseData,
-		TuinPlayerData playerData)
+		TuinPlayerData playerData, int markSlot)
 	{
 		if (!corpse || !corpseData || !playerData || playerNumber < 0 ||
 			playerNumber >= TUIN_MAX_PLAYERS) return;
@@ -4121,12 +4246,15 @@ class TuinRPGHandler : EventHandler
 		double radius = FinalVerdictRadius(playerData);
 		int explosionDamage = FinalVerdictDamage(corpseData, playerData);
 
-		ClearExecutionerMark(playerNumber, playerData);
-		if (ultimate)
+		ClearExecutionerMarkSlot(playerNumber, playerData, markSlot);
+		bool refunded;
+		if (ultimate && !playerData.ExecutionerRefundGranted)
 		{
-			playerData.ExecutionerCharge = 25;
+			playerData.ExecutionerCharge = min(100, playerData.ExecutionerCharge + 25);
 			playerData.ExecutionerChargeRemainder = 0.0;
 			playerData.ExecutionerReadyNotified = false;
+			playerData.ExecutionerRefundGranted = true;
+			refunded = true;
 		}
 		Actor.Spawn('PSQuickGrenadeExplosionFX', corpse.Pos + (0, 0, 8), NO_REPLACE);
 		corpse.A_StartSound("psgrenade/explode", CHAN_BODY);
@@ -4153,7 +4281,7 @@ class TuinRPGHandler : EventHandler
 				}
 			}
 		}
-		SetLootNotification(playerNumber, ultimate ?
+		SetLootNotification(playerNumber, refunded ?
 			"FINAL VERDICT - 25% JUDGMENT REFUNDED" : "FINAL VERDICT", 5);
 	}
 
@@ -4186,11 +4314,12 @@ class TuinRPGHandler : EventHandler
 		{
 			if (!playerInGame[markedPlayer] || !players[markedPlayer].mo) continue;
 			let executionerData = GetPlayerData(players[markedPlayer].mo);
-			if (!executionerData || executionerData.ExecutionerMarkedTarget != e.Thing) continue;
+			int markSlot = ExecutionerMarkSlotForTarget(executionerData, e.Thing);
+			if (!executionerData || markSlot < 0) continue;
 			bool sentencedKill = executionerData.PlayerClass == 3 &&
-				executionerData.ExecutionerMarkTics > 0 && killer == markedPlayer;
-			if (sentencedKill) TriggerFinalVerdict(markedPlayer, e.Thing, data, executionerData);
-			else ClearExecutionerMark(markedPlayer, executionerData);
+				ExecutionerMarkTime(executionerData, markSlot) > 0 && killer == markedPlayer;
+			if (sentencedKill) TriggerFinalVerdict(markedPlayer, e.Thing, data, executionerData, markSlot);
+			else ClearExecutionerMarkSlot(markedPlayer, executionerData, markSlot);
 		}
 		int xpAward = data.XPValue;
 		if (killer >= 0)
@@ -4240,8 +4369,8 @@ class TuinRPGHandler : EventHandler
 		TargetName[playerNumber] = data.GeneratedName.Length() ? data.GeneratedName : target.GetTag(target.GetClassName());
 		TargetAffixes[playerNumber] = AffixList(data);
 		let playerData = GetPlayerData(pawn);
-		if (playerData && playerData.PlayerClass == 3 && playerData.ExecutionerMarkTics > 0 &&
-			playerData.ExecutionerMarkedTarget == target)
+		if (playerData && playerData.PlayerClass == 3 &&
+			ExecutionerMarkSlotForTarget(playerData, target) >= 0)
 		{
 			TargetDeathSentence[playerNumber] = true;
 			TargetAffixes[playerNumber].AppendFormat("%sDEATH SENTENCE",
@@ -5179,10 +5308,17 @@ class TuinRPGHandler : EventHandler
 		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
 		string status;
 		int statusColor;
-		if (data.ExecutionerMarkTics > 0 && data.ExecutionerMarkedTarget)
+		int activeMarks = data.ExecutionerMarkedTarget && data.ExecutionerMarkTics > 0 ? 1 : 0;
+		int maxMarkTime = data.ExecutionerMarkTics;
+		for (int i = 0; i < 2; i++)
 		{
-			status = String.Format("DEATH SENTENCE  %.1f SEC  -  EXECUTE THE TARGET",
-				max(0, data.ExecutionerMarkTics) / 35.0);
+			if (data.ExecutionerExtraMarkedTarget[i] && data.ExecutionerExtraMarkTics[i] > 0) activeMarks++;
+			maxMarkTime = max(maxMarkTime, data.ExecutionerExtraMarkTics[i]);
+		}
+		if (activeMarks > 0)
+		{
+			status = String.Format("DEATH SENTENCE  %d TARGET%s  %.1f SEC",
+				activeMarks, activeMarks == 1 ? "" : "S", max(0, maxMarkTime) / 35.0);
 			statusColor = Font.CR_RED;
 		}
 		else if (data.ExecutionerCharge < 100)
