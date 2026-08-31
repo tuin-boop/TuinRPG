@@ -370,37 +370,25 @@ class TuinRPGHandler : EventHandler
 		if (oldCharge < 100 && data.ExecutionerCharge >= 100)
 		{
 			data.ExecutionerReadyNotified = true;
-			SetLootNotification(playerNumber, "JUDGMENT FULL - CHOOSE YOUR TARGET", 4);
+			SetLootNotification(playerNumber, "JUDGMENT FULL - PRESS V TO ARM", 4);
 		}
 	}
 
-	int FindExecutionerTargets(Actor pawn, out Actor first, out Actor second, out Actor third)
+	int FindExecutionerSplashTargets(Actor primary, out Actor second, out Actor third)
 	{
-		first = null; second = null; third = null;
-		if (!pawn || pawn.Health <= 0) return 0;
-		double firstScore = 1000000000.0;
+		second = null; third = null;
+		if (!primary) return 0;
 		double secondScore = 1000000000.0;
 		double thirdScore = 1000000000.0;
-		double maxRange = max(3072.0, CVFloat('tuin_healthbar_distance', 2048.0));
 		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
 		Actor candidate;
 		while (candidate = Actor(iterator.Next()))
 		{
-			if (candidate == pawn || candidate.Health <= 0 || candidate.bFRIENDLY ||
+			if (candidate == primary || candidate.Health <= 0 || candidate.bFRIENDLY ||
 				!GetMonsterData(candidate)) continue;
-			double distance = pawn.Distance3D(candidate);
-			if (distance > maxRange || !pawn.CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
-			double yawDifference = abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(candidate, true)));
-			if (yawDifference > 35.0) continue;
-			// Crosshair alignment matters most, with distance breaking close scores.
-			double score = yawDifference * 80.0 + distance * 0.02;
-			if (score < firstScore)
-			{
-				third = second; thirdScore = secondScore;
-				second = first; secondScore = firstScore;
-				first = candidate; firstScore = score;
-			}
-			else if (score < secondScore)
+			double score = primary.Distance3D(candidate);
+			if (score > 384.0 || !primary.CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+			if (score < secondScore)
 			{
 				third = second; thirdScore = secondScore;
 				second = candidate; secondScore = score;
@@ -410,7 +398,7 @@ class TuinRPGHandler : EventHandler
 				third = candidate; thirdScore = score;
 			}
 		}
-		return first ? (third ? 3 : (second ? 2 : 1)) : 0;
+		return third ? 2 : (second ? 1 : 0);
 	}
 
 	void ClearExecutionerMarkSlot(int playerNumber, TuinPlayerData data, int slot)
@@ -486,21 +474,42 @@ class TuinRPGHandler : EventHandler
 				data.ExecutionerCharge), 0);
 			return;
 		}
-		Actor first, second, third;
-		int targetCount = FindExecutionerTargets(pawn, first, second, third);
-		if (targetCount <= 0)
+		if (data.ExecutionerJudgmentArmed)
 		{
-			SetLootNotification(playerNumber, "CHOOSE YOUR TARGETS - FACE A MONSTER", 0);
+			SetLootNotification(playerNumber, "JUDGMENT ARMED - NEXT SHOT PASSES SENTENCE", 0);
 			return;
 		}
+		data.ExecutionerJudgmentArmed = true;
+		SetLootNotification(playerNumber, "JUDGMENT ARMED - NEXT SHOT PASSES SENTENCE", 5);
+	}
+
+	bool IsExecutionerJudgmentDamage(Actor inflictor, Actor victim, Name damageType)
+	{
+		if (IsGrenadeDamage(inflictor, damageType)) return false;
+		if (IsPlayerRocketDamage(inflictor, damageType) && !RocketHitWasDirect(inflictor, victim))
+			return false;
+		return damageType != 'TuinFinalVerdict' && damageType != 'TuinBloodPunch' &&
+			damageType != 'TuinBleed' && damageType != 'TuinRocketBurn' &&
+			damageType != 'TuinPlasmaArc' && damageType != 'Poison';
+	}
+
+	void PassExecutionerSentenceFromHit(int playerNumber, Actor pawn, TuinPlayerData data, Actor primary)
+	{
+		if (!pawn || !data || !primary || data.PlayerClass != 3 || pawn.Health <= 0 ||
+			!data.ExecutionerJudgmentArmed || data.ExecutionerCharge < 100 ||
+			data.HasActiveExecutionerMark()) return;
+		Actor second, third;
+		int extraTargets = FindExecutionerSplashTargets(primary, second, third);
 		ClearExecutionerMark(playerNumber, data);
 		data.ExecutionerCharge = 0;
 		data.ExecutionerChargeRemainder = 0.0;
 		data.ExecutionerReadyNotified = false;
 		data.ExecutionerRefundGranted = false;
-		MarkExecutionerTarget(playerNumber, data, 0, first);
+		data.ExecutionerJudgmentArmed = false;
+		MarkExecutionerTarget(playerNumber, data, 0, primary);
 		if (second) MarkExecutionerTarget(playerNumber, data, 1, second);
 		if (third) MarkExecutionerTarget(playerNumber, data, 2, third);
+		int targetCount = 1 + extraTargets;
 		SetLootNotification(playerNumber, String.Format("DEATH SENTENCE - %d TARGET%s JUDGED",
 			targetCount, targetCount == 1 ? "" : "S"), 5);
 	}
@@ -511,6 +520,7 @@ class TuinRPGHandler : EventHandler
 		if (data.PlayerClass != 3 || !pawn || pawn.Health <= 0)
 		{
 			ClearExecutionerMark(playerNumber, data);
+			data.ExecutionerJudgmentArmed = false;
 			return;
 		}
 		bool hadMarks = data.HasActiveExecutionerMark();
@@ -1265,6 +1275,7 @@ class TuinRPGHandler : EventHandler
 				data.ExecutionerExtraMarkTics[i] = 0;
 			}
 			data.ExecutionerRefundGranted = false;
+			data.ExecutionerJudgmentArmed = false;
 		}
 		else if (chosenClass == 4)
 		{
@@ -4048,6 +4059,13 @@ class TuinRPGHandler : EventHandler
 			}
 		}
 		if (ApplyingBonusDamage) return;
+		if (victimData && attacker >= 0 && attacker < TUIN_MAX_PLAYERS &&
+			IsExecutionerJudgmentDamage(e.Inflictor, e.Thing, e.DamageType))
+		{
+			let judgmentData = EnsurePlayerData(attacker);
+			if (judgmentData && judgmentData.PlayerClass == 3 && judgmentData.ExecutionerJudgmentArmed)
+				PassExecutionerSentenceFromHit(attacker, players[attacker].mo, judgmentData, e.Thing);
+		}
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
 		double targetBaseDamageFactor = 1.0;
@@ -4905,9 +4923,10 @@ class TuinRPGHandler : EventHandler
 				testData.ExecutionerCharge = 100;
 				testData.ExecutionerChargeRemainder = 0.0;
 				testData.ExecutionerReadyNotified = true;
+				testData.ExecutionerJudgmentArmed = false;
 				ApplyClassHealth(testPawn, testData);
-				testPawn.A_Log("DEATH SENTENCE TEST READY. Aim at a monster and press V.");
-				SetLootNotification(e.Player, "DEATH SENTENCE TEST READY - AIM AND PRESS V", 4);
+				testPawn.A_Log("DEATH SENTENCE TEST READY. Press V, then shoot a monster.");
+				SetLootNotification(e.Player, "DEATH SENTENCE TEST READY - PRESS V, THEN FIRE", 4);
 			}
 			return;
 		}
@@ -5321,6 +5340,11 @@ class TuinRPGHandler : EventHandler
 				activeMarks, activeMarks == 1 ? "" : "S", max(0, maxMarkTime) / 35.0);
 			statusColor = Font.CR_RED;
 		}
+		else if (data.ExecutionerJudgmentArmed)
+		{
+			status = "JUDGMENT ARMED  -  NEXT HIT PASSES SENTENCE";
+			statusColor = Font.CR_RED;
+		}
 		else if (data.ExecutionerCharge < 100)
 		{
 			status = String.Format("JUDGMENT CHARGE  %d%%  -  DEAL DAMAGE", data.ExecutionerCharge);
@@ -5328,7 +5352,7 @@ class TuinRPGHandler : EventHandler
 		}
 		else
 		{
-			status = "JUDGMENT READY  -  CHOOSE YOUR TARGET";
+			status = "JUDGMENT READY  -  PRESS V TO ARM";
 			statusColor = Font.CR_GREEN;
 		}
 		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);

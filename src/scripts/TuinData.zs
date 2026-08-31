@@ -474,6 +474,7 @@ class TuinPlayerData : Inventory
 	Actor ExecutionerExtraMarkVisual[2];
 	int ExecutionerExtraMarkTics[2];
 	bool ExecutionerRefundGranted;
+	bool ExecutionerJudgmentArmed;
 	int DoomBloodPunchCharge;
 	double DoomBloodPunchChargeRemainder;
 	bool DoomBloodPunchInitialized;

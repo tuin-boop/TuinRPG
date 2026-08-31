@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.47
+
+- Reworked Death Sentence into a one-press setup: full Judgment is armed with `V`, then the next qualifying weapon hit sentences the monster it strikes.
+- The struck monster becomes the primary target and Judgment spreads to the two nearest visible hostiles within 384 map units, for a maximum of three sentenced targets.
+- Missing, hitting scenery, grenade damage, Blood Punch, Final Verdict, bleeding, burning, poison, and plasma-arc damage do not consume armed Judgment.
+- Updated the Executioner HUD, notifications, class card, testing cheat, and automated gameplay regression for the new armed-next-hit flow.
+
 ## 0.6.46
 
 - Replaced Death Sentence's exact crosshair line trace with a forgiving 70-degree forward Judgment cone reaching at least 3,072 map units.
