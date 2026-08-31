@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.48
+
+- Removed the Executioner's 10% increased incoming-damage penalty. The class retains its 25% lower maximum health as its defensive tradeoff.
+- Added a visible **Fodder** debuff that makes every Lost Soul take 50% more player damage, including Rare, Mythic, and Pain Elemental-spawned variants.
+- Crowds of eleven or more living hostile monsters within 512 map units also receive Fodder, helping ammunition economy on dense slaughter maps without weakening sparse encounters.
+- Applied Fodder after elite bonus-damage limiting so high rarity cannot weaken the intended 50% vulnerability.
+
 ## 0.6.47
 
 - Reworked Death Sentence into a one-press setup: full Judgment is armed with `V`, then the next qualifying weapon hit sentences the monster it strikes.

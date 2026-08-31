@@ -187,6 +187,34 @@ class TuinRPGHandler : EventHandler
 		return mo && mo.bISMONSTER && mo.bSHOOTABLE && !mo.bFRIENDLY && mo.Health > 0;
 	}
 
+	bool HasFodderDebuff(Actor target)
+	{
+		if (!IsValidMonster(target)) return false;
+		if (target is 'LostSoul') return true;
+		let data = GetMonsterData(target);
+		if (data && data.FodderCheckTime > level.Time) return data.CrowdFodderDebuffed;
+		int nearbyMonsters = 0;
+		bool crowded = false;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (!IsValidMonster(candidate) || target.Distance3D(candidate) > 512.0) continue;
+			nearbyMonsters++;
+			if (nearbyMonsters >= 11)
+			{
+				crowded = true;
+				break;
+			}
+		}
+		if (data)
+		{
+			data.CrowdFodderDebuffed = crowded;
+			data.FodderCheckTime = level.Time + 18;
+		}
+		return crowded;
+	}
+
 	clearscope static TuinMonsterData GetMonsterData(Actor mo)
 	{
 		if (!mo) return null;
@@ -3130,11 +3158,13 @@ class TuinRPGHandler : EventHandler
 		return RollAffixes(count);
 	}
 
-	clearscope static string AffixList(TuinMonsterData data)
+	string AffixList(TuinMonsterData data)
 	{
 		if (!data) return "";
 		string result = "";
-		if (data.AffixFlags & TuinMonsterData.AFFIX_SWIFT) result.AppendFormat("SWIFT");
+		if (HasFodderDebuff(data.Owner)) result.AppendFormat("FODDER: +50%% DAMAGE TAKEN");
+		if (data.AffixFlags & TuinMonsterData.AFFIX_SWIFT)
+			result.AppendFormat("%sSWIFT", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_ARMORED) result.AppendFormat("%sARMORED", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_REGENERATING) result.AppendFormat("%sREGENERATING", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_BERSERKER) result.AppendFormat("%sBERSERKER", result.Length() ? "  |  " : "");
@@ -4173,6 +4203,15 @@ class TuinRPGHandler : EventHandler
 		int bonusDamage = int(e.Damage * playerBaseDamageFactor * (multiplier - 1.0) + 0.5);
 		if (victimData && bonusDamage > 0)
 			bonusDamage = DiminishRPGBonusDamage(e.Thing, victimData, bonusDamage);
+		// Lost Souls and locally dense crowds are treated as fodder. Apply their
+		// vulnerability after the RPG bonus limiter so rarity can never erase the
+		// intended 50% weakness.
+		if (victimData && attacker >= 0 && HasFodderDebuff(e.Thing))
+		{
+			int damageBeforeWeakness = max(1, int(e.Damage * playerBaseDamageFactor + 0.5)) +
+				max(0, bonusDamage);
+			bonusDamage += max(1, int(damageBeforeWeakness * 0.50 + 0.5));
+		}
 		if (bonusDamage > 0 && e.Thing.Health > 0)
 		{
 			ApplyingBonusDamage = true;
@@ -5517,7 +5556,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
 			TargetMaxHealth[playerNumber] <= 0 || !TargetAffixes[playerNumber].Length()) return;
 		double scale = clamp(hudScale * 1.12, 1.65, 2.55);
-		string heading = TargetDeathSentence[playerNumber] ? "MARKED TARGET" : "TARGET BUFFS";
+		string heading = TargetDeathSentence[playerNumber] ? "MARKED TARGET" : "TARGET TRAITS";
 		string affixes = TargetAffixes[playerNumber];
 		double affixScale = min(scale, double(screenWidth - 56) / max(1, font.StringWidth(affixes)));
 		affixScale = max(1.35, affixScale);

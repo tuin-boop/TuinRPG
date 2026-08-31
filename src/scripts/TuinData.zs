@@ -38,6 +38,8 @@ class TuinMonsterData : Inventory
 	int BurnDamageRemaining;
 	int RPGBonusWindowEndTime;
 	int RPGBonusWindowRawDamage;
+	int FodderCheckTime;
+	bool CrowdFodderDebuffed;
 	int SignatureProfile;
 	int SignatureCooldown;
 	int SignatureWindup;
@@ -697,7 +699,6 @@ class TuinPlayerData : Inventory
 			if (Endurance > 0) multiplier *= 1.0 - clamp(Endurance * 0.01, 0.0, 0.75);
 			if (PerkIronSkin > 0) multiplier *= 1.0 - clamp(PerkIronSkin * 0.03, 0.0, 0.25);
 			if (PlayerClass == 1) multiplier *= 0.50;
-			else if (PlayerClass == 3) multiplier *= 1.10;
 			else if (PlayerClass == 4) multiplier *= 0.90;
 			if (PlayerClass == 1 && PerkClassMastery > 0)
 				multiplier *= 1.0 - clamp(PerkClassMastery * 0.03, 0.0, 0.20);
