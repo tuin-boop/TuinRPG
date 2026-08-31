@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.45
+
+- Added a custom blood-red demonic skull sprite that bobs and pulses above the monster carrying Death Sentence, including moving and flying targets.
+- The skull marker is centered in world space and disappears immediately when the target dies, the sentence expires, or a level transition invalidates the target.
+- Reworded the full-Judgment HUD and notifications to clearly instruct the Executioner to **choose a target**.
+
 ## 0.6.44
 
 - Rebuilt Damage Dealer as the **Executioner**, preserving its +30% weapon damage, 25% lower maximum health, and 10% increased incoming damage while giving the class a complete active playstyle.

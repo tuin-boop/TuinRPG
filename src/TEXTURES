@@ -10,6 +10,14 @@ Sprite JOHNA0, 37, 56
 	Patch "graphics/TuinJohnSprite.png", 0, 0
 }
 
+// Death Sentence's floating world marker. Keeping the generated source in the
+// graphics namespace lets this virtual sprite provide reliable centered offsets.
+Sprite EXSKA0, 1230, 1278
+{
+	Offset 615, 1278
+	Patch "graphics/TuinExecutionerSkull.png", 0, 0
+}
+
 // A world-oriented fist/knuckle pickup. PUNGA0 is available in every Doom IWAD,
 // while many weapon mods provide only an offset-less first-person pickup frame.
 Sprite TKNKA0, 67, 57

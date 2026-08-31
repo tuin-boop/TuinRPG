@@ -391,6 +391,29 @@ class TuinTankOverdriveFiringSpeed : PowerDoubleFiringSpeed
 	}
 }
 
+class TuinExecutionerSkullMarker : Actor
+{
+	Default
+	{
+		Radius 0;
+		Height 0;
+		Scale 0.045;
+		Alpha 0.94;
+		RenderStyle "Translucent";
+		+NOINTERACTION
+		+NOGRAVITY
+		+FORCEXYBILLBOARD
+		+BRIGHT
+	}
+
+	States
+	{
+	Spawn:
+		EXSK A -1 Bright;
+		Stop;
+	}
+}
+
 class TuinPlayerData : Inventory
 {
 	class<Weapon> VariantWeaponType[64];
@@ -445,6 +468,7 @@ class TuinPlayerData : Inventory
 	double ExecutionerChargeRemainder;
 	bool ExecutionerReadyNotified;
 	Actor ExecutionerMarkedTarget;
+	Actor ExecutionerMarkVisual;
 	int ExecutionerMarkTics;
 	int DoomBloodPunchCharge;
 	double DoomBloodPunchChargeRemainder;

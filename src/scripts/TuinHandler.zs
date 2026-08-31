@@ -311,7 +311,7 @@ class TuinRPGHandler : EventHandler
 		if (oldCharge < 100 && data.ExecutionerCharge >= 100)
 		{
 			data.ExecutionerReadyNotified = true;
-			SetLootNotification(playerNumber, "DEATH SENTENCE READY - AIM AND PRESS V", 4);
+			SetLootNotification(playerNumber, "JUDGMENT FULL - CHOOSE YOUR TARGET", 4);
 		}
 	}
 
@@ -330,8 +330,24 @@ class TuinRPGHandler : EventHandler
 		if (!data) return;
 		if (data.ExecutionerMarkedTarget)
 			data.ExecutionerMarkedTarget.A_RemoveLight(ExecutionerMarkLightName(playerNumber));
+		if (data.ExecutionerMarkVisual) data.ExecutionerMarkVisual.Destroy();
 		data.ExecutionerMarkedTarget = null;
+		data.ExecutionerMarkVisual = null;
 		data.ExecutionerMarkTics = 0;
+	}
+
+	void UpdateExecutionerSkullMarker(int playerNumber, TuinPlayerData data)
+	{
+		if (!data || !data.ExecutionerMarkedTarget || data.ExecutionerMarkTics <= 0) return;
+		Actor target = data.ExecutionerMarkedTarget;
+		if (!data.ExecutionerMarkVisual)
+			data.ExecutionerMarkVisual = Actor.Spawn('TuinExecutionerSkullMarker',
+				target.Pos + (0, 0, target.Height + 20), NO_REPLACE);
+		if (!data.ExecutionerMarkVisual) return;
+		double bob = 20.0 + sin((level.Time + playerNumber * 9) * 7.0) * 3.0;
+		data.ExecutionerMarkVisual.SetOrigin(target.Pos + (0, 0, target.Height + bob), false);
+		data.ExecutionerMarkVisual.Alpha = 0.78 +
+			(sin((level.Time + playerNumber * 5) * 10.0) + 1.0) * 0.10;
 	}
 
 	void ActivateExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -352,7 +368,7 @@ class TuinRPGHandler : EventHandler
 		Actor target = FindExecutionerTarget(pawn);
 		if (!target)
 		{
-			SetLootNotification(playerNumber, "DEATH SENTENCE READY - AIM AT A MONSTER", 0);
+			SetLootNotification(playerNumber, "CHOOSE YOUR TARGET - AIM AT A MONSTER", 0);
 			return;
 		}
 		ClearExecutionerMark(playerNumber, data);
@@ -361,6 +377,7 @@ class TuinRPGHandler : EventHandler
 		data.ExecutionerReadyNotified = false;
 		data.ExecutionerMarkedTarget = target;
 		data.ExecutionerMarkTics = ExecutionerMarkDuration(data);
+		UpdateExecutionerSkullMarker(playerNumber, data);
 		target.A_AttachLight(ExecutionerMarkLightName(playerNumber), DynamicLight.PulseLight,
 			Color(255, 18, 12), 54, 104, DynamicLight.LF_ATTENUATE,
 			(0, 0, target.Height * 0.58), 0.32);
@@ -394,7 +411,9 @@ class TuinRPGHandler : EventHandler
 		{
 			ClearExecutionerMark(playerNumber, data);
 			SetLootNotification(playerNumber, "DEATH SENTENCE EXPIRED - BUILD JUDGMENT", 0);
+			return;
 		}
+		UpdateExecutionerSkullMarker(playerNumber, data);
 	}
 
 	TuinPlayerData EnsurePlayerData(int playerNumber)
@@ -5173,7 +5192,7 @@ class TuinRPGHandler : EventHandler
 		}
 		else
 		{
-			status = "DEATH SENTENCE READY  -  AIM AND PRESS V";
+			status = "JUDGMENT READY  -  CHOOSE YOUR TARGET";
 			statusColor = Font.CR_GREEN;
 		}
 		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
