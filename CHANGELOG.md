@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.43
+
+- Increased direct-target rocket burn from 16% to 32% of final impact damage.
+- Increased surrounding rocket-explosion burn from 8% to 16% of the damage received by each nearby monster.
+- Doubled the Plasma Rifle's arc range from 96 to 192 map units while retaining its 20% secondary-damage value and line-of-sight requirement.
+
 ## 0.6.42
 
 - Rocket impacts now ignite damaged monsters for four seconds. The directly struck monster receives a burn worth 16% of its final impact damage, while other monsters caught by the explosion receive an 8% burn based on the damage dealt to each of them.

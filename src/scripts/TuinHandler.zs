@@ -3618,7 +3618,7 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
 			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
-		double percent = directImpact ? 0.16 : 0.08;
+		double percent = directImpact ? 0.32 : 0.16;
 		int addedDamage = max(1, int(triggeringDamage * percent + 0.5));
 		data.BurnDamageRemaining = min(2000000000, data.BurnDamageRemaining + addedDamage);
 		if (data.BurnPulsesRemaining <= 0) data.BurnNextTime = level.Time + 35;
@@ -3638,7 +3638,7 @@ class TuinRPGHandler : EventHandler
 			for (Actor victim = arcSector.thinglist; victim; victim = victim.snext)
 			{
 				if (victim == primaryVictim || victim.Health <= 0 || !GetMonsterData(victim) ||
-					victim.bFRIENDLY || primaryVictim.Distance3D(victim) > 96.0 ||
+					victim.bFRIENDLY || primaryVictim.Distance3D(victim) > 192.0 ||
 					!primaryVictim.CheckSight(victim, SF_IGNOREWATERBOUNDARY)) continue;
 				int healthBefore = victim.Health;
 				ApplyingBonusDamage = true;
