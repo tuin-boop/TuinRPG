@@ -441,6 +441,11 @@ class TuinPlayerData : Inventory
 	bool TankOverdriveActive;
 	int TankOverdriveTics;
 	Actor TankOverdriveOwner;
+	int ExecutionerCharge;
+	double ExecutionerChargeRemainder;
+	bool ExecutionerReadyNotified;
+	Actor ExecutionerMarkedTarget;
+	int ExecutionerMarkTics;
 	int DoomBloodPunchCharge;
 	double DoomBloodPunchChargeRemainder;
 	bool DoomBloodPunchInitialized;
@@ -491,6 +496,23 @@ class TuinPlayerData : Inventory
 		TankOverdriveChargeRemainder = exact - gained;
 		TankOverdriveCharge = min(100, TankOverdriveCharge + gained);
 		if (TankOverdriveCharge < 100) TankReadyNotified = false;
+	}
+
+	clearscope int ExecutionerDamageRequired()
+	{
+		return 500 + max(1, PlayerLevel) * 50;
+	}
+
+	void AddExecutionerCharge(int damage)
+	{
+		if (PlayerClass != 3 || ExecutionerMarkTics > 0 || damage <= 0 || ExecutionerCharge >= 100) return;
+		double chargeRate = 1.0 + PerkClassMastery * 0.10;
+		double exact = damage * chargeRate * 100.0 / ExecutionerDamageRequired() +
+			ExecutionerChargeRemainder;
+		int gained = int(exact);
+		ExecutionerChargeRemainder = exact - gained;
+		ExecutionerCharge = min(100, ExecutionerCharge + gained);
+		if (ExecutionerCharge < 100) ExecutionerReadyNotified = false;
 	}
 
 	clearscope int DoomBloodPunchDamageRequired()

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.44
+
+- Rebuilt Damage Dealer as the **Executioner**, preserving its +30% weapon damage, 25% lower maximum health, and 10% increased incoming damage while giving the class a complete active playstyle.
+- Ordinary weapon damage now fills Judgment, requiring `500 + 50 × player level` damage. Press Class Ability at full charge to place **Death Sentence** on the monster under the crosshair for ten seconds.
+- Death Sentence adds 25% damage against ordinary monsters and 10% against Boss-tier targets. The marked monster receives a red pulse/ring and a clearly labeled red target panel.
+- Killing the marked monster triggers **Final Verdict**, damaging nearby visible hostiles for 18% of the victim's scaled maximum health within 160 units. It uses the integrated quick grenade's explosion effect, sound, and quake, with red floating damage numbers.
+- Executioner Class Training now builds Judgment 10%, 20%, and 30% faster instead of adding passive damage.
+- Replaced the old 2.5x-critical Ultimate with **No Appeals**: Death Sentence lasts twelve seconds, deals 35% bonus damage to ordinary monsters and 15% to bosses, expands Final Verdict to 224 units at 25% victim health, and refunds 25% Judgment after a successful execution.
+- Added `netevent tuin_test_death_sentence` to select Executioner and fill Judgment for testing.
+
 ## 0.6.43
 
 - Increased direct-target rocket burn from 16% to 32% of final impact damage.

@@ -38,6 +38,7 @@ class TuinRPGHandler : EventHandler
 	int DifficultyNoticeTics[TUIN_MAX_PLAYERS];
 	string TargetName[TUIN_MAX_PLAYERS];
 	string TargetAffixes[TUIN_MAX_PLAYERS];
+	bool TargetDeathSentence[TUIN_MAX_PLAYERS];
 	int TargetLevel[TUIN_MAX_PLAYERS];
 	int TargetRarity[TUIN_MAX_PLAYERS];
 	int TargetHealth[TUIN_MAX_PLAYERS];
@@ -210,7 +211,7 @@ class TuinRPGHandler : EventHandler
 		{
 		case 1: return "TANK";
 		case 2: return "HEALER";
-		case 3: return "DAMAGE DEALER";
+		case 3: return "EXECUTIONER";
 		case 4: return "DOOM GUY";
 		case 5: return "ROGUE";
 		default: return "UNSELECTED";
@@ -235,6 +236,33 @@ class TuinRPGHandler : EventHandler
 	clearscope static int HealerSupplyCooldown()
 	{
 		return 700;
+	}
+
+	clearscope static int ExecutionerMarkDuration(TuinPlayerData data)
+	{
+		return data && data.PerkCapstone ? 420 : 350;
+	}
+
+	double ExecutionerMarkedDamageBonus(TuinPlayerData playerData,
+		TuinMonsterData victimData, Actor victim)
+	{
+		if (!playerData || !victimData || !victim || playerData.PlayerClass != 3 ||
+			playerData.ExecutionerMarkTics <= 0 || playerData.ExecutionerMarkedTarget != victim)
+			return 0.0;
+		bool bossTarget = victimData.MonsterRarity >= 6 || IsIconicEpisodeBoss(victim);
+		return playerData.PerkCapstone ? (bossTarget ? 0.15 : 0.35) :
+			(bossTarget ? 0.10 : 0.25);
+	}
+
+	clearscope static Name ExecutionerMarkLightName(int playerNumber)
+	{
+		switch (playerNumber)
+		{
+		case 0: return 'TuinExecutionerMark0'; case 1: return 'TuinExecutionerMark1';
+		case 2: return 'TuinExecutionerMark2'; case 3: return 'TuinExecutionerMark3';
+		case 4: return 'TuinExecutionerMark4'; case 5: return 'TuinExecutionerMark5';
+		case 6: return 'TuinExecutionerMark6'; default: return 'TuinExecutionerMark7';
+		}
 	}
 
 	void AddTankDamageCharge(int playerNumber, TuinPlayerData data, int damage)
@@ -271,6 +299,101 @@ class TuinRPGHandler : EventHandler
 		{
 			data.DoomBloodPunchReadyNotified = true;
 			SetLootNotification(playerNumber, "BLOOD PUNCH READY - HOLD V", 4);
+		}
+	}
+
+	void AddExecutionerDamageCharge(int playerNumber, TuinPlayerData data, int damage)
+	{
+		if (!data || data.PlayerClass != 3 || damage <= 0 || data.ExecutionerCharge >= 100 ||
+			data.ExecutionerMarkTics > 0) return;
+		int oldCharge = data.ExecutionerCharge;
+		data.AddExecutionerCharge(damage);
+		if (oldCharge < 100 && data.ExecutionerCharge >= 100)
+		{
+			data.ExecutionerReadyNotified = true;
+			SetLootNotification(playerNumber, "DEATH SENTENCE READY - AIM AND PRESS V", 4);
+		}
+	}
+
+	Actor FindExecutionerTarget(Actor pawn)
+	{
+		if (!pawn || pawn.Health <= 0) return null;
+		FLineTraceData trace;
+		double distance = max(64.0, CVFloat('tuin_healthbar_distance', 2048.0));
+		if (!pawn.LineTrace(pawn.Angle, distance, pawn.Pitch, 0, pawn.Height * 0.5, data: trace)) return null;
+		Actor target = trace.HitActor;
+		return target && target.Health > 0 && !target.bFRIENDLY && GetMonsterData(target) ? target : null;
+	}
+
+	void ClearExecutionerMark(int playerNumber, TuinPlayerData data)
+	{
+		if (!data) return;
+		if (data.ExecutionerMarkedTarget)
+			data.ExecutionerMarkedTarget.A_RemoveLight(ExecutionerMarkLightName(playerNumber));
+		data.ExecutionerMarkedTarget = null;
+		data.ExecutionerMarkTics = 0;
+	}
+
+	void ActivateExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 3 || pawn.Health <= 0) return;
+		if (data.ExecutionerMarkTics > 0 && data.ExecutionerMarkedTarget)
+		{
+			SetLootNotification(playerNumber, String.Format("DEATH SENTENCE ACTIVE: %.1f SEC",
+				data.ExecutionerMarkTics / 35.0), 0);
+			return;
+		}
+		if (data.ExecutionerCharge < 100)
+		{
+			SetLootNotification(playerNumber, String.Format("JUDGMENT CHARGE: %d%% - DEAL DAMAGE",
+				data.ExecutionerCharge), 0);
+			return;
+		}
+		Actor target = FindExecutionerTarget(pawn);
+		if (!target)
+		{
+			SetLootNotification(playerNumber, "DEATH SENTENCE READY - AIM AT A MONSTER", 0);
+			return;
+		}
+		ClearExecutionerMark(playerNumber, data);
+		data.ExecutionerCharge = 0;
+		data.ExecutionerChargeRemainder = 0.0;
+		data.ExecutionerReadyNotified = false;
+		data.ExecutionerMarkedTarget = target;
+		data.ExecutionerMarkTics = ExecutionerMarkDuration(data);
+		target.A_AttachLight(ExecutionerMarkLightName(playerNumber), DynamicLight.PulseLight,
+			Color(255, 18, 12), 54, 104, DynamicLight.LF_ATTENUATE,
+			(0, 0, target.Height * 0.58), 0.32);
+		for (int i = 0; i < 18; i++)
+		{
+			double particleAngle = i * 20.0;
+			target.A_SpawnParticle(i & 1 ? Color(255, 30, 12) : Color(150, 0, 0),
+				SPF_FULLBRIGHT | SPF_FACECAMERA, 24, 5.0, particleAngle,
+				cos(particleAngle) * (target.Radius + 8), sin(particleAngle) * (target.Radius + 8),
+				target.Height * 0.55, 0, 0, 1.4, 0, 0, -0.08, 1.0, 0.05, -0.20);
+		}
+		SetLootNotification(playerNumber, "DEATH SENTENCE PASSED", 5);
+	}
+
+	void ApplyExecutionerDeathSentence(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!data) return;
+		if (data.PlayerClass != 3 || !pawn || pawn.Health <= 0)
+		{
+			ClearExecutionerMark(playerNumber, data);
+			return;
+		}
+		if (data.ExecutionerMarkTics <= 0 || !data.ExecutionerMarkedTarget ||
+			data.ExecutionerMarkedTarget.Health <= 0)
+		{
+			ClearExecutionerMark(playerNumber, data);
+			return;
+		}
+		data.ExecutionerMarkTics--;
+		if (data.ExecutionerMarkTics <= 0)
+		{
+			ClearExecutionerMark(playerNumber, data);
+			SetLootNotification(playerNumber, "DEATH SENTENCE EXPIRED - BUILD JUDGMENT", 0);
 		}
 	}
 
@@ -990,6 +1113,14 @@ class TuinRPGHandler : EventHandler
 			data.TankOverdriveActive = false;
 			data.TankOverdriveTics = 0;
 			data.TankReadyNotified = false;
+		}
+		else if (chosenClass == 3)
+		{
+			data.ExecutionerCharge = 0;
+			data.ExecutionerChargeRemainder = 0.0;
+			data.ExecutionerReadyNotified = false;
+			data.ExecutionerMarkedTarget = null;
+			data.ExecutionerMarkTics = 0;
 		}
 		else if (chosenClass == 4)
 		{
@@ -3821,7 +3952,11 @@ class TuinRPGHandler : EventHandler
 				if (playerData.PlayerClass == 1) playerBaseDamageFactor = 1.0;
 				else if (playerData.PlayerClass == 2) playerBaseDamageFactor = 0.75;
 				else if (playerData.PlayerClass == 3)
-					multiplier *= 1.30 + playerData.PerkClassMastery * 0.03;
+				{
+					multiplier *= 1.30;
+					double markBonus = ExecutionerMarkedDamageBonus(playerData, victimData, e.Thing);
+					if (markBonus > 0.0) multiplier *= 1.0 + markBonus;
+				}
 				else if (playerData.PlayerClass == 4) multiplier *= 1.10;
 				bool firstAmbushHit = playerData.PlayerClass == 5 &&
 					(playerData.RogueVeiled || playerData.RogueAmbushGraceTics > 0);
@@ -3854,7 +3989,7 @@ class TuinRPGHandler : EventHandler
 				if (victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
 				{
-					multiplier *= playerData.PlayerClass == 3 && playerData.PerkCapstone ? 2.5 : 2.0;
+					multiplier *= 2.0;
 					wasCritical = true;
 					CriticalPopupTics[attacker] = 18;
 				}
@@ -3898,6 +4033,9 @@ class TuinRPGHandler : EventHandler
 				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
 				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
+			if (attackData && attackData.PlayerClass == 3)
+				AddExecutionerDamageCharge(attacker, attackData,
+					min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 4 && !bloodPunchAttack)
 				AddDoomBloodPunchCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
@@ -3954,6 +4092,65 @@ class TuinRPGHandler : EventHandler
 				amount, amount == 1 ? "" : "s", data.PlayerLevel, data.UnspentStatPoints));
 	}
 
+	void TriggerFinalVerdict(int playerNumber, Actor corpse, TuinMonsterData corpseData,
+		TuinPlayerData playerData)
+	{
+		if (!corpse || !corpseData || !playerData || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS) return;
+		Actor source = playerInGame[playerNumber] ? players[playerNumber].mo : null;
+		bool ultimate = playerData.PerkCapstone;
+		double radius = FinalVerdictRadius(playerData);
+		int explosionDamage = FinalVerdictDamage(corpseData, playerData);
+
+		ClearExecutionerMark(playerNumber, playerData);
+		if (ultimate)
+		{
+			playerData.ExecutionerCharge = 25;
+			playerData.ExecutionerChargeRemainder = 0.0;
+			playerData.ExecutionerReadyNotified = false;
+		}
+		Actor.Spawn('PSQuickGrenadeExplosionFX', corpse.Pos + (0, 0, 8), NO_REPLACE);
+		corpse.A_StartSound("psgrenade/explode", CHAN_BODY);
+		corpse.A_StartSound("psgrenade/explode_distant", CHAN_5);
+		corpse.A_QuakeEx(5, 5, 5, 18, 0, 1000, "", QF_SCALEDOWN);
+
+		foreach (verdictSector: level.Sectors)
+		{
+			for (Actor victim = verdictSector.thinglist; victim; victim = victim.snext)
+			{
+				let victimData = GetMonsterData(victim);
+				if (!victimData || victim == corpse || victim.Health <= 0 || victim.bFRIENDLY ||
+					corpse.Distance3D(victim) > radius ||
+					!corpse.CheckSight(victim, SF_IGNOREWATERBOUNDARY)) continue;
+				int healthBefore = victim.Health;
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(source, source, explosionDamage, 'TuinFinalVerdict');
+				ApplyingBonusDamage = false;
+				int damageDone = min(healthBefore, max(0, healthBefore - victim.Health));
+				if (damageDone > 0)
+				{
+					victimData.LastPlayerNumber = playerNumber;
+					SpawnDamageNumber(playerNumber, victim, damageDone, false, false, 3);
+				}
+			}
+		}
+		SetLootNotification(playerNumber, ultimate ?
+			"FINAL VERDICT - 25% JUDGMENT REFUNDED" : "FINAL VERDICT", 5);
+	}
+
+	double FinalVerdictRadius(TuinPlayerData playerData)
+	{
+		return playerData && playerData.PerkCapstone ? 224.0 : 160.0;
+	}
+
+	int FinalVerdictDamage(TuinMonsterData corpseData, TuinPlayerData playerData)
+	{
+		bool ultimate = playerData && playerData.PerkCapstone;
+		int scaledHealth = corpseData ? max(1, corpseData.ScaledMaxHealth) : 1;
+		return clamp(int(scaledHealth * (ultimate ? 0.25 : 0.18) + 0.5),
+			ultimate ? 60 : 40, ultimate ? 600 : 400);
+	}
+
 	override void WorldThingDied(WorldEvent e)
 	{
 		let data = GetMonsterData(e.Thing);
@@ -3965,6 +4162,16 @@ class TuinRPGHandler : EventHandler
 		{
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 				if (playerInGame[i] && players[i].mo) { killer = i; break; }
+		}
+		for (int markedPlayer = 0; markedPlayer < TUIN_MAX_PLAYERS; markedPlayer++)
+		{
+			if (!playerInGame[markedPlayer] || !players[markedPlayer].mo) continue;
+			let executionerData = GetPlayerData(players[markedPlayer].mo);
+			if (!executionerData || executionerData.ExecutionerMarkedTarget != e.Thing) continue;
+			bool sentencedKill = executionerData.PlayerClass == 3 &&
+				executionerData.ExecutionerMarkTics > 0 && killer == markedPlayer;
+			if (sentencedKill) TriggerFinalVerdict(markedPlayer, e.Thing, data, executionerData);
+			else ClearExecutionerMark(markedPlayer, executionerData);
 		}
 		int xpAward = data.XPValue;
 		if (killer >= 0)
@@ -4000,6 +4207,7 @@ class TuinRPGHandler : EventHandler
 		TargetMaxHealth[playerNumber] = 0;
 		TargetLevel[playerNumber] = 0;
 		TargetRarity[playerNumber] = 0;
+		TargetDeathSentence[playerNumber] = false;
 		int healthBarMode = CVInt('tuin_healthbar_mode', 1);
 		if (!CVInt('tuin_enabled', 1) || healthBarMode == 3 || !playerInGame[playerNumber]) return;
 		Actor pawn = players[playerNumber].mo;
@@ -4012,6 +4220,14 @@ class TuinRPGHandler : EventHandler
 		if (!data || target.Health <= 0 || target.bFRIENDLY) return;
 		TargetName[playerNumber] = data.GeneratedName.Length() ? data.GeneratedName : target.GetTag(target.GetClassName());
 		TargetAffixes[playerNumber] = AffixList(data);
+		let playerData = GetPlayerData(pawn);
+		if (playerData && playerData.PlayerClass == 3 && playerData.ExecutionerMarkTics > 0 &&
+			playerData.ExecutionerMarkedTarget == target)
+		{
+			TargetDeathSentence[playerNumber] = true;
+			TargetAffixes[playerNumber].AppendFormat("%sDEATH SENTENCE",
+				TargetAffixes[playerNumber].Length() ? "  |  " : "");
+		}
 		TargetHealth[playerNumber] = max(0, target.Health);
 		TargetMaxHealth[playerNumber] = max(1, data.ScaledMaxHealth);
 		TargetPreviousDisplayHealth[playerNumber] = data.PreviousDisplayHealth;
@@ -4362,6 +4578,7 @@ class TuinRPGHandler : EventHandler
 			ApplyClassRegeneration(i, players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
+			ApplyExecutionerDeathSentence(i, players[i].mo, playerData);
 			ApplyDoomBloodPunch(i, players[i].mo, playerData);
 			ApplyFlashlight(players[i].mo, playerData);
 			ApplyHeldGodlyGlow(i, playerData);
@@ -4473,6 +4690,11 @@ class TuinRPGHandler : EventHandler
 					SetLootNotification(e.Player, String.Format("OVERDRIVE CHARGE: %d%%", rogueData.TankOverdriveCharge), 0);
 				return;
 			}
+			if (rogueData && pawn && rogueData.PlayerClass == 3)
+			{
+				ActivateExecutionerDeathSentence(e.Player, pawn, rogueData);
+				return;
+			}
 			if (rogueData && pawn && rogueData.PlayerClass == 4)
 			{
 				if (rogueData.DoomBloodPunchCharge >= 100)
@@ -4487,7 +4709,7 @@ class TuinRPGHandler : EventHandler
 			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
 			{
-				SetLootNotification(e.Player, "CLASS ABILITY REQUIRES TANK, HEALER, DOOM GUY, OR ROGUE", 0);
+				SetLootNotification(e.Player, "CHOOSE A CLASS WITH AN ACTIVE ABILITY", 0);
 				return;
 			}
 			if (rogueData.RogueVeiled)
@@ -4521,6 +4743,23 @@ class TuinRPGHandler : EventHandler
 				ApplyClassHealth(testPawn, testData);
 				testPawn.A_Log("BLOOD PUNCH TEST READY. Press V to punch. Repeat this command to refill it.");
 				SetLootNotification(e.Player, "BLOOD PUNCH TEST READY - PRESS V", 4);
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_test_death_sentence")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				ClearExecutionerMark(e.Player, testData);
+				testData.PlayerClass = 3;
+				testData.ExecutionerCharge = 100;
+				testData.ExecutionerChargeRemainder = 0.0;
+				testData.ExecutionerReadyNotified = true;
+				ApplyClassHealth(testPawn, testData);
+				testPawn.A_Log("DEATH SENTENCE TEST READY. Aim at a monster and press V.");
+				SetLootNotification(e.Player, "DEATH SENTENCE TEST READY - AIM AND PRESS V", 4);
 			}
 			return;
 		}
@@ -4831,6 +5070,7 @@ class TuinRPGHandler : EventHandler
 			int numberColor = DamageNumberBleed[i] ? Font.CR_RED :
 				DamageNumberElement[i] == 1 ? Font.CR_ORANGE :
 				DamageNumberElement[i] == 2 ? Font.CR_CYAN :
+				DamageNumberElement[i] == 3 ? Font.CR_RED :
 				(DamageNumberCritical[i] ? Font.CR_GOLD : Font.CR_WHITE);
 			Screen.DrawText(font, numberColor, x, y, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);
@@ -4907,6 +5147,50 @@ class TuinRPGHandler : EventHandler
 		}
 		Screen.Dim(Color(2, 14, 9), 0.94, panelX, panelY, panelWidth, int(20 * scale));
 		Screen.DrawLineFrame(Color(35, 210, 105), panelX, panelY, panelWidth, int(20 * scale), 2);
+		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
+		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
+			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+	}
+
+	ui void DrawExecutionerStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 3) return;
+		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		string status;
+		int statusColor;
+		if (data.ExecutionerMarkTics > 0 && data.ExecutionerMarkedTarget)
+		{
+			status = String.Format("DEATH SENTENCE  %.1f SEC  -  EXECUTE THE TARGET",
+				max(0, data.ExecutionerMarkTics) / 35.0);
+			statusColor = Font.CR_RED;
+		}
+		else if (data.ExecutionerCharge < 100)
+		{
+			status = String.Format("JUDGMENT CHARGE  %d%%  -  DEAL DAMAGE", data.ExecutionerCharge);
+			statusColor = Font.CR_GOLD;
+		}
+		else
+		{
+			status = "DEATH SENTENCE READY  -  AIM AND PRESS V";
+			statusColor = Font.CR_GREEN;
+		}
+		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		int panelX = screenWidth - panelWidth - 10;
+		int panelY = 10;
+		if (CVInt('tuin_minimap_enabled', 1))
+		{
+			int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, screenHeight - 32));
+			double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
+			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+			panelWidth = mapSize;
+		}
+		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
+		Screen.DrawLineFrame(Color(230, 28, 16), panelX, panelY, panelWidth, int(20 * scale), 2);
 		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
 		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
@@ -5054,7 +5338,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
 			TargetMaxHealth[playerNumber] <= 0 || !TargetAffixes[playerNumber].Length()) return;
 		double scale = clamp(hudScale * 1.12, 1.65, 2.55);
-		string heading = "TARGET BUFFS";
+		string heading = TargetDeathSentence[playerNumber] ? "MARKED TARGET" : "TARGET BUFFS";
 		string affixes = TargetAffixes[playerNumber];
 		double affixScale = min(scale, double(screenWidth - 56) / max(1, font.StringWidth(affixes)));
 		affixScale = max(1.35, affixScale);
@@ -5066,10 +5350,12 @@ class TuinRPGHandler : EventHandler
 		int panelY = (healthBarMode == 0 || healthBarMode == 2) ?
 			max(int(55 * scale), screenHeight / 10 + int(35 * scale)) : int(12 * scale);
 		Screen.Dim(Color(3, 4, 9), 0.95, panelX, panelY, panelWidth, panelHeight);
-		Screen.DrawLineFrame(RarityBarColor(TargetRarity[playerNumber]), panelX, panelY, panelWidth, panelHeight, 2);
+		Screen.DrawLineFrame(TargetDeathSentence[playerNumber] ? Color(240, 22, 12) :
+			RarityBarColor(TargetRarity[playerNumber]), panelX, panelY, panelWidth, panelHeight, 2);
 		Screen.DrawText(font, Font.CR_GOLD, (screenWidth - font.StringWidth(heading) * scale) / 2,
 			panelY + int(3 * scale), heading, DTA_ScaleX, scale, DTA_ScaleY, scale);
-		int targetColor = TargetRarity[playerNumber] > 0 ? RarityColor(TargetRarity[playerNumber]) : Font.CR_WHITE;
+		int targetColor = TargetDeathSentence[playerNumber] ? Font.CR_RED :
+			(TargetRarity[playerNumber] > 0 ? RarityColor(TargetRarity[playerNumber]) : Font.CR_WHITE);
 		Screen.DrawText(font, targetColor, (screenWidth - font.StringWidth(affixes) * affixScale) / 2,
 			panelY + int(16 * scale), affixes, DTA_ScaleX, affixScale, DTA_ScaleY, affixScale);
 	}
@@ -5112,6 +5398,7 @@ class TuinRPGHandler : EventHandler
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
 		DrawHealerSupplyStatus(pnum, font, sw, sh, hudScale);
+		DrawExecutionerStatus(pnum, font, sw, sh, hudScale);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
 		DrawTankStatus(pnum, font, sw, sh, hudScale);
 		DrawDoomBloodPunchStatus(pnum, font, sw, sh, hudScale);

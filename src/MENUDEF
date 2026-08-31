@@ -252,7 +252,7 @@ OptionMenu "TuinRPGClassChoice"
 	StaticText " "
 	Command "TANK", "netevent tuin_choose_class 1"
 	Command "HEALER", "netevent tuin_choose_class 2"
-	Command "DAMAGE DEALER", "netevent tuin_choose_class 3"
+	Command "EXECUTIONER", "netevent tuin_choose_class 3"
 	Command "DOOM GUY", "netevent tuin_choose_class 4"
 	Command "ROGUE", "netevent tuin_choose_class 5"
 	Class "TuinRPGClassChoiceMenu"
@@ -305,7 +305,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText " "
 	StaticText "TANK: +3% DAMAGE RESISTANCE", 1
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
-	StaticText "DAMAGE DEALER: +3% DAMAGE", 1
+	StaticText "EXECUTIONER: JUDGMENT CHARGE +10% / +20% / +30%", 1
 	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
 	StaticText "ROGUE: +2% CRIT + LONGER VEIL + MORE DAMAGE CHARGE", 1
 	StaticText " "
@@ -323,7 +323,7 @@ OptionMenu "TuinRPGClassCapstone"
 	StaticText " "
 	StaticText "TANK: LAST STAND BELOW 30% HEALTH", 1
 	StaticText "HEALER: DOUBLE ALL CLASS HEALING", 1
-	StaticText "DAMAGE DEALER: CRITICAL HITS DEAL 2.5X DAMAGE", 1
+	StaticText "EXECUTIONER - NO APPEALS: STRONGER 12-SEC MARK + 25% REFUND", 1
 	StaticText "DOOM GUY: +45% BLOOD PUNCH CHARGE | HEALS 30% DAMAGE", 1
 	StaticText "ROGUE: AMBUSH DEALS X6 RANGED / X30 FIST DAMAGE", 1
 	StaticText " "

@@ -170,7 +170,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		double luckCritical = data.Luck * 0.5;
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data);
 		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 0.50) : data.PlayerClass == 2 ? 0.75 :
-			data.PlayerClass == 3 ? 1.30 + data.PerkClassMastery * 0.03 : data.PlayerClass == 4 ? 1.10 : 1.0;
+			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : 1.0;
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
 		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
 			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
@@ -394,14 +394,14 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			training = "+1 HEALTH PER HEALING PULSE PER RANK";
 			ultimate = "DOUBLE ALL CLASS HEALING";
 		}
-		else if (mLabel ~== "DAMAGE DEALER")
+		else if (mLabel ~== "EXECUTIONER")
 		{
-			role = "GLASS CANNON";
+			role = "PRIORITY KILLER";
 			bonuses = "+30% WEAPON DAMAGE";
 			tradeoff = "-25% MAX HEALTH | TAKE 10% MORE DAMAGE";
-			ability = "HIGH-DAMAGE CRITICAL-HIT SPECIALIST";
-			training = "+3% WEAPON DAMAGE PER RANK";
-			ultimate = "CRITICAL HITS DEAL 2.5X DAMAGE";
+			ability = "V: DEATH SENTENCE - MARK AND EXECUTE ONE TARGET";
+			training = "JUDGMENT CHARGE +10% / +20% / +30%";
+			ultimate = "NO APPEALS: STRONGER MARK | 12 SEC | 25% REFUND";
 		}
 		else if (mLabel ~== "DOOM GUY")
 		{
@@ -459,7 +459,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 			string command;
 			if (item.mLabel ~== "TANK") command = "netevent tuin_choose_class 1";
 			else if (item.mLabel ~== "HEALER") command = "netevent tuin_choose_class 2";
-			else if (item.mLabel ~== "DAMAGE DEALER") command = "netevent tuin_choose_class 3";
+			else if (item.mLabel ~== "EXECUTIONER") command = "netevent tuin_choose_class 3";
 			else if (item.mLabel ~== "DOOM GUY") command = "netevent tuin_choose_class 4";
 			else if (item.mLabel ~== "ROGUE") command = "netevent tuin_choose_class 5";
 			else continue;
