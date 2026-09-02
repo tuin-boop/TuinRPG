@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.50
+
+- Moved the life count onto its own clearly visible third row beneath the minimap instead of appending it to the XP row where wide values could run beyond the screen edge.
+- Expanded the player HUD panel and repositioned every class ability and target panel to prevent overlap with the new life row.
+
 ## 0.6.49
 
 - Replaced Doom's single-player tally screen with a framed TuinRPG **Mission Report** while retaining the normal intermission controls and map transition.

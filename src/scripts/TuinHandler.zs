@@ -5393,10 +5393,9 @@ class TuinRPGHandler : EventHandler
 			int playerStatusY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
 				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7);
 			double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
-			panelY = playerStatusY + int(34 * statusScale) + 7;
+			panelY = playerStatusY + int(47 * statusScale) + 7;
 			let targetPlayerData = GetPlayerData(players[playerNumber].mo);
-			if (targetPlayerData && (targetPlayerData.PlayerClass == 1 || targetPlayerData.PlayerClass == 4 ||
-				targetPlayerData.PlayerClass == 5))
+			if (targetPlayerData && targetPlayerData.PlayerClass >= 1 && targetPlayerData.PlayerClass <= 5)
 				panelY += int(22 * statusScale) + 5;
 			panelWidth = mapSize;
 		}
@@ -5441,7 +5440,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(2, 14, 9), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -5497,7 +5496,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -5541,7 +5540,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(8, 3, 14), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -5585,7 +5584,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(15, 2, 2), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -5634,7 +5633,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(34 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -5849,14 +5848,16 @@ class TuinRPGHandler : EventHandler
 			let pd = GetPlayerData(players[pnum].mo);
 			if (pd)
 			{
-				string progress = String.Format("LV %d   XP %d/%d   LIVES %d", pd.PlayerLevel, pd.CurrentXP,
-					XPRequired(pd.PlayerLevel), pd.Lives);
+				string progress = String.Format("LV %d   XP %d/%d", pd.PlayerLevel, pd.CurrentXP,
+					XPRequired(pd.PlayerLevel));
 				string resources = String.Format("STAT %d   PERK %d   COINS %d", pd.UnspentStatPoints,
 					pd.UnspentSkillPoints, CoinBalance(players[pnum].mo));
+				string lives = String.Format("LIVES %d", pd.Lives);
 				double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
 				int statusX = 10;
 				int statusY = 10;
-				int statusWidth = max(int(font.StringWidth(progress) * statusScale), int(font.StringWidth(resources) * statusScale)) + 14;
+				int statusWidth = max(max(int(font.StringWidth(progress) * statusScale),
+					int(font.StringWidth(resources) * statusScale)), int(font.StringWidth(lives) * statusScale)) + 14;
 				if (CVInt('tuin_minimap_enabled', 1))
 				{
 					int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, sh - 32));
@@ -5867,10 +5868,13 @@ class TuinRPGHandler : EventHandler
 						(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7);
 					statusWidth = mapSize;
 				}
-				Screen.Dim(Color(3, 5, 9), 0.93, statusX, statusY - 5, statusWidth, int(34 * statusScale));
+				Screen.Dim(Color(3, 5, 9), 0.93, statusX, statusY - 5, statusWidth, int(47 * statusScale));
 				Screen.DrawText(font, Font.CR_GOLD, statusX + 6, statusY, progress,
 					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
 				Screen.DrawText(font, Font.CR_GOLD, statusX + 6, statusY + int(13 * statusScale), resources,
+					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
+				Screen.DrawText(font, pd.Lives > 1 ? Font.CR_RED : Font.CR_GOLD,
+					statusX + 6, statusY + int(26 * statusScale), lives,
 					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
 			}
 		}
