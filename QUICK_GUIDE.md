@@ -47,7 +47,7 @@ Weapon bonuses include firing speed, damage, life leech, execution damage agains
 
 ## Minimap, bosses and John
 
-The minimap tracks explored geometry, special monsters, exits and weapon drops. Near the end of a suitable map, one surviving monster becomes a powerful finale Boss and is marked on the map. Defeating it guarantees a high-quality weapon reward.
+The minimap tracks explored geometry, special monsters, exits and weapon drops. At 85% kills, Hunt activates and reveals every remaining enemy. Ordinary survivors pulse bright yellow, special enemies keep their rarity colors, and distant targets appear at the minimap edge. Near the end of a suitable map, one surviving monster becomes a powerful finale Boss and is marked on the map. Defeating it guarantees a high-quality weapon reward.
 
 John appears near the end of the level. Press **E** while facing him to buy health, armor, ammo, backpacks or weapons with coins dropped by monsters.
 

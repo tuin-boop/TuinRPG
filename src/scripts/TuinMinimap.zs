@@ -11,12 +11,14 @@ class TuinMapMarker : Object play
 	int LastSeen;
 	int Discovered;
 	bool Alive;
+	bool HuntReveal;
 	TuinMapMarker Next;
 }
 
 class TuinMinimapHandler : EventHandler
 {
 	TuinMapMarker Markers;
+	bool HuntModeUnlocked;
 
 	override void UiTick()
 	{
@@ -56,6 +58,7 @@ class TuinMinimapHandler : EventHandler
 	override void WorldLoaded(WorldEvent e)
 	{
 		ClearMarkers();
+		HuntModeUnlocked = false;
 	}
 
 	override void WorldUnloaded(WorldEvent e)
@@ -70,7 +73,7 @@ class TuinMinimapHandler : EventHandler
 		return null;
 	}
 
-	void RememberActor(Actor target, int kind, int rarity)
+	void RememberActor(Actor target, int kind, int rarity, bool huntReveal = false)
 	{
 		if (!target) return;
 		TuinMapMarker marker = FindMarker(target);
@@ -85,6 +88,7 @@ class TuinMinimapHandler : EventHandler
 		}
 		marker.LastPosition = target.Pos;
 		marker.Rarity = rarity;
+		marker.HuntReveal = kind == 1 && huntReveal;
 		marker.LastSeen = level.Time;
 		marker.Alive = kind == 2 ? target.bSPECIAL : kind == 3 ? true : target.Health > 0;
 	}
@@ -151,6 +155,9 @@ class TuinMinimapHandler : EventHandler
 		if (pnum < 0 || pnum >= 8 || !playerInGame[pnum] || !players[pnum].mo) return;
 		Actor viewer = players[pnum].mo;
 		RefreshExistingMarkers(viewer, pnum);
+		if (!HuntModeUnlocked && level.total_monsters > 0 &&
+			level.killed_monsters * 100 >= level.total_monsters * 85)
+			HuntModeUnlocked = true;
 		bool showNormal = MapInt('tuin_minimap_show_normal_monsters', 0) != 0;
 		bool showLoot = MapInt('tuin_minimap_show_weapon_drops', 1) != 0;
 		foreach (sector: level.Sectors)
@@ -161,7 +168,9 @@ class TuinMinimapHandler : EventHandler
 				{
 					let data = TuinRPGHandler.GetMonsterData(actor);
 					int rarity = data ? data.MonsterRarity : 0;
-					if (rarity >= 6 || ((rarity > 0 || showNormal) && CanDiscover(viewer, actor, pnum))) RememberActor(actor, 1, rarity);
+					if (HuntModeUnlocked || rarity >= 6 ||
+						((rarity > 0 || showNormal) && CanDiscover(viewer, actor, pnum)))
+						RememberActor(actor, 1, rarity, HuntModeUnlocked);
 				}
 				else if (showLoot && actor is 'TuinWeaponDrop')
 				{
@@ -300,12 +309,14 @@ class TuinMinimapHandler : EventHandler
 			double edge = half - 9.0;
 			if (max(abs(offset.x), abs(offset.y)) > edge)
 			{
-				if (marker.Kind != 2 && marker.Kind != 3 && (marker.Kind != 1 || marker.Rarity < 4)) continue;
+				if (marker.Kind != 2 && marker.Kind != 3 &&
+					(marker.Kind != 1 || (marker.Rarity < 4 && !marker.HuntReveal))) continue;
 				double factor = edge / max(abs(offset.x), abs(offset.y));
 				markerPoint = center + offset * factor;
 			}
 			Color markerColor = marker.Kind == 2 ? TuinWeaponDrop.QualityColor(marker.Rarity) :
-				marker.Kind == 3 ? Color(70, 255, 210) : MarkerColor(marker.Rarity);
+				marker.Kind == 3 ? Color(70, 255, 210) :
+				marker.HuntReveal && marker.Rarity == 0 ? Color(255, 245, 70) : MarkerColor(marker.Rarity);
 			int age = level.Time - marker.LastSeen;
 			int alpha = age <= 8 ? 255 : 155;
 			if (marker.Kind == 2)
@@ -325,9 +336,10 @@ class TuinMinimapHandler : EventHandler
 			}
 			else
 			{
-				double radius = marker.Rarity >= 4 ? 5.0 : marker.Rarity > 0 ? 4.0 : 2.5;
+				double radius = marker.Rarity >= 4 ? 5.0 : marker.Rarity > 0 ? 4.0 :
+					marker.HuntReveal ? 3.5 : 2.5;
 				DrawCircle(markerPoint, radius, markerColor, alpha, marker.Rarity >= 4 ? 2.0 : 1.4);
-				if (level.Time - marker.Discovered < 70 || marker.Rarity >= 5)
+				if (marker.HuntReveal || level.Time - marker.Discovered < 70 || marker.Rarity >= 5)
 				{
 					double pulse = radius + 3.0 + 2.0 * sin((gametic + e.FracTic) * 12.0);
 					DrawCircle(markerPoint, pulse, markerColor, max(70, alpha - 60));
@@ -345,8 +357,11 @@ class TuinMinimapHandler : EventHandler
 
 		if (MapInt('tuin_minimap_show_stats', 1))
 		{
-			string statistics = String.Format("K %d/%d   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
-				level.found_items, level.total_items, level.found_secrets, level.total_secrets);
+			string statistics = HuntModeUnlocked ?
+				String.Format("K %d/%d   HUNT   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
+					level.found_items, level.total_items, level.found_secrets, level.total_secrets) :
+				String.Format("K %d/%d   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
+					level.found_items, level.total_items, level.found_secrets, level.total_secrets);
 			double statisticsScale = 1.60;
 			int statisticsY = top + size + 5;
 			Screen.Dim(Color(3, 5, 9), min(0.96, opacity + 0.18), left, statisticsY - 4, size, 23);

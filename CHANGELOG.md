@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.53
+
+- Added a persistent minimap Hunt phase once the player reaches 85% kills on a map.
+- Revealed every remaining hostile during Hunt. Ordinary monsters use bright yellow pulsing markers, while special enemies retain their rarity colors.
+- Added edge-clamped Hunt markers for surviving monsters outside the minimap range and a visible HUNT label beside the minimap statistics.
+
 ## 0.6.52
 
 - Tripled the protected life-revival scene from 1.4 seconds to 4.2 seconds before returning the player to the map start.
