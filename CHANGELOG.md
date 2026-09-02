@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.56
+
+- Removed the visible kill percentage from John's combat-tip popup. Milestones still trigger the system internally, while the dialogue panel now simply identifies John.
+
 ## 0.6.55
 
 - Added John combat commentary at every 10% kill milestone, with an independent 50% chance to speak at each milestone.

@@ -5901,7 +5901,7 @@ class TuinRPGHandler : EventHandler
 				Screen.DrawTexture(johnFace, false, faceX, faceY,
 					DTA_DestWidth, faceSize, DTA_DestHeight, faceSize, DTA_Alpha, alpha);
 			string quote = JohnMilestoneQuote(JohnCommentQuote[pnum]);
-			string heading = String.Format("JOHN  %d%% CLEARED", JohnCommentPercent[pnum]);
+			string heading = "JOHN";
 			double commentScale = clamp(hudScale * 0.90, 1.15, 1.65);
 			int availableWidth = max(180, faceX - 34);
 			commentScale = min(commentScale,
