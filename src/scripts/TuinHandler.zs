@@ -863,7 +863,8 @@ class TuinRPGHandler : EventHandler
 			data.ClassHealthOwner = pawn;
 			data.AppliedClassHealthPenalty = 0;
 		}
-		int unmodifiedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty);
+		int unmodifiedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty -
+			data.AppliedLifeEssenceOverhealth);
 		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
 		int desiredModifier = data.PlayerClass == 1 ? 300 - baseMaximum :
 			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
@@ -2400,35 +2401,66 @@ class TuinRPGHandler : EventHandler
 		if (essence) essence.bDROPPED = true;
 	}
 
-	void ApplyLifeEssenceHealing(Actor pawn, TuinPlayerData data)
+	void SynchronizeLifeEssenceOverhealth(Actor pawn, TuinPlayerData data, bool drainHealth)
 	{
-		if (!pawn || !data || data.LifeEssenceHealingTics <= 0 ||
-			data.LifeEssenceHealingPool <= 0.0) return;
-		double healingShare = data.LifeEssenceHealingPool / data.LifeEssenceHealingTics;
-		data.LifeEssenceHealingPool = max(0.0,
-			data.LifeEssenceHealingPool - healingShare);
-		data.LifeEssenceHealingRemainder += healingShare;
-		data.LifeEssenceHealingTics--;
-		int healing = int(data.LifeEssenceHealingRemainder + 0.0001);
-		if (healing > 0)
+		if (!pawn || !pawn.player || !data) return;
+		let pp = PlayerPawn(pawn);
+		if (!pp) return;
+		if (data.LifeEssenceHealthOwner != pawn)
 		{
-			data.LifeEssenceHealingRemainder -= healing;
-			if (pawn.Health > 0 && pawn.Health < pawn.GetMaxHealth(true))
-			{
-				pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
-				pawn.A_SpawnParticle(Color(70, 255, 125),
-					SPF_FULLBRIGHT | SPF_FACECAMERA, 12, 2.5, 0,
-					FRandom[TuinLifeEssenceHeal](-10.0, 10.0),
-					FRandom[TuinLifeEssenceHeal](-10.0, 10.0),
-					FRandom[TuinLifeEssenceHeal](4.0, pawn.Height), 0, 0, 0.4,
-					0, 0, -0.02, 0.12, 0.04);
-			}
+			data.LifeEssenceHealthOwner = pawn;
+			data.AppliedLifeEssenceOverhealth = 0;
 		}
-		if (data.LifeEssenceHealingTics <= 0)
+		int desired = max(0, int(ceil(data.LifeEssenceOverhealth)));
+		int delta = desired - data.AppliedLifeEssenceOverhealth;
+		if (delta == 0) return;
+		pp.Stamina += delta;
+		data.AppliedLifeEssenceOverhealth = desired;
+		if (drainHealth && delta < 0 && pawn.Health > 0)
+			pawn.A_SetHealth(max(1, pawn.Health + delta));
+		if (pawn.Health > pawn.GetMaxHealth(true)) pawn.A_SetHealth(pawn.GetMaxHealth(true));
+	}
+
+	void GrantLifeEssenceOverhealth(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || pawn.Health <= 0) return;
+		// Retire any healing-over-time state carried by an older save.
+		data.LifeEssenceHealingPool = 0.0;
+		data.LifeEssenceHealingRemainder = 0.0;
+		data.LifeEssenceHealingTics = 0;
+		data.LifeEssenceOverhealth += 30.0;
+		data.LifeEssenceDecayClock = 35;
+		SynchronizeLifeEssenceOverhealth(pawn, data, false);
+		pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + 30));
+	}
+
+	void ConsumeLifeEssenceOverhealth(Actor pawn, TuinPlayerData data, int damage)
+	{
+		if (!pawn || !data || damage <= 0 || data.LifeEssenceOverhealth <= 0.0) return;
+		int actualDamage = min(damage, max(0, pawn.Health + damage));
+		data.LifeEssenceOverhealth = max(0.0, data.LifeEssenceOverhealth - actualDamage);
+		SynchronizeLifeEssenceOverhealth(pawn, data, false);
+	}
+
+	void UpdateLifeEssenceOverhealth(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		SynchronizeLifeEssenceOverhealth(pawn, data, false);
+		if (data.LifeEssenceOverhealth <= 0.0) return;
+		if (data.LifeEssenceDecayClock > 0)
 		{
-			data.LifeEssenceHealingPool = 0.0;
-			data.LifeEssenceHealingRemainder = 0.0;
+			data.LifeEssenceDecayClock--;
+			return;
 		}
+		data.LifeEssenceDecayClock = 35;
+		data.LifeEssenceOverhealth = max(0.0, data.LifeEssenceOverhealth - 1.0);
+		SynchronizeLifeEssenceOverhealth(pawn, data, true);
+		if ((level.Time % 7) == 0 && pawn.Health > 0)
+			pawn.A_SpawnParticle(Color(70, 255, 125), SPF_FULLBRIGHT | SPF_FACECAMERA,
+				10, 2.0, 0, FRandom[TuinLifeEssenceHeal](-8.0, 8.0),
+				FRandom[TuinLifeEssenceHeal](-8.0, 8.0),
+				FRandom[TuinLifeEssenceHeal](4.0, pawn.Height), 0, 0, 0.25,
+				0, 0, -0.015, 0.10, 0.03);
 	}
 
 	void ReviveWithLife(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -4587,6 +4619,7 @@ class TuinRPGHandler : EventHandler
 			let hurtData = GetPlayerData(e.Thing);
 			if (hurtData) hurtData.LevelDamageTaken += min(e.Damage,
 				max(0, e.Thing.Health + e.Damage));
+			if (hurtData) ConsumeLifeEssenceOverhealth(e.Thing, hurtData, e.Damage);
 			if (hurtData && hurtData.PlayerClass == 5)
 			{
 				hurtData.RogueStillTics = 0;
@@ -4941,7 +4974,26 @@ class TuinRPGHandler : EventHandler
 		{
 			int explosionDamage = max(12, int(data.MonsterLevel * CVFloat('tuin_affix_explosive_damage_per_level', 3.0)));
 			double radius = clamp(CVFloat('tuin_affix_explosive_radius', 96.0), 32.0, 256.0);
-			e.Thing.A_Explode(explosionDamage, radius, 0, false, 0.0, 0, 0, 'BulletPuff', 'Fire');
+			Actor.Spawn('PSQuickGrenadeExplosionFX', e.Thing.Pos + (0, 0, 8), NO_REPLACE);
+			e.Thing.A_StartSound("psgrenade/explode", CHAN_BODY);
+			e.Thing.A_StartSound("psgrenade/explode_distant", CHAN_5);
+			e.Thing.A_QuakeEx(3, 3, 3, 12, 0, 640, "", QF_SCALEDOWN);
+
+			// Damage nearby players and hostile monsters directly while the corpse
+			// is still valid. This remains reliable with custom monster death states.
+			foreach (blastSector: level.Sectors)
+			{
+				for (Actor blastVictim = blastSector.thinglist; blastVictim; blastVictim = blastVictim.snext)
+				{
+					if (blastVictim == e.Thing || blastVictim.Health <= 0 || !blastVictim.bSHOOTABLE ||
+						(!blastVictim.player && (!blastVictim.bISMONSTER || blastVictim.bFRIENDLY))) continue;
+					double distance = e.Thing.Distance3D(blastVictim);
+					if (distance > radius || !e.Thing.CheckSight(blastVictim, SF_IGNOREWATERBOUNDARY)) continue;
+					double fraction = clamp(1.0 - distance / radius, 0.0, 1.0);
+					int dealtDamage = max(1, int(explosionDamage * (0.35 + fraction * 0.65) + 0.5));
+					blastVictim.DamageMobj(e.Thing, e.Thing, dealtDamage, 'Fire');
+				}
+			}
 		}
 	}
 
@@ -5329,7 +5381,7 @@ class TuinRPGHandler : EventHandler
 			ApplyClassRegeneration(i, players[i].mo, playerData);
 			UpdateEngineerSentries(i, players[i].mo, playerData);
 			UpdateEngineerAmmoFabrication(i, players[i].mo, playerData);
-			ApplyLifeEssenceHealing(players[i].mo, playerData);
+			UpdateLifeEssenceOverhealth(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
 			ApplyExecutionerDeathSentence(i, players[i].mo, playerData);

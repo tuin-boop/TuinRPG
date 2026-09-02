@@ -113,6 +113,7 @@ class TuinCoinPickup : Inventory
 		bool pickedUp = Super.TryPickup(toucher);
 		if (pickedUp && toucher)
 		{
+			toucher.A_StartSound("pickups/tuincoin", CHAN_7);
 			let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
 			if (data) data.LevelCoinsEarned += max(0, collected);
 		}
@@ -127,7 +128,7 @@ class TuinCoinPickup : Inventory
 		Inventory.MaxAmount 999999;
 		Inventory.InterHubAmount 999999;
 		Inventory.PickupMessage "Picked up Tuin coins.";
-		Inventory.PickupSound "misc/i_pkup";
+		Inventory.PickupSound "";
 		+INVENTORY.KEEPDEPLETED
 		+INVENTORY.UNDROPPABLE
 		+FLOATBOB
@@ -183,7 +184,7 @@ class TuinLifePickup : Inventory
 	{
 		Radius 16;
 		Height 30;
-		Scale 0.06;
+		Scale 0.04;
 		Inventory.PickupMessage "Extra life!";
 		+FLOATBOB
 		+RELATIVETOFLOOR
@@ -223,12 +224,16 @@ class TuinLifeEssencePickup : Inventory
 		if (!toucher || !toucher.player || toucher.Health <= 0) return false;
 		let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
 		if (!data) return false;
-		data.LifeEssenceHealingPool += 30.0;
-		data.LifeEssenceHealingTics = max(data.LifeEssenceHealingTics, 350);
 		let handler = TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
 		if (handler)
+		{
+			handler.GrantLifeEssenceOverhealth(toucher, data);
 			handler.SetLootNotification(toucher.PlayerNumber(),
-				"LIFE ESSENCE   REGENERATING 30 HEALTH", 1);
+				"LIFE ESSENCE   +30 TEMPORARY HEALTH", 1);
+		}
+		// This pickup is consumed manually instead of through Super.TryPickup,
+		// so play its randomized cue explicitly on a channel other pickups do not use.
+		toucher.A_StartSound("pickups/lifeessence", CHAN_6);
 		A_RemoveLight('TuinLifeEssenceGlow');
 		GoAwayAndDie();
 		return true;

@@ -456,6 +456,10 @@ class TuinPlayerData : Inventory
 	double LifeEssenceHealingPool;
 	double LifeEssenceHealingRemainder;
 	int LifeEssenceHealingTics;
+	double LifeEssenceOverhealth;
+	int AppliedLifeEssenceOverhealth;
+	int LifeEssenceDecayClock;
+	Actor LifeEssenceHealthOwner;
 	int PlayerClass;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.62
+
+- Reduced the extra-life heart's world sprite by one third so it remains noticeable without obscuring nearby combat.
+- Reworked Life Essence into stackable temporary overhealth: each pickup immediately adds 30 current and maximum health, loses one untouched point per second, and lets incoming damage consume the temporary pool without double-draining it afterward.
+- Made Life Essence play its randomized custom pickup cue explicitly on a dedicated sound channel, preventing simultaneous pickups from silencing it.
+- Added two supplied randomized Tuin Coin pickup sounds on their own channel, replacing the ordinary Doom item cue.
+- Rebuilt the Explosive monster affix death blast with the quick grenade's visible explosion, sound, quake, and direct sight-checked radius damage with distance falloff.
+
 ## 0.6.61
 
 - Expanded the Hell Director's high-level preferred pool to include Cacodemons alongside Hell Knights, Barons, and stronger monsters (400+ original health).

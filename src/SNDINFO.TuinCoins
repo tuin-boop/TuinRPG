@@ -1,0 +1,3 @@
+$random pickups/tuincoin { pickups/tuincoin1 pickups/tuincoin2 }
+pickups/tuincoin1 SOUNDS/TuinCoins/COINPCK1
+pickups/tuincoin2 SOUNDS/TuinCoins/COINPCK2
