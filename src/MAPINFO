@@ -1,4 +1,5 @@
 GameInfo
 {
 	AddEventHandlers = "PSCompatWeaponHandler", "TuinRPGHandler", "TuinMinimapHandler"
+	Statscreen_Single = "TuinRPGStatusScreen"
 }

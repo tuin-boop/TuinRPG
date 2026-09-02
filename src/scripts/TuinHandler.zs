@@ -537,6 +537,7 @@ class TuinRPGHandler : EventHandler
 		MarkExecutionerTarget(playerNumber, data, 0, primary);
 		if (second) MarkExecutionerTarget(playerNumber, data, 1, second);
 		if (third) MarkExecutionerTarget(playerNumber, data, 2, third);
+		data.LevelAbilityUses++;
 		int targetCount = 1 + extraTargets;
 		SetLootNotification(playerNumber, String.Format("DEATH SENTENCE - %d TARGET%s JUDGED",
 			targetCount, targetCount == 1 ? "" : "S"), 5);
@@ -586,6 +587,11 @@ class TuinRPGHandler : EventHandler
 				data.PlayerLevel = 1;
 				data.CurrentXP = 0;
 			}
+		}
+		if (data && !data.LivesInitialized)
+		{
+			data.Lives = clamp(CVInt('tuin_starting_lives', 3), 1, 99);
+			data.LivesInitialized = true;
 		}
 		ApplyVitality(pawn, data);
 		ApplyPerkHealth(pawn, data);
@@ -776,6 +782,7 @@ class TuinRPGHandler : EventHandler
 		pickup.Vel = (cos(pawn.Angle) * 10.0, sin(pawn.Angle) * 10.0, 5.5) + pawn.Vel * 0.35;
 		pickup.Angle = pawn.Angle;
 		data.HealerSupplyCooldownTics = HealerSupplyCooldown();
+		data.LevelAbilityUses++;
 		for (int particle = 0; particle < 14; particle++)
 		{
 			pawn.A_SpawnParticle(particle & 1 ? Color(40, 255, 100) : Color(80, 190, 255),
@@ -861,6 +868,7 @@ class TuinRPGHandler : EventHandler
 		data.RogueVeilTics = 0;
 		data.RogueStillTics = 0;
 		data.RogueAmbushHitTime = -1;
+		data.LevelAbilityUses++;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
 		MaintainRogueDisengagement(playerNumber, pawn);
@@ -911,6 +919,7 @@ class TuinRPGHandler : EventHandler
 		data.TankOverdriveCharge = 100;
 		data.TankReadyNotified = true;
 		data.TankOverdriveChargeRemainder = 0.0;
+		data.LevelAbilityUses++;
 		pawn.A_RemoveLight('TuinTankOverdriveGlow');
 		pawn.GiveInventory('TuinTankOverdriveFiringSpeed', 1);
 		pawn.A_AttachLight('TuinTankOverdriveGlow', DynamicLight.PulseLight, Color(255, 24, 8), 62, 128,
@@ -1093,6 +1102,7 @@ class TuinRPGHandler : EventHandler
 		data.DoomBloodPunchAttackTics = 0;
 		data.DoomBloodPunchFlashTics = 0;
 		data.DoomBloodPunchWeaponHidden = false;
+		data.LevelAbilityUses++;
 		let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
 		data.DoomBloodPunchWeaponStartY = weaponSprite ? weaponSprite.y : WEAPONTOP;
 		pawn.player.SetPsprite(PSP_FLASH, null);
@@ -2125,6 +2135,53 @@ class TuinRPGHandler : EventHandler
 		Vector3 floorPosition = (corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 10.0);
 		let coins = TuinCoinPickup(Actor.Spawn('TuinCoinPickup', floorPosition, NO_REPLACE));
 		if (coins) coins.Amount = value;
+	}
+
+	void TryDropExtraLife(Actor corpse, TuinMonsterData monsterData)
+	{
+		if (!corpse || !monsterData || monsterData.MonsterRarity < 2) return;
+		double chance;
+		switch (monsterData.MonsterRarity)
+		{
+		case 2: chance = 3.0; break;
+		case 3: chance = 6.0; break;
+		case 4: chance = 12.0; break;
+		case 5: chance = 20.0; break;
+		default: chance = 35.0; break;
+		}
+		if (FRandom[TuinRPGLifeDrop](0.0, 100.0) >= chance) return;
+		Vector3 dropPosition = (corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 18.0);
+		let heart = TuinLifePickup(Actor.Spawn('TuinLifePickup', dropPosition, NO_REPLACE));
+		if (heart) heart.bDROPPED = true;
+	}
+
+	void ReviveWithLife(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || !data.LifeRevivePending) return;
+		Vector3 destination;
+		int startAngle;
+		[destination, startAngle] = level.PickPlayerStart(playerNumber);
+		pawn.SetOrigin(destination, false);
+		pawn.Angle = startAngle;
+		pawn.Pitch = 0;
+		pawn.Vel = (0, 0, 0);
+		pawn.A_SetHealth(max(1, pawn.GetMaxHealth(true)));
+		pawn.player.damagecount = 0;
+		pawn.player.poisoncount = 0;
+		PoisonTics[playerNumber] = 0;
+		PoisonDamage[playerNumber] = 0;
+		PoisonSource[playerNumber] = null;
+		data.LifeRevivePending = false;
+		data.LifeGraceTics = 3 * 35;
+		for (int particle = 0; particle < 32; particle++)
+			pawn.A_SpawnParticle(particle & 1 ? Color(255, 20, 12) : Color(255, 170, 40),
+				SPF_FULLBRIGHT | SPF_FACECAMERA, 24, 8.0, 0,
+				FRandom[TuinLifeRevive](-24.0, 24.0), FRandom[TuinLifeRevive](-24.0, 24.0),
+				FRandom[TuinLifeRevive](0.0, pawn.Height), 0, 0, FRandom[TuinLifeRevive](0.5, 2.5),
+				0, 0, -0.05, 0.25, 0.08);
+		pawn.A_StartSound("misc/teleport", CHAN_BODY);
+		SetLootNotification(playerNumber, String.Format("EXTRA LIFE USED  %d REMAIN", data.Lives), 5);
+		pawn.A_Log(String.Format("Extra life used. Returned to the start with %d remaining.", data.Lives));
 	}
 
 	string RandomJohnGreeting()
@@ -3808,6 +3865,21 @@ class TuinRPGHandler : EventHandler
 			CurrentLoadedCampaignMap = level.LevelNum;
 			if (CurrentLoadedCampaignMap <= 0) CurrentLoadedCampaignMap = max(1, MapsVisited + 1);
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++) CatchupHandled[i] = false;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+			{
+				if (!playerInGame[i] || !players[i].mo) continue;
+				let levelData = EnsurePlayerData(i);
+				if (!levelData) continue;
+				levelData.LevelDamageDealt = 0;
+				levelData.LevelDamageTaken = 0;
+				levelData.LevelXPEarned = 0;
+				levelData.LevelCoinsEarned = 0;
+				levelData.LevelEliteKills = 0;
+				levelData.LevelBossKills = 0;
+				levelData.LevelCriticalHits = 0;
+				levelData.LevelAbilityUses = 0;
+				levelData.LevelLivesUsed = 0;
+			}
 		}
 		MigrateBalanceDefaults();
 		MigrateRarityDefaults();
@@ -4070,6 +4142,15 @@ class TuinRPGHandler : EventHandler
 		if (!CVInt('tuin_enabled', 1) || !e.Thing || e.Damage <= 0) return;
 		int attacker = PlayerNumberFromSource(e.DamageSource, e.Inflictor);
 		let victimData = GetMonsterData(e.Thing);
+		if ((victimData || (e.Thing.bISMONSTER && !e.Thing.bFRIENDLY)) &&
+			attacker >= 0 && attacker < TUIN_MAX_PLAYERS)
+		{
+			let recordData = EnsurePlayerData(attacker);
+			// Damage events arrive after health changes. Reconstruct pre-hit health so
+			// lethal blows count correctly without counting their overkill damage.
+			if (recordData) recordData.LevelDamageDealt += min(e.Damage,
+				max(0, e.Thing.Health + e.Damage));
+		}
 		if (victimData)
 		{
 			if (attacker >= 0) victimData.LastPlayerNumber = attacker;
@@ -4082,6 +4163,8 @@ class TuinRPGHandler : EventHandler
 			if (hurtPlayer >= 0 && hurtPlayer < TUIN_MAX_PLAYERS)
 				DirectorDamageTaken[hurtPlayer] = min(1000000, DirectorDamageTaken[hurtPlayer] + e.Damage);
 			let hurtData = GetPlayerData(e.Thing);
+			if (hurtData) hurtData.LevelDamageTaken += min(e.Damage,
+				max(0, e.Thing.Health + e.Damage));
 			if (hurtData && hurtData.PlayerClass == 5)
 			{
 				hurtData.RogueStillTics = 0;
@@ -4185,6 +4268,7 @@ class TuinRPGHandler : EventHandler
 					wasCritical = true;
 					CriticalPopupTics[attacker] = 18;
 				}
+				if (wasCritical) playerData.LevelCriticalHits++;
 				if (variantIndex >= 0)
 				{
 					multiplier *= 1.0 + WeaponItemLevelPowerPercent(playerData.VariantItemLevel[variantIndex]) * 0.01;
@@ -4261,6 +4345,7 @@ class TuinRPGHandler : EventHandler
 		if (!data) return;
 		double luckChance = 1.0 - exp(log(0.97) * max(0, data.Luck));
 		if (FRandom[TuinRPGLuck](0.0, 1.0) < luckChance) amount += max(1, amount / 4);
+		data.LevelXPEarned += max(0, amount);
 		data.CurrentXP += amount;
 		PopupXP[playerNumber] += amount;
 		PopupTics[playerNumber] = 70;
@@ -4382,6 +4467,11 @@ class TuinRPGHandler : EventHandler
 		if (killer >= 0)
 		{
 			let playerData = EnsurePlayerData(killer);
+			if (playerData)
+			{
+				if (data.MonsterRarity >= 6) playerData.LevelBossKills++;
+				else if (data.MonsterRarity >= 2) playerData.LevelEliteKills++;
+			}
 			int variantIndex = ActiveWeaponVariantIndex(killer, playerData);
 			if (variantIndex >= 0)
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
@@ -4389,6 +4479,7 @@ class TuinRPGHandler : EventHandler
 			TryDropWeapon(e.Thing, data, killer);
 		}
 		SpawnCoinReward(e.Thing, data);
+		TryDropExtraLife(e.Thing, data);
 		if (!IsIconicEpisodeFinale() && !FinaleBossPromoted) TryPromoteFinaleBoss();
 		if (data.MonsterRarity >= 6 && !JohnMerchant)
 		{
@@ -4778,6 +4869,8 @@ class TuinRPGHandler : EventHandler
 			// its persistent inventory token has transferred from the previous map.
 			ApplyLateStartCatchup(i);
 			let playerData = EnsurePlayerData(i);
+			if (playerData && playerData.LifeRevivePending) ReviveWithLife(i, players[i].mo, playerData);
+			if (playerData && playerData.LifeGraceTics > 0) playerData.LifeGraceTics--;
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
@@ -5756,7 +5849,8 @@ class TuinRPGHandler : EventHandler
 			let pd = GetPlayerData(players[pnum].mo);
 			if (pd)
 			{
-				string progress = String.Format("LV %d   XP %d/%d", pd.PlayerLevel, pd.CurrentXP, XPRequired(pd.PlayerLevel));
+				string progress = String.Format("LV %d   XP %d/%d   LIVES %d", pd.PlayerLevel, pd.CurrentXP,
+					XPRequired(pd.PlayerLevel), pd.Lives);
 				string resources = String.Format("STAT %d   PERK %d   COINS %d", pd.UnspentStatPoints,
 					pd.UnspentSkillPoints, CoinBalance(players[pnum].mo));
 				double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);

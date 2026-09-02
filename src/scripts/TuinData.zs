@@ -435,6 +435,19 @@ class TuinPlayerData : Inventory
 	int CurrentXP;
 	int UnspentStatPoints;
 	int UnspentSkillPoints;
+	int LevelDamageDealt;
+	int LevelDamageTaken;
+	int LevelXPEarned;
+	int LevelCoinsEarned;
+	int LevelEliteKills;
+	int LevelBossKills;
+	int LevelCriticalHits;
+	int LevelAbilityUses;
+	int LevelLivesUsed;
+	int Lives;
+	bool LivesInitialized;
+	bool LifeRevivePending;
+	int LifeGraceTics;
 	int PlayerClass;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;
@@ -715,6 +728,20 @@ class TuinPlayerData : Inventory
 					newdamage = min(newdamage, maximumHit);
 				}
 				AddTankOverdriveCharge(min(newdamage, max(0, Owner.Health)) * 4);
+			}
+		}
+		if (passive && Owner && Owner.player && newdamage > 0)
+		{
+			if (LifeRevivePending || LifeGraceTics > 0)
+			{
+				newdamage = 0;
+			}
+			else if (Lives > 0 && Owner.Health > 0 && newdamage >= Owner.Health)
+			{
+				Lives--;
+				LevelLivesUsed++;
+				LifeRevivePending = true;
+				newdamage = max(0, Owner.Health - 1);
 			}
 		}
 	}

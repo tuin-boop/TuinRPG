@@ -108,8 +108,15 @@ class TuinCoinPickup : Inventory
 
 	override bool TryPickup(in out Actor toucher)
 	{
+		int collected = Amount;
 		A_RemoveLight('TuinCoinGlow');
-		return Super.TryPickup(toucher);
+		bool pickedUp = Super.TryPickup(toucher);
+		if (pickedUp && toucher)
+		{
+			let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
+			if (data) data.LevelCoinsEarned += max(0, collected);
+		}
+		return pickedUp;
 	}
 
 	Default
@@ -131,6 +138,62 @@ class TuinCoinPickup : Inventory
 	{
 	Spawn:
 		TCIN A -1 Bright;
+		Stop;
+	}
+}
+
+class TuinLifePickup : Inventory
+{
+	override void BeginPlay()
+	{
+		Super.BeginPlay();
+		A_AttachLight('TuinLifeGlow', DynamicLight.PulseLight, Color(255, 28, 18), 46, 78,
+			DynamicLight.LF_ATTENUATE, (0, 0, 20), 0.55);
+	}
+
+	override void Tick()
+	{
+		Super.Tick();
+		if ((level.Time % 6) == 0)
+			A_SpawnParticle(Color(255, 54, 22), SPF_FULLBRIGHT | SPF_FACECAMERA, 13, 3.0, 0,
+				FRandom[TuinLifeSpark](-11.0, 11.0), FRandom[TuinLifeSpark](-4.0, 4.0),
+				FRandom[TuinLifeSpark](2.0, 38.0), 0, 0, 0.35, 0, 0, -0.02, 0.18, 0.05);
+	}
+
+	override bool TryPickup(in out Actor toucher)
+	{
+		if (!toucher || !toucher.player) return false;
+		let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
+		if (!data) return false;
+		int maximum = clamp(CVar.FindCVar('tuin_max_lives') ? CVar.FindCVar('tuin_max_lives').GetInt() : 9, 3, 99);
+		if (data.Lives >= maximum)
+		{
+			toucher.A_Log(String.Format("LIVES FULL: %d / %d", data.Lives, maximum));
+			return false;
+		}
+		data.Lives++;
+		toucher.A_StartSound("misc/i_pkup", CHAN_ITEM);
+		toucher.A_Log(String.Format("EXTRA LIFE! %d LIVES", data.Lives));
+		A_RemoveLight('TuinLifeGlow');
+		GoAwayAndDie();
+		return true;
+	}
+
+	Default
+	{
+		Radius 16;
+		Height 30;
+		Scale 0.06;
+		Inventory.PickupMessage "Extra life!";
+		+FLOATBOB
+		+RELATIVETOFLOOR
+		+FORCEXYBILLBOARD
+	}
+
+	States
+	{
+	Spawn:
+		TLIF A -1 Bright;
 		Stop;
 	}
 }

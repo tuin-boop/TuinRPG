@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.49
+
+- Replaced Doom's single-player tally screen with a framed TuinRPG **Mission Report** while retaining the normal intermission controls and map transition.
+- Added animated completion bars for kills, items, and secrets, plus mission time, par time, and a pace bonus.
+- Added a weighted 0-1000 mission score and E-through-S rating: kills award up to 300 points, items 150, secrets 150, pace 100, and preserving lives up to 300. Full kills, perfect pace, and no deaths reach C when items and secrets are ignored.
+- Added an RPG Record for per-level damage dealt, damage taken, XP earned, coins collected, special and Boss kills, critical hits, and class ability uses.
+- Damage records count actual health removed, including lethal hits, while excluding overkill and console damage without a player source.
+- Added a rating-aware John verdict in a separate dialogue font at the end of every Mission Report.
+- Added the player's current RPG level, chosen class, coin balance, and clearer calculating/continue prompts to the report.
+- Added a limited-lives system. Players begin with three lives; lethal damage consumes one, returns the same player to the map start at full health, and grants three seconds of protection without resetting map progress or inventory.
+- Rare, Elite, Legendary, Mythic, and Boss enemies can drop an extra-life heart at increasingly generous rates. The supplied transparent heart art floats, pulses, emits small particles, and can raise the player to the configurable nine-life default maximum.
+- Added the current life count to the HUD and Mission Report. Lives used during a map now have a major effect on the final mission rating.
+
 ## 0.6.48
 
 - Removed the Executioner's 10% increased incoming-damage penalty. The class retains its 25% lower maximum health as its defensive tradeoff.

@@ -4,6 +4,13 @@ Sprite TCINA0, 1254, 1254
 	Patch "graphics/TuinCoin.png", 0, 0
 }
 
+// Rare extra-life pickup generated specifically for TuinRPG.
+Sprite TLIFA0, 1012, 937
+{
+	Offset 506, 937
+	Patch "graphics/TuinLifeHeart.png", 0, 0
+}
+
 Sprite JOHNA0, 37, 56
 {
 	Offset 18, 56

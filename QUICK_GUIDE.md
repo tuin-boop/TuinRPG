@@ -27,9 +27,9 @@ Killing monsters awards XP. Every level grants one stat point:
 
 Monsters also scale with the map and can appear as **Uncommon, Rare, Elite, Legendary, Mythic**, or the special **Boss** tier. Higher rarities have more health, damage, XP and affixes. Legendary and Mythic enemies may use special attacks, so watch for their warning glow.
 
-Every five levels grants a perk point. The first point permanently chooses Tank, Healer, Damage Dealer, Doom Guy, or Rogue under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, and class perks. Class capstones unlock at level 20 after Class Training II.
+Every five levels grants a perk point. The first point permanently chooses Tank, Healer, Executioner, Doom Guy, or Rogue under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, and class perks. Class Ultimates unlock at level 20 after Class Training II.
 
-Rogue enters Shadow Veil after standing still for 1.5 seconds while its fixed 15-second cooldown is ready. The veil remains active until broken, makes Rogue half translucent and untargetable, and forces monsters to disengage and wander. The attack that breaks it deals x4 weapon damage or x20 fist/knuckle damage; movement after activation is allowed.
+Each class has a distinct V ability. Tank charges Overdrive by dealing and taking damage. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy holds V to ready Blood Punch and releases it to strike. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires.
 
 ## Weapon loot
 
@@ -57,6 +57,12 @@ Ultimate Doom has special continuous finales:
 - **E4M8:** Remains the true ending.
 
 John carries your health, weapons, variants, coins and RPG progress into the next episode.
+
+## Lives and mission ratings
+
+You begin with three lives. When lethal damage spends a life, you return to the map start at full health with brief protection while keeping your weapons, progression, and completed map actions. Rare and stronger enemies can drop a floating red heart that grants one extra life, up to nine by default.
+
+The Mission Report scores kills, items, secrets, completion pace, and lives preserved. Avoiding deaths contributes up to 300 of the 1000 available points, so survival matters as much as clearing the map. The report also records damage, XP, coins, special enemies, Bosses, critical hits, class abilities, and John's verdict on the run.
 
 ## Useful advice
 
