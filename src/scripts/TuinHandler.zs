@@ -2604,8 +2604,8 @@ class TuinRPGHandler : EventHandler
 		JohnCommentTics[playerNumber] = 245;
 		Actor listener = playerInGame[playerNumber] ? players[playerNumber].mo : null;
 		if (listener)
-			listener.A_StartSound("misc/chat", CHAN_7, CHANF_LOCAL | CHANF_UI,
-				0.22, ATTN_NONE);
+			listener.A_StartSound("tuin/john/tip", CHAN_AUTO, CHANF_LOCAL | CHANF_UI,
+				0.85, ATTN_NONE);
 	}
 
 	void UpdateJohnMilestoneComments()
@@ -4926,6 +4926,13 @@ class TuinRPGHandler : EventHandler
 		{
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 				if (playerInGame[i] && players[i].mo) { killer = i; break; }
+		}
+		if (data.MonsterRarity >= 6 && !IsIconicEpisodeBoss(e.Thing))
+		{
+			for (int listener = 0; listener < TUIN_MAX_PLAYERS; listener++)
+				if (playerInGame[listener] && players[listener].mo)
+					players[listener].mo.A_StartSound("tuin/boss/down", CHAN_AUTO,
+						CHANF_LOCAL | CHANF_UI, 0.85, ATTN_NONE);
 		}
 		for (int markedPlayer = 0; markedPlayer < TUIN_MAX_PLAYERS; markedPlayer++)
 		{

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.63
+
+- Replaced John's barely audible generic chat cue with three supplied randomized ROTT notification sounds whenever his lower-right combat tip appears.
+- Raised the tip cue to a clear UI volume and moved it to an automatic local channel so unrelated pickup sounds cannot silence it.
+- Added two supplied randomized victory cues when an ordinary promoted level Boss is defeated; iconic episode finales retain their separate John sequence.
+
 ## 0.6.62
 
 - Reduced the extra-life heart's world sprite by one third so it remains noticeable without obscuring nearby combat.

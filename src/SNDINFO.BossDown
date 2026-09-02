@@ -1,0 +1,3 @@
+$random tuin/boss/down { tuin/boss/down1 tuin/boss/down2 }
+tuin/boss/down1 SOUNDS/BossDown/BSDWN1
+tuin/boss/down2 SOUNDS/BossDown/BSDWN2
