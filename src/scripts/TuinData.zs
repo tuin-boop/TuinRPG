@@ -32,6 +32,8 @@ class TuinMonsterData : Inventory
 	int BleedPlayerNumber;
 	int BleedResistanceTics;
 	int BleedDamageRemaining;
+	int RogueSilencedHitMask;
+	int RogueKnifeHitMask;
 	int BurnPulsesRemaining;
 	int BurnNextTime;
 	int BurnPlayerNumber;

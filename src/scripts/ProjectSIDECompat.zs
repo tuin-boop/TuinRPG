@@ -576,6 +576,19 @@ class PSCompatWeaponHandler : EventHandler
 	void NormalizeStartingWeapons(PlayerPawn playerPawn)
 	{
 		if (!playerPawn) return;
+		let data = TuinPlayerData(playerPawn.FindInventory('TuinPlayerData'));
+		if (data && data.PlayerClass == 5)
+		{
+			playerPawn.TakeInventory("Fist", 0x7FFFFFFF);
+			playerPawn.TakeInventory("PerkFist", 0x7FFFFFFF);
+			playerPawn.TakeInventory("Pistol", 0x7FFFFFFF);
+			playerPawn.TakeInventory("PerkPistol", 0x7FFFFFFF);
+			if (!playerPawn.FindInventory("TuinRogueKnife"))
+				playerPawn.GiveInventory("TuinRogueKnife", 1);
+			if (!playerPawn.FindInventory("TuinRogueSilencedPistol"))
+				playerPawn.GiveInventory("TuinRogueSilencedPistol", 1);
+			return;
+		}
 
 		if (playerPawn.FindInventory("Fist") || playerPawn.FindInventory("PerkFist"))
 		{

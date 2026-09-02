@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.72
+
+- Added the Rogue Knife and Rogue Silenced Pistol, adapted from the user-supplied DOOM Revitalized 1.3. Choosing Rogue replaces only that player's fists and pistol; other classes retain their normal weapons.
+- The knife is silent, deals 28-42 base melee damage versus the pistol's 8, guarantees its own first hit on each monster as a critical, and inflicts bleed based on 200% of that critical damage (still capped at 24% of monster maximum health). It fully participates in Shadow Veil's much stronger melee Ambush, and subsequent knife drops can roll new levels, rarities, and affixes.
+- The silenced pistol fires quietly and guarantees a critical hit the first time each Rogue hits each monster. That critical causes the Rogue's normal bleed, and first-hit tracking is separate for every player in multiplayer.
+- Rogue weapons are multiplayer-safe: their inspection panel reads `ROGUE CLASS ONLY`, and both RPG drops and raw weapon pickups reject non-Rogues without consuming the item.
+
 ## 0.6.71
 
 - Reduced the explosive-supply crate's visual size by 50% while retaining its forgiving pickup radius.

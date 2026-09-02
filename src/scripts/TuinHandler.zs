@@ -1519,6 +1519,14 @@ class TuinRPGHandler : EventHandler
 		{
 			data.RogueChargeInitialized = true;
 			data.RogueVeilCharge = 100;
+			pawn.TakeInventory('Fist', 0x7FFFFFFF);
+			pawn.TakeInventory('PerkFist', 0x7FFFFFFF);
+			pawn.TakeInventory('Pistol', 0x7FFFFFFF);
+			pawn.TakeInventory('PerkPistol', 0x7FFFFFFF);
+			pawn.GiveInventory('TuinRogueKnife', 1);
+			pawn.GiveInventory('TuinRogueSilencedPistol', 1);
+			if (pawn.player)
+				pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
 		}
 		else if (chosenClass == 1)
 		{
@@ -1827,6 +1835,11 @@ class TuinRPGHandler : EventHandler
 		return label ~== "FIST" || label ~== "FISTS" || label ~== "BRASS KNUCKLES" ||
 			label ~== "KNUCKLES" || label ~== "BARE HANDS" || label ~== "UNARMED" ||
 			label ~== "PUNCH" || label ~== "PUNCHES" || label ~== "MARTIAL ARTS";
+	}
+
+	clearscope static bool IsRogueOnlyWeaponType(class<Weapon> weaponType)
+	{
+		return weaponType == 'TuinRogueKnife' || weaponType == 'TuinRogueSilencedPistol';
 	}
 
 	clearscope static string GodlyWeaponTitle(int variantID)
@@ -4727,12 +4740,33 @@ class TuinRPGHandler : EventHandler
 						SetLootNotification(attacker, String.Format("AMBUSH x%.0f!", ambushMultiplier), 5);
 					}
 				}
+				let activeWeapon = players[attacker].ReadyWeapon;
+				bool rogueSilencedPistol = playerData.PlayerClass == 5 && victimData && activeWeapon &&
+					activeWeapon.GetClassName() == 'TuinRogueSilencedPistol';
+				bool rogueKnife = playerData.PlayerClass == 5 && victimData && activeWeapon &&
+					activeWeapon.GetClassName() == 'TuinRogueKnife';
+				bool openingCritical = rogueSilencedPistol || rogueKnife;
+				if (openingCritical)
+				{
+					int playerBit = 1 << attacker;
+					int previousHits = rogueKnife ? victimData.RogueKnifeHitMask :
+						victimData.RogueSilencedHitMask;
+					openingCritical = !(previousHits & playerBit);
+					if (rogueKnife) victimData.RogueKnifeHitMask |= playerBit;
+					else victimData.RogueSilencedHitMask |= playerBit;
+				}
+				if (openingCritical && !wasCritical)
+				{
+					multiplier *= 2.0;
+					wasCritical = true;
+					CriticalPopupTics[attacker] = 18;
+				}
 				if (playerBaseDamageFactor < 1.0)
 					e.NewDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 				multiplier *= 1.0 + playerData.Strength * 0.02;
 				int variantIndex = (bloodPunchAttack || engineerTurretAttack) ? -1 :
 					ActiveWeaponVariantIndex(attacker, playerData);
-				if (victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+				if (!wasCritical && victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) <
 					TotalCriticalChance(playerData, variantIndex) + engineerCriticalBonus)
 				{
@@ -4793,7 +4827,14 @@ class TuinRPGHandler : EventHandler
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
 			if (wasCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
-				ApplyRogueBleed(attacker, victimData, totalDamage);
+			{
+				int bleedTriggerDamage = totalDamage;
+				let bleedWeapon = players[attacker].ReadyWeapon;
+				if (attackData.PlayerClass == 5 && bleedWeapon &&
+					bleedWeapon.GetClassName() == 'TuinRogueKnife')
+					bleedTriggerDamage *= 2;
+				ApplyRogueBleed(attacker, victimData, bleedTriggerDamage);
+			}
 			// Accumulate fractional leech instead of rounding every small hit down
 			// to zero. This makes bullets, pellets, and special weapons leech just
 			// as reliably as rockets without granting one full HP per rapid hit.
@@ -5252,6 +5293,12 @@ class TuinRPGHandler : EventHandler
 		if (!lootDrop || !pawn || pawn.Distance3D(lootDrop) > 128.0) return;
 		let data = EnsurePlayerData(playerNumber);
 		if (!data) return;
+		if (IsRogueOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 5)
+		{
+			SetLootNotification(playerNumber, "ROGUE CLASS ONLY", 0);
+			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
+			return;
+		}
 		bool needsWeapon = !pawn.FindInventory(lootDrop.WeaponType);
 		int existing = data.FindEquippedVariant(lootDrop.WeaponType);
 		bool replaced = existing >= 0;
@@ -6452,8 +6499,14 @@ class TuinRPGHandler : EventHandler
 				panelY + 6 + line * 9, WeaponStatComparison("CRITICAL", viewedCritical, currentCritical, hasCurrent),
 				DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			bool closeEnough = players[pnum].mo.Distance3D(viewedDrop) <= 128.0;
-			string prompt = closeEnough ? (equippedIndex >= 0 ? "PRESS USE [E] TO SWAP - OLD WEAPON DROPS" : "PRESS USE [E] TO EQUIP") : "MOVE CLOSER TO INSPECT AND EQUIP";
-			Screen.DrawText(font, closeEnough ? Font.CR_GOLD : Font.CR_WHITE, (sw - font.StringWidth(prompt) * lootScale) / 2, panelY + panelHeight - int(15 * lootScale), prompt, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			bool rogueRestricted = IsRogueOnlyWeaponType(viewedDrop.WeaponType) &&
+				(!playerData || playerData.PlayerClass != 5);
+			string prompt = rogueRestricted ? "ROGUE CLASS ONLY" : closeEnough ?
+				(equippedIndex >= 0 ? "PRESS USE [E] TO SWAP - OLD WEAPON DROPS" : "PRESS USE [E] TO EQUIP") :
+				"MOVE CLOSER TO INSPECT AND EQUIP";
+			Screen.DrawText(font, rogueRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,
+				(sw - font.StringWidth(prompt) * lootScale) / 2, panelY + panelHeight - int(15 * lootScale),
+				prompt, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 		}
 		if (LootNotificationTics[pnum] > 0 && LootNotification[pnum].Length())
 		{
