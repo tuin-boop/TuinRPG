@@ -1,6 +1,7 @@
 version "4.10"
 
 #include "scripts/ProjectSIDECompat.zs"
+#include "scripts/TuinEngineerMine.zs"
 #include "scripts/TuinLoot.zs"
 #include "scripts/TuinData.zs"
 #include "scripts/TuinEngineer.zs"

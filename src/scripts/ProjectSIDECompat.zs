@@ -306,6 +306,7 @@ class PSCompatWeaponHandler : EventHandler
 {
 	bool User1Held[MAXPLAYERS];
 	bool GrenadeHidingWeapon[MAXPLAYERS];
+	bool EngineerMineThrow[MAXPLAYERS];
 	int ThrowTimer[MAXPLAYERS];
 	int ThrowCooldown[MAXPLAYERS];
 
@@ -329,6 +330,7 @@ class PSCompatWeaponHandler : EventHandler
 			{
 				User1Held[i] = false;
 				GrenadeHidingWeapon[i] = false;
+				EngineerMineThrow[i] = false;
 				ThrowTimer[i] = 0;
 				ThrowCooldown[i] = 0;
 				continue;
@@ -342,8 +344,9 @@ class PSCompatWeaponHandler : EventHandler
 			if (ThrowTimer[i] > 0)
 			{
 				ThrowTimer[i]--;
-				if (ThrowTimer[i] == 26) PullGrenadePin(i, pawn);
-				if (ThrowTimer[i] == 13) LaunchGrenade(pawn);
+				if (!EngineerMineThrow[i] && ThrowTimer[i] == 26) PullGrenadePin(i, pawn);
+				if (!EngineerMineThrow[i] && ThrowTimer[i] == 13) LaunchGrenade(pawn);
+				if (EngineerMineThrow[i] && ThrowTimer[i] == 15) LaunchEngineerMine(pawn);
 				if (ThrowTimer[i] == 0) RestoreWeaponAfterGrenade(i, pawn);
 			}
 
@@ -365,25 +368,27 @@ class PSCompatWeaponHandler : EventHandler
 
 		Inventory ammo = players[pnum].mo.FindInventory("PSQuickGrenadeAmmo");
 		int grenadeCount = ammo ? ammo.Amount : 0;
+		bool engineer = IsEngineerPawn(players[pnum].mo);
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
 		// Keep the grenade counter close to the weapon ammo instead of competing
 		// with the health and armor HUD in the lower left corner.
-		int panelWidth = 92;
-		int panelHeight = 42;
+		int panelWidth = 112;
+		int panelHeight = 58;
 		int panelX = sw - panelWidth - 18;
-		int panelY = sh - 112;
-		TextureID grenadeIcon = TexMan.CheckForTexture("GRNDA0");
+		int panelY = sh - 160;
+		TextureID grenadeIcon = TexMan.CheckForTexture(engineer ? "TMNEICON" : "TGRNICON");
 
-		Screen.Dim(Color(8, 8, 8), 0.58, panelX, panelY, panelWidth, panelHeight);
+		Screen.Dim(Color(120, 76, 18), 0.80, panelX - 2, panelY - 2, panelWidth + 4, panelHeight + 4);
+		Screen.Dim(Color(0, 0, 0), 0.88, panelX, panelY, panelWidth, panelHeight);
 		if (grenadeIcon.IsValid())
 		{
-			Screen.DrawTexture(grenadeIcon, false, panelX + 5, panelY + 5,
-				DTA_DestWidth, 32, DTA_DestHeight, 32,
+			Screen.DrawTexture(grenadeIcon, false, panelX + (engineer ? 4 : 9), panelY + (engineer ? 10 : 5),
+				DTA_DestWidth, engineer ? 54 : 44, DTA_DestHeight, engineer ? 40 : 48,
 				DTA_LeftOffset, 0, DTA_TopOffset, 0, DTA_Alpha, 0.9);
 		}
 		Screen.DrawText(BigFont, grenadeCount > 0 ? Font.CR_GOLD : Font.CR_DARKGRAY,
-			panelX + 47, panelY + 10, String.Format("%d", grenadeCount));
+			panelX + 72, panelY + 18, String.Format("%d", grenadeCount));
 	}
 
 	// The dedicated bind is more reliable than a generic +user button and also
@@ -432,6 +437,8 @@ class PSCompatWeaponHandler : EventHandler
 		bool firstSetup = !pawn.FindInventory("PSQuickGrenadeVisual");
 		if (firstSetup)
 			pawn.GiveInventory("PSQuickGrenadeVisual", 1);
+		if (!pawn.FindInventory("TuinEngineerMineVisual"))
+			pawn.GiveInventory("TuinEngineerMineVisual", 1);
 
 		if (giveStartingGrenades && firstSetup && !pawn.FindInventory("PSQuickGrenadeAmmo"))
 		{
@@ -440,6 +447,7 @@ class PSCompatWeaponHandler : EventHandler
 
 		User1Held[playerNumber] = false;
 		GrenadeHidingWeapon[playerNumber] = false;
+		EngineerMineThrow[playerNumber] = false;
 		ThrowTimer[playerNumber] = 0;
 		ThrowCooldown[playerNumber] = 0;
 	}
@@ -447,11 +455,12 @@ class PSCompatWeaponHandler : EventHandler
 	void StartGrenadeThrow(int playerNumber, PlayerPawn pawn)
 	{
 		Inventory ammo = pawn.FindInventory("PSQuickGrenadeAmmo");
-		Inventory visual = pawn.FindInventory("PSQuickGrenadeVisual");
+		bool engineer = IsEngineerPawn(pawn);
+		Inventory visual = pawn.FindInventory(engineer ? "TuinEngineerMineVisual" : "PSQuickGrenadeVisual");
 		if (!visual || !pawn.player) return;
 		if (!ammo || ammo.Amount <= 0)
 		{
-			pawn.A_Print("No quick grenades.");
+			pawn.A_Print(engineer ? "No proximity mines." : "No quick grenades.");
 			pawn.A_StartSound("weapons/noammo", CHAN_WEAPON);
 			return;
 		}
@@ -460,7 +469,7 @@ class PSCompatWeaponHandler : EventHandler
 
 		Weapon currentWeapon = pawn.player.ReadyWeapon;
 		name currentWeaponName = currentWeapon ? currentWeapon.GetClassName() : 'None';
-		bool hideMeleeWeapon = currentWeaponName == 'PerkFist' ||
+		bool hideMeleeWeapon = engineer || currentWeaponName == 'PerkFist' ||
 			currentWeaponName == 'Fist' || currentWeaponName == 'Z86Chainsaw' ||
 			currentWeaponName == 'Chainsaw';
 
@@ -480,9 +489,10 @@ class PSCompatWeaponHandler : EventHandler
 		}
 
 		pawn.player.SetPSprite(1001, visual.FindState("Throw"));
-		if (hideMeleeWeapon) AdjustMeleeGrenadeLayer(pawn.player, 1001);
-		ThrowTimer[playerNumber] = 28;
-		ThrowCooldown[playerNumber] = 38;
+		if (hideMeleeWeapon && !engineer) AdjustMeleeGrenadeLayer(pawn.player, 1001);
+		EngineerMineThrow[playerNumber] = engineer;
+		ThrowTimer[playerNumber] = engineer ? 35 : 28;
+		ThrowCooldown[playerNumber] = engineer ? 45 : 38;
 	}
 
 	void RestoreWeaponAfterGrenade(int playerNumber, PlayerPawn pawn)
@@ -494,6 +504,7 @@ class PSCompatWeaponHandler : EventHandler
 		if (pawn.health > 0 && pawn.player.ReadyWeapon)
 			pawn.player.SetPSprite(PSP_WEAPON, pawn.player.ReadyWeapon.GetReadyState());
 		GrenadeHidingWeapon[playerNumber] = false;
+		EngineerMineThrow[playerNumber] = false;
 	}
 
 	void AdjustMeleeGrenadeLayer(PlayerInfo p, int layerID)
@@ -535,6 +546,28 @@ class PSCompatWeaponHandler : EventHandler
 			grenade.Vel += pawn.Vel * 0.45;
 		}
 		pawn.A_StartSound("psgrenade/toss", CHAN_WEAPON);
+	}
+
+	clearscope static bool IsEngineerPawn(PlayerPawn pawn)
+	{
+		if (!pawn) return false;
+		let data = TuinPlayerData(pawn.FindInventory('TuinPlayerData'));
+		return data && data.PlayerClass == 6;
+	}
+
+	void LaunchEngineerMine(PlayerPawn pawn)
+	{
+		if (!pawn || !pawn.player || pawn.health <= 0) return;
+
+		FTranslatedLineTarget aimTarget;
+		Actor mine = pawn.SpawnPlayerMissile("TuinEngineerMineProjectile",
+			pawn.Angle, 12, 0, 7, aimTarget, false, true);
+		if (mine)
+		{
+			mine.Vel.Z += 2.5;
+			mine.Vel += pawn.Vel * 0.35;
+		}
+		pawn.A_StartSound("tuin/mine/throw", CHAN_WEAPON);
 	}
 
 	void NormalizeStartingWeapons(PlayerPawn playerPawn)

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.67
+
+- Added an Engineer-only proximity mine adapted from Doom Deluxe's slot-0 mine. Pressing the normal grenade key throws it onto the ground, where it settles, arms after about one second, and watches a 130-unit radius for visible hostile monsters.
+- Integrated the mine's original first-person/world artwork and throw, flight, bounce, and arming sounds; detonation uses TuinRPG's established quick-grenade explosion sound, visual effects, quake, and multi-band damage.
+- Engineers now see the mine icon in the quick-explosive HUD counter and receive a mine-specific empty-ammo message. Every other class retains the normal quick grenade.
+- The owning Engineer can face an armed, untriggered mine and press Use to disarm it and recover one explosive charge, provided the reserve is not full.
+- Added the supplied dedicated mine and grenade icons and rebuilt the quick-explosive counter as a larger, higher black panel with a subtle bronze border. Both icons preserve their intended proportions.
+
 ## 0.6.66
 
 - Prevented Cacodemon-tier and tougher enemies (400+ base health) from rolling Armored once the highest active player reaches level 15, including promoted finale Bosses.
