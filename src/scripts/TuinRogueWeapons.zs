@@ -100,30 +100,30 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 		PSSI A -1;
 		Stop;
 	Ready:
-		RQEQ ABCD 1;
-		RQPI A 1;
+		SIEQ ABCD 1;
+		SIPI A 1;
 		Goto ReadyLoop;
 	ReadyLoop:
-		RQPI A 1 A_WeaponReady;
+		SIPI A 1 A_WeaponReady;
 		Loop;
 	Select:
 		TNT1 A 1 A_Raise;
 		Loop;
 	Deselect:
-		RQPI A 1 A_Lower;
+		SIPI A 1 A_Lower;
 		Loop;
 	Fire:
-		RQPI A 1;
-		RQPI B 2;
-		RQPI C 2
+		SIPI A 1;
+		SIPI B 2;
+		SIPI C 2
 		{
 			A_PlaySound("tuin/rogue/silenced", CHAN_WEAPON, 0.8);
 			A_FireBullets(1.4, 0.6, 1, 8, "TuinRogueSilencedPuff");
 		}
-		RQPI DEFGHI 1;
-		RQPI F 2;
-		RQPI B 1 A_ReFire;
-		RQPI A 1;
+		SIPI DEFGHI 1;
+		SIPI F 2;
+		SIPI B 1 A_ReFire;
+		SIPI A 1;
 		Goto ReadyLoop;
 	}
 }

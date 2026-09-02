@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.75
+
+- Fixed the invisible Rogue Silenced Pistol by restoring its original visible sprites and mirroring the live weapon layer with UZDoom's native first-person mirror support.
+- The mirror is applied only while the silenced pistol is equipped and is cleared automatically for every other weapon.
+
 ## 0.6.74
 
 - The quick-grenade system now recognizes every weapon flagged as melee, including the Rogue Knife, and hides it during the throw so the grenade animation cannot produce three hands.
