@@ -112,6 +112,8 @@ OptionMenu "TuinRPGOptions"
 	Option "Floating damage numbers", "tuin_damage_numbers", "OnOff"
 	Slider "Damage-number size", "tuin_damage_number_scale", 0.75, 2.5, 0.05, 2
 	Option "Player XP HUD", "tuin_player_hud", "OnOff"
+	Option "John's combat tips", "tuin_john_milestone_comments", "OnOff"
+	Command "Testing: show a John combat tip", "netevent tuin_test_john_comment"
 	Class "TuinRPGOptionsMenu"
 }
 

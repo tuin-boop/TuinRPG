@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.55
+
+- Added John combat commentary at every 10% kill milestone, with an independent 50% chance to speak at each milestone.
+- Added 50 distinct gameplay tips, class reminders, tactical observations, and encouraging remarks.
+- Reused the floating revival portrait in a smaller lower-right presentation with gentle bobbing, fade animation, and a compact black dialogue panel.
+- Added the user option **John's combat tips** and a settings-menu test command for previewing a random comment immediately.
+
 ## 0.6.54
 
 - Fixed Blood Drinker on low-damage bullets, pellets, and rapid-fire weapons by carrying fractional healing forward until it becomes a full health point.

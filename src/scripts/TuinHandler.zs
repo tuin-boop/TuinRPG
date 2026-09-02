@@ -36,6 +36,10 @@ class TuinRPGHandler : EventHandler
 	string DifficultyNoticeTitle[TUIN_MAX_PLAYERS];
 	string DifficultyNoticeStats[TUIN_MAX_PLAYERS];
 	int DifficultyNoticeTics[TUIN_MAX_PLAYERS];
+	int JohnCommentMilestone[TUIN_MAX_PLAYERS];
+	int JohnCommentTics[TUIN_MAX_PLAYERS];
+	int JohnCommentQuote[TUIN_MAX_PLAYERS];
+	int JohnCommentPercent[TUIN_MAX_PLAYERS];
 	string TargetName[TUIN_MAX_PLAYERS];
 	string TargetAffixes[TUIN_MAX_PLAYERS];
 	bool TargetDeathSentence[TUIN_MAX_PLAYERS];
@@ -2230,6 +2234,90 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
+	ui string JohnMilestoneQuote(int quote)
+	{
+		switch (quote)
+		{
+		case 0: return "Keep moving. A still marine is an easy target.";
+		case 1: return "Check corners. Hell loves hiding one last imp.";
+		case 2: return "Save the heavy ammunition for heavy problems.";
+		case 3: return "Armor first. Heroics become cheaper afterward.";
+		case 4: return "Press K when you have points waiting to be spent.";
+		case 5: return "Press L to compare the weapons you have collected.";
+		case 6: return "Luck raises critical chance as well as bonus XP.";
+		case 7: return "Blood Drinker counts every hit, even tiny ones.";
+		case 8: return "Armored enemies cut ordinary incoming damage in half.";
+		case 9: return "Warding weakens your bonus and elemental damage.";
+		case 10: return "Healing monsters need pressure, not patience.";
+		case 11: return "Poison is a good reason to finish the fight quickly.";
+		case 12: return "Rare colors mean better loot and nastier surprises.";
+		case 13: return "Mythic does not mean immortal. Keep firing.";
+		case 14: return "Bosses resist punishment, but they still bleed.";
+		case 15: return "Rockets burn the target and scorch its neighbors.";
+		case 16: return "Plasma arcs farther than the shot you can see.";
+		case 17: return "Grenades cannot crit, so throw them into crowds.";
+		case 18: return "Lost Souls are fodder. Clear them without mercy.";
+		case 19: return "Dense packs become fodder. Make that weakness count.";
+		case 20: return "At eighty five percent kills, Hunt reveals survivors.";
+		case 21: return "Yellow Hunt marks point toward ordinary stragglers.";
+		case 22: return "Colored Hunt marks still show enemy rarity.";
+		case 23: return "A diamond on the minimap means weapon loot.";
+		case 24: return "Press N if you need the minimap out of your way.";
+		case 25: return "Your flashlight can expose a very bad idea early.";
+		case 26: return "Fresh ammunition is useless if you forget to reload.";
+		case 27: return "A weaker weapon level can still carry better traits.";
+		case 28: return "Critical chance is capped, so build damage too.";
+		case 29: return "Firing speed has a limit outside Tank Overdrive.";
+		case 30: return "Tank charges fastest by fighting in the thick of it.";
+		case 31: return "Overdrive turns saved ammunition into ten wild seconds.";
+		case 32: return "Healer supplies are best called before panic begins.";
+		case 33: return "Executioner should sentence the enemy everyone fears.";
+		case 34: return "Judgment waits for your next proper weapon hit.";
+		case 35: return "Final Verdict rewards a well chosen execution.";
+		case 36: return "Doom Guy earns Blood Punch by staying aggressive.";
+		case 37: return "Hold V, choose the moment, then release the punch.";
+		case 38: return "Blood Punch heals from the damage it actually deals.";
+		case 39: return "Rogue earns Shadow Veil through weapon damage.";
+		case 40: return "A Rogue ambush is always a critical hit.";
+		case 41: return "Heavy critical hits create the strongest bleeding.";
+		case 42: return "Do not waste Shadow Veil on the first weak target.";
+		case 43: return "Cyberdemons and masterminds strongly resist the BFG.";
+		case 44: return "The Director watches health, ammunition, and momentum.";
+		case 45: return "Untouched ammunition may improve when reserves run low.";
+		case 46: return "Extra lives protect the run and improve your rating.";
+		case 47: return "Items and secrets matter when you want an elite score.";
+		case 48: return "Good pace helps, but surviving matters much more.";
+		default: return "You are making progress. Hell is running out of rooms.";
+		}
+	}
+
+	void StartJohnMilestoneComment(int playerNumber, int percent, int forcedQuote = -1)
+	{
+		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
+		JohnCommentQuote[playerNumber] = forcedQuote >= 0 ? clamp(forcedQuote, 0, 49) :
+			Random[TuinJohnMilestones](0, 49);
+		JohnCommentPercent[playerNumber] = percent;
+		JohnCommentTics[playerNumber] = 245;
+	}
+
+	void UpdateJohnMilestoneComments()
+	{
+		if (level.total_monsters <= 0) return;
+		int reached = clamp(level.killed_monsters * 10 / level.total_monsters, 0, 10);
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber]) continue;
+			while (JohnCommentMilestone[playerNumber] < reached)
+			{
+				JohnCommentMilestone[playerNumber]++;
+				if (CVInt('tuin_john_milestone_comments', 1) &&
+					Random[TuinJohnMilestoneChance](0, 99) < 50)
+					StartJohnMilestoneComment(playerNumber,
+						JohnCommentMilestone[playerNumber] * 10);
+			}
+		}
+	}
+
 	string RandomJohnGreeting()
 	{
 		switch (Random[TuinRPGJohn](0, 5))
@@ -3906,6 +3994,8 @@ class TuinRPGHandler : EventHandler
 			{
 				DirectorDamageTaken[i] = 0;
 				DirectorTrailValid[i] = false;
+				JohnCommentMilestone[i] = 0;
+				JohnCommentTics[i] = 0;
 			}
 			PreviousLoadedCampaignMap = CurrentLoadedCampaignMap;
 			CurrentLoadedCampaignMap = level.LevelNum;
@@ -4852,6 +4942,7 @@ class TuinRPGHandler : EventHandler
 	override void WorldTick()
 	{
 		UpdateGrenadeBossDamage();
+		UpdateJohnMilestoneComments();
 		for (int damageNumber = 0; damageNumber < TUIN_MAX_DAMAGE_NUMBERS; damageNumber++)
 		{
 			if (DamageNumberTics[damageNumber] > 0)
@@ -4930,6 +5021,7 @@ class TuinRPGHandler : EventHandler
 			if (playerData && playerData.LifeRevivePending) UpdateLifeRevive(i, players[i].mo, playerData);
 			if (playerData && playerData.LifeGraceTics > 0) playerData.LifeGraceTics--;
 			if (playerData && playerData.LifeReviveFadeTics > 0) playerData.LifeReviveFadeTics--;
+			if (JohnCommentTics[i] > 0) JohnCommentTics[i]--;
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
@@ -5084,6 +5176,13 @@ class TuinRPGHandler : EventHandler
 		if (e.Name ~== "tuin_give_levels")
 		{
 			GiveTestLevels(e.Player, e.Args[0] > 0 ? e.Args[0] : 1);
+			return;
+		}
+		if (e.Name ~== "tuin_test_john_comment")
+		{
+			int percent = level.total_monsters > 0 ?
+				clamp(level.killed_monsters * 100 / level.total_monsters, 0, 100) : 10;
+			StartJohnMilestoneComment(e.Player, max(10, percent));
 			return;
 		}
 		if (e.Name ~== "tuin_test_blood_punch")
@@ -5788,6 +5887,37 @@ class TuinRPGHandler : EventHandler
 		{
 			Screen.Dim(Color(130, 0, 0), 0.18 * overlayData.LifeReviveFadeTics / 24.0,
 				0, 0, sw, sh);
+		}
+		if (!menuactive && (!overlayData || !overlayData.LifeRevivePending) &&
+			CVInt('tuin_john_milestone_comments', 1) && JohnCommentTics[pnum] > 0)
+		{
+			int remaining = JohnCommentTics[pnum];
+			double alpha = min(1.0, min((245 - remaining) / 18.0, remaining / 24.0));
+			int faceSize = clamp(int(sh * 0.105), 64, 108);
+			int faceX = sw - faceSize - 16;
+			int faceY = sh - faceSize - 48 + int(sin((gametic + e.FracTic) * 5.0) * 5.0);
+			TextureID johnFace = TexMan.CheckForTexture("graphics/TuinReviveJohn.png", TexMan.Type_Any);
+			if (johnFace.IsValid())
+				Screen.DrawTexture(johnFace, false, faceX, faceY,
+					DTA_DestWidth, faceSize, DTA_DestHeight, faceSize, DTA_Alpha, alpha);
+			string quote = JohnMilestoneQuote(JohnCommentQuote[pnum]);
+			string heading = String.Format("JOHN  %d%% CLEARED", JohnCommentPercent[pnum]);
+			double commentScale = clamp(hudScale * 0.90, 1.15, 1.65);
+			int availableWidth = max(180, faceX - 34);
+			commentScale = min(commentScale,
+				double(availableWidth - 24) / max(1, font.StringWidth(quote)));
+			int panelWidth = min(availableWidth,
+				max(int(font.StringWidth(quote) * commentScale),
+					int(font.StringWidth(heading) * commentScale)) + 24);
+			int panelHeight = int(34 * commentScale);
+			int panelX = faceX - panelWidth - 10;
+			int panelY = faceY + (faceSize - panelHeight) / 2;
+			Screen.Dim(Color(3, 3, 3), 0.90 * alpha, panelX, panelY, panelWidth, panelHeight);
+			Screen.DrawLineFrame(Color(185, 38, 25), panelX, panelY, panelWidth, panelHeight, 2);
+			Screen.DrawText(font, Font.CR_RED, panelX + 10, panelY + int(4 * commentScale), heading,
+				DTA_ScaleX, commentScale, DTA_ScaleY, commentScale, DTA_Alpha, alpha);
+			Screen.DrawText(font, Font.CR_WHITE, panelX + 10, panelY + int(18 * commentScale), quote,
+				DTA_ScaleX, commentScale, DTA_ScaleY, commentScale, DTA_Alpha, alpha);
 		}
 		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomBloodPunchFlashTics > 0)
 		{

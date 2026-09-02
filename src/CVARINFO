@@ -101,6 +101,7 @@ user bool tuin_xp_popup = true;
 user bool tuin_damage_numbers = true;
 user float tuin_damage_number_scale = 1.35;
 user bool tuin_player_hud = true;
+user bool tuin_john_milestone_comments = true;
 user float tuin_hud_scale = 1.5;
 user int tuin_menu_time_mode = 0;
 user bool tuin_minimap_enabled = true;
