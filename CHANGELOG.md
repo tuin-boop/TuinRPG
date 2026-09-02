@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.73
+
+- Assigned the Rogue Knife and Rogue Silenced Pistol to weapon slots 1 and 2, so both can be selected normally.
+- Corrected both weapons' raise/ready state flow. Their equip animation now plays once after the weapon finishes rising instead of repeatedly interrupting weapon switching.
+
 ## 0.6.72
 
 - Added the Rogue Knife and Rogue Silenced Pistol, adapted from the user-supplied DOOM Revitalized 1.3. Choosing Rogue replaces only that player's fists and pistol; other classes retain their normal weapons.

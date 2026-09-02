@@ -39,6 +39,7 @@ class TuinRogueKnife : TuinRogueWeapon
 		Inventory.PickupMessage "Picked up a Rogue Knife.";
 		Inventory.PickupSound "misc/w_pkup";
 		Inventory.Icon "KNIFA0";
+		Weapon.SlotNumber 1;
 		Weapon.SelectionOrder 3700;
 		Weapon.Kickback 100;
 		+WEAPON.MELEEWEAPON
@@ -50,11 +51,14 @@ class TuinRogueKnife : TuinRogueWeapon
 		KNIF A -1;
 		Stop;
 	Ready:
+		NIFA ABCD 1;
+		NIFE A 1;
+		Goto ReadyLoop;
+	ReadyLoop:
 		NIFE A 1 A_WeaponReady;
 		Loop;
 	Select:
-		NIFA ABCD 1;
-		NIFE A 1 A_Raise;
+		TNT1 A 1 A_Raise;
 		Loop;
 	Deselect:
 		NIFE A 1 A_Lower;
@@ -83,6 +87,7 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 		Inventory.PickupMessage "Picked up a Rogue Silenced Pistol.";
 		Inventory.PickupSound "misc/w_pkup";
 		Inventory.Icon "PSSIA0";
+		Weapon.SlotNumber 2;
 		Weapon.SelectionOrder 1900;
 		Weapon.AmmoType1 "Clip";
 		Weapon.AmmoUse1 1;
@@ -95,11 +100,14 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 		PSSI A -1;
 		Stop;
 	Ready:
+		SIEQ ABCD 1;
+		SIPI A 1;
+		Goto ReadyLoop;
+	ReadyLoop:
 		SIPI A 1 A_WeaponReady;
 		Loop;
 	Select:
-		SIEQ ABCD 1;
-		SIPI A 1 A_Raise;
+		TNT1 A 1 A_Raise;
 		Loop;
 	Deselect:
 		SIPI A 1 A_Lower;
