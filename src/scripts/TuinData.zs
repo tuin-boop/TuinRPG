@@ -461,6 +461,7 @@ class TuinPlayerData : Inventory
 	int PerkKillerInstinct;
 	int PerkIronSkin;
 	int PerkBloodDrinker;
+	double LeechHealingRemainder;
 	int PerkClassMastery;
 	bool PerkCapstone;
 	int AppliedPerkHealth;

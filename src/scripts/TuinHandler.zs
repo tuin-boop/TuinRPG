@@ -4234,7 +4234,10 @@ class TuinRPGHandler : EventHandler
 			targetBaseDamageFactor = 0.25;
 		bool wasCritical = false;
 		bool rogueAmbushAttack = false;
-		int victimHealthBefore = e.Thing.Health;
+		// Damage callbacks occur after the engine applies the original hit.
+		// Preserve the reconstructed pre-hit health for charge and leech so a
+		// lethal hit still receives credit for the damage it actually dealt.
+		int victimHealthBefore = max(0, e.Thing.Health + e.Damage);
 		let sourceMonsterData = MonsterDataFromSource(e.DamageSource, e.Inflictor);
 		if (sourceMonsterData)
 		{
@@ -4321,12 +4324,6 @@ class TuinRPGHandler : EventHandler
 					if (playerData.VariantPowerPercent[variantIndex] > 0) multiplier *= 1.0 + playerData.VariantPowerPercent[variantIndex] * 0.01;
 					if (playerData.VariantExecutionPercent[variantIndex] > 0 && victimData && e.Thing.Health * 100 <= victimData.ScaledMaxHealth * 30)
 						multiplier *= 1.0 + playerData.VariantExecutionPercent[variantIndex] * 0.01;
-					if (playerData.VariantLeechPercent[variantIndex] > 0 && victimData && players[attacker].mo && players[attacker].mo.Health > 0)
-					{
-						int healing = max(1, int(e.Damage * targetBaseDamageFactor *
-							playerData.VariantLeechPercent[variantIndex] * 0.01 + 0.5));
-						players[attacker].mo.A_SetHealth(min(players[attacker].mo.GetMaxHealth(true), players[attacker].mo.Health + healing));
-					}
 				}
 			}
 		}
@@ -4374,12 +4371,27 @@ class TuinRPGHandler : EventHandler
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
 			if (wasCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
 				ApplyRogueBleed(attacker, victimData, totalDamage);
-			let leechData = attackData;
-			if (leechData && leechData.PerkBloodDrinker > 0 && players[attacker].mo && players[attacker].mo.Health > 0)
+			// Accumulate fractional leech instead of rounding every small hit down
+			// to zero. This makes bullets, pellets, and special weapons leech just
+			// as reliably as rockets without granting one full HP per rapid hit.
+			int leechPercent = attackData ? attackData.PerkBloodDrinker : 0;
+			if (attackData && attackVariant >= 0)
+				leechPercent += attackData.VariantLeechPercent[attackVariant];
+			Actor leechPlayer = players[attacker].mo;
+			if (attackData && leechPercent > 0 && leechPlayer && leechPlayer.Health > 0)
 			{
-				int perkHealing = int(totalDamage * leechData.PerkBloodDrinker * 0.01);
-				if (perkHealing > 0) players[attacker].mo.A_SetHealth(min(players[attacker].mo.GetMaxHealth(true),
-					players[attacker].mo.Health + perkHealing));
+				int maximumHealth = leechPlayer.GetMaxHealth(true);
+				if (leechPlayer.Health >= maximumHealth) attackData.LeechHealingRemainder = 0.0;
+				else
+				{
+					int damageDone = min(totalDamage, victimHealthBefore);
+					double exactHealing = damageDone * leechPercent * 0.01 +
+						attackData.LeechHealingRemainder;
+					int healing = int(exactHealing);
+					attackData.LeechHealingRemainder = exactHealing - healing;
+					if (healing > 0)
+						leechPlayer.A_SetHealth(min(maximumHealth, leechPlayer.Health + healing));
+				}
 			}
 		}
 	}

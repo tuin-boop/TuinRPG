@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.54
+
+- Fixed Blood Drinker on low-damage bullets, pellets, and rapid-fire weapons by carrying fractional healing forward until it becomes a full health point.
+- Combined perk and equipped weapon leech into the same damage-based calculation, including found weapon variants, without rounding every small hit up to one health.
+- Improved minimap Hunt cleanup so living counted monsters remain visible while dormant or temporarily non-shootable.
+- Made the minimap K/I/S/HUNT status line scale to its panel width instead of clipping on narrow HUD layouts.
+
 ## 0.6.53
 
 - Added a persistent minimap Hunt phase once the player reaches 85% kills on a map.

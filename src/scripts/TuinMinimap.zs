@@ -164,7 +164,14 @@ class TuinMinimapHandler : EventHandler
 		{
 			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
 			{
-				if (actor.bISMONSTER && actor.bSHOOTABLE && !actor.bFRIENDLY && actor.Health > 0)
+				// Hunt must also expose dormant and temporarily invulnerable map
+				// monsters. They still count toward the level total even while they
+				// cannot currently be shot.
+				bool activeMonster = actor.bISMONSTER && actor.bSHOOTABLE &&
+					!actor.bFRIENDLY && actor.Health > 0;
+				bool huntMonster = HuntModeUnlocked && actor.bISMONSTER && actor.bCOUNTKILL &&
+					!actor.bFRIENDLY && actor.Health > 0;
+				if (activeMonster || huntMonster)
 				{
 					let data = TuinRPGHandler.GetMonsterData(actor);
 					int rarity = data ? data.MonsterRarity : 0;
@@ -362,7 +369,8 @@ class TuinMinimapHandler : EventHandler
 					level.found_items, level.total_items, level.found_secrets, level.total_secrets) :
 				String.Format("K %d/%d   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
 					level.found_items, level.total_items, level.found_secrets, level.total_secrets);
-			double statisticsScale = 1.60;
+			double statisticsScale = min(1.60,
+				double(size - 12) / max(1, SmallFont.StringWidth(statistics)));
 			int statisticsY = top + size + 5;
 			Screen.Dim(Color(3, 5, 9), min(0.96, opacity + 0.18), left, statisticsY - 4, size, 23);
 			Screen.DrawText(SmallFont, Font.CR_WHITE, left + 6, statisticsY, statistics,
