@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.70
+
+- Replaced dropped grenade models with a class-neutral explosive-supply crate supplied by Tuin. The pickup still feeds the shared reserve: grenades for normal classes and proximity mines for the Engineer.
+- Renamed its pickup message to `Picked up explosive supplies.` so it describes both uses correctly.
+
 ## 0.6.69
 
 - Lowered the Engineer mine's first-person arm animation so it remains anchored below the bottom edge of the screen, matching the corrected melee grenade positioning.

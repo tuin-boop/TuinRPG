@@ -39,6 +39,13 @@ Sprite TKNKA0, 67, 57
 	Patch PUNGA0, 0, 0
 }
 
+// Class-neutral explosive reserve dropped for both grenades and Engineer mines.
+Sprite EXSPA0, 766, 782
+{
+	Offset 383, 782
+	Patch "graphics/TuinExplosiveSupply.png", 0, 0
+}
+
 // Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
 // 70x59 menu units it is centered above the stock menu choices.
 Graphic M_DOOM, 1115, 941

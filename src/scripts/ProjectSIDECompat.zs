@@ -41,19 +41,20 @@ class PSQuickGrenadeAmmo : Ammo
 		Inventory.MaxAmount 5;
 		Ammo.BackpackAmount 1;
 		Ammo.BackpackMaxAmount 8;
-		Inventory.PickupMessage "Picked up a quick grenade.";
+		Tag "Explosive Supply";
+		Inventory.PickupMessage "Picked up explosive supplies.";
 		Inventory.PickupSound "psgrenade/pickup";
-		Inventory.Icon "GRNDA0";
-		Radius 10;
-		Height 8;
-		Scale 0.5;
+		Inventory.Icon "EXSPA0";
+		Radius 14;
+		Height 24;
+		Scale 0.055;
 		+FORCEXYBILLBOARD
 	}
 
 	States
 	{
 	Spawn:
-		GRND A -1;
+		EXSP A -1;
 		Stop;
 	}
 }
