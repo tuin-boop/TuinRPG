@@ -1,4 +1,4 @@
 $random tuin/john/tip { tuin/john/tip1 tuin/john/tip2 tuin/john/tip3 }
-tuin/john/tip1 SOUNDS/JohnTips/ROTT1
-tuin/john/tip2 SOUNDS/JohnTips/ROTT2
-tuin/john/tip3 SOUNDS/JohnTips/ROTT3
+tuin/john/tip1 ROTT1
+tuin/john/tip2 ROTT2
+tuin/john/tip3 ROTT3

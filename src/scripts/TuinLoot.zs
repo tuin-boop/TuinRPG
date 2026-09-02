@@ -99,11 +99,51 @@ class TuinWeaponDrop : Actor
 
 class TuinCoinPickup : Inventory
 {
+	override void PlayPickupSound(Actor toucher)
+	{
+		if (toucher)
+			toucher.A_StartSound("pickups/tuincoin", CHAN_ITEM,
+				CHANF_NOPAUSE | CHANF_MAYBE_LOCAL | CHANF_OVERLAP, 1.0, ATTN_NONE);
+	}
+
 	override void BeginPlay()
 	{
 		Super.BeginPlay();
 		A_AttachLight('TuinCoinGlow', DynamicLight.PointLight, Color(255, 190, 32), 28, 42,
 			DynamicLight.LF_ATTENUATE, (0, 0, 10));
+	}
+
+	override void Tick()
+	{
+		Super.Tick();
+		if (Owner) return;
+
+		Actor nearestPlayer;
+		double nearestDistance = 320.0;
+		for (int playerNumber = 0; playerNumber < MAXPLAYERS; playerNumber++)
+		{
+			if (!playerInGame[playerNumber] || !players[playerNumber].mo ||
+				players[playerNumber].mo.Health <= 0) continue;
+			Actor candidate = players[playerNumber].mo;
+			double distance = Distance2D(candidate);
+			if (distance >= nearestDistance || !CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+			nearestDistance = distance;
+			nearestPlayer = candidate;
+		}
+
+		if (!nearestPlayer)
+		{
+			Vel.X *= 0.75;
+			Vel.Y *= 0.75;
+			return;
+		}
+
+		double deltaX = nearestPlayer.Pos.X - Pos.X;
+		double deltaY = nearestPlayer.Pos.Y - Pos.Y;
+		double distance = max(1.0, sqrt(deltaX * deltaX + deltaY * deltaY));
+		double speed = clamp(6.0 + (320.0 - distance) * 0.025, 6.0, 14.0);
+		Vel.X = deltaX / distance * speed;
+		Vel.Y = deltaY / distance * speed;
 	}
 
 	override bool TryPickup(in out Actor toucher)
@@ -113,7 +153,6 @@ class TuinCoinPickup : Inventory
 		bool pickedUp = Super.TryPickup(toucher);
 		if (pickedUp && toucher)
 		{
-			toucher.A_StartSound("pickups/tuincoin", CHAN_7);
 			let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
 			if (data) data.LevelCoinsEarned += max(0, collected);
 		}
@@ -128,7 +167,7 @@ class TuinCoinPickup : Inventory
 		Inventory.MaxAmount 999999;
 		Inventory.InterHubAmount 999999;
 		Inventory.PickupMessage "Picked up Tuin coins.";
-		Inventory.PickupSound "";
+		Inventory.PickupSound "pickups/tuincoin";
 		+INVENTORY.KEEPDEPLETED
 		+INVENTORY.UNDROPPABLE
 		+FLOATBOB

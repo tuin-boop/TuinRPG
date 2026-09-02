@@ -2602,10 +2602,11 @@ class TuinRPGHandler : EventHandler
 			Random[TuinJohnMilestones](0, 49);
 		JohnCommentPercent[playerNumber] = percent;
 		JohnCommentTics[playerNumber] = 245;
-		Actor listener = playerInGame[playerNumber] ? players[playerNumber].mo : null;
-		if (listener)
-			listener.A_StartSound("tuin/john/tip", CHAN_AUTO, CHANF_LOCAL | CHANF_UI,
-				0.85, ATTN_NONE);
+		// This is a screen-local UI event, so use the engine's direct sound route.
+		// Actor-local playback can be discarded when the HUD event originates in
+		// server scope, even in a single-player game.
+		if (playerNumber == consoleplayer)
+			S_Sound("tuin/john/tip", CHAN_AUTO, 1.0, ATTN_NONE);
 	}
 
 	void UpdateJohnMilestoneComments()

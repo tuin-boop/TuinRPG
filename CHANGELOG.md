@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.64
+
+- Fixed the new John tip cues being silent by routing the local HUD event through UZDoom's direct UI sound function at full volume.
+- Moved Tuin Coin audio into the engine's normal pickup-sound callback and enabled overlapping playback, preventing simultaneous pickups from discarding the randomized coin cue.
+- Corrected the physical sound mappings for John tips, Tuin Coins, and ordinary Boss victories to use their resolvable eight-character lump names.
+- Added a 320-unit line-of-sight magnet to world Tuin Coins. Nearby untouched coins accelerate toward the nearest living player, while walls block their attraction.
+
 ## 0.6.63
 
 - Replaced John's barely audible generic chat cue with three supplied randomized ROTT notification sounds whenever his lower-right combat tip appears.
