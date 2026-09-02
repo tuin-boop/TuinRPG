@@ -447,6 +447,11 @@ class TuinPlayerData : Inventory
 	int Lives;
 	bool LivesInitialized;
 	bool LifeRevivePending;
+	int LifeReviveTics;
+	int LifeReviveFadeTics;
+	int LifeReviveQuote;
+	bool LifeReviveFreezeApplied;
+	bool LifeReviveWasFrozen;
 	int LifeGraceTics;
 	int PlayerClass;
 	int ClassHealClock;
@@ -741,6 +746,8 @@ class TuinPlayerData : Inventory
 				Lives--;
 				LevelLivesUsed++;
 				LifeRevivePending = true;
+				LifeReviveTics = 49;
+				LifeReviveQuote = Random[TuinLifeReviveQuote](0, 4);
 				newdamage = max(0, Owner.Health - 1);
 			}
 		}

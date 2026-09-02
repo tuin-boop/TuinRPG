@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.51
+
+- Reworked life revival into a dramatic 1.4-second protected sequence at the defeat location. Movement pauses beneath a pulsing red screen effect, red particles, light, sound, and one of five John encouragement lines before the player returns to the map start.
+- Added a short red fade after revival while the existing three-second protection begins.
+- Added the supplied transparent floating John face to the revival sequence, with a gentle pulse above his encouragement line.
+
 ## 0.6.50
 
 - Moved the life count onto its own clearly visible third row beneath the minimap instead of appending it to the XP row where wide values could run beyond the screen edge.

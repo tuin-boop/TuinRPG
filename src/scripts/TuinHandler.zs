@@ -2158,6 +2158,9 @@ class TuinRPGHandler : EventHandler
 	void ReviveWithLife(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !pawn.player || !data || !data.LifeRevivePending) return;
+		pawn.A_RemoveLight('TuinLifeReviveGlow');
+		if (data.LifeReviveFreezeApplied && !data.LifeReviveWasFrozen)
+			pawn.player.cheats &= ~CF_TOTALLYFROZEN;
 		Vector3 destination;
 		int startAngle;
 		[destination, startAngle] = level.PickPlayerStart(playerNumber);
@@ -2172,8 +2175,12 @@ class TuinRPGHandler : EventHandler
 		PoisonDamage[playerNumber] = 0;
 		PoisonSource[playerNumber] = null;
 		data.LifeRevivePending = false;
+		data.LifeReviveTics = 0;
+		data.LifeReviveFadeTics = 24;
+		data.LifeReviveFreezeApplied = false;
+		data.LifeReviveWasFrozen = false;
 		data.LifeGraceTics = 3 * 35;
-		for (int particle = 0; particle < 32; particle++)
+		for (int particle = 0; particle < 48; particle++)
 			pawn.A_SpawnParticle(particle & 1 ? Color(255, 20, 12) : Color(255, 170, 40),
 				SPF_FULLBRIGHT | SPF_FACECAMERA, 24, 8.0, 0,
 				FRandom[TuinLifeRevive](-24.0, 24.0), FRandom[TuinLifeRevive](-24.0, 24.0),
@@ -2182,6 +2189,45 @@ class TuinRPGHandler : EventHandler
 		pawn.A_StartSound("misc/teleport", CHAN_BODY);
 		SetLootNotification(playerNumber, String.Format("EXTRA LIFE USED  %d REMAIN", data.Lives), 5);
 		pawn.A_Log(String.Format("Extra life used. Returned to the start with %d remaining.", data.Lives));
+	}
+
+	void UpdateLifeRevive(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || !data.LifeRevivePending) return;
+		if (!data.LifeReviveFreezeApplied)
+		{
+			data.LifeReviveWasFrozen = (pawn.player.cheats & CF_TOTALLYFROZEN) != 0;
+			data.LifeReviveFreezeApplied = true;
+			pawn.player.cheats |= CF_TOTALLYFROZEN;
+			pawn.A_RemoveLight('TuinLifeReviveGlow');
+			pawn.A_AttachLight('TuinLifeReviveGlow', DynamicLight.PulseLight,
+				Color(255, 8, 4), 96, 190, 0.42);
+			pawn.A_StartSound("misc/secret", CHAN_BODY);
+		}
+		pawn.Vel = (0, 0, 0);
+		if ((data.LifeReviveTics % 3) == 0)
+		{
+			for (int particle = 0; particle < 7; particle++)
+				pawn.A_SpawnParticle(particle & 1 ? Color(255, 12, 8) : Color(170, 0, 0),
+					SPF_FULLBRIGHT | SPF_FACECAMERA, 20, 5.0, 0,
+					FRandom[TuinLifeRevive](-20.0, 20.0), FRandom[TuinLifeRevive](-20.0, 20.0),
+					FRandom[TuinLifeRevive](0.0, pawn.Height), 0, 0,
+					FRandom[TuinLifeRevive](0.6, 2.8), 0, 0, -0.03, 0.20, 0.05);
+		}
+		if (data.LifeReviveTics > 0) data.LifeReviveTics--;
+		if (data.LifeReviveTics <= 0) ReviveWithLife(playerNumber, pawn, data);
+	}
+
+	ui string LifeReviveJohnQuote(int quote)
+	{
+		switch (quote)
+		{
+		case 0: return "JOHN: Not done yet. Get back in there.";
+		case 1: return "JOHN: Hell does not get you that easily.";
+		case 2: return "JOHN: That heart bought you another round.";
+		case 3: return "JOHN: Up again. The map is still waiting.";
+		default: return "JOHN: You still have work to do.";
+		}
 	}
 
 	string RandomJohnGreeting()
@@ -4869,8 +4915,9 @@ class TuinRPGHandler : EventHandler
 			// its persistent inventory token has transferred from the previous map.
 			ApplyLateStartCatchup(i);
 			let playerData = EnsurePlayerData(i);
-			if (playerData && playerData.LifeRevivePending) ReviveWithLife(i, players[i].mo, playerData);
+			if (playerData && playerData.LifeRevivePending) UpdateLifeRevive(i, players[i].mo, playerData);
 			if (playerData && playerData.LifeGraceTics > 0) playerData.LifeGraceTics--;
+			if (playerData && playerData.LifeReviveFadeTics > 0) playerData.LifeReviveFadeTics--;
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
@@ -5700,6 +5747,34 @@ class TuinRPGHandler : EventHandler
 		Font font = SmallFont;
 		double hudScale = clamp(CVFloat('tuin_hud_scale', 1.5), 1.25, 3.0);
 		let overlayData = GetPlayerData(players[pnum].mo);
+		if (overlayData && overlayData.LifeRevivePending)
+		{
+			double pulse = 0.31 + 0.09 * sin(level.Time * 24.0);
+			Screen.Dim(Color(150, 0, 0), pulse, 0, 0, sw, sh);
+			TextureID johnFace = TexMan.CheckForTexture("graphics/TuinReviveJohn.png", TexMan.Type_Any);
+			if (johnFace.IsValid())
+			{
+				int faceSize = clamp(int(sh * 0.29), 150, 330);
+				double facePulse = 0.84 + 0.10 * sin(level.Time * 18.0);
+				Screen.DrawTexture(johnFace, false, (sw - faceSize) / 2, int(sh * 0.10),
+					DTA_DestWidth, faceSize, DTA_DestHeight, faceSize, DTA_Alpha, facePulse);
+			}
+			double titleScale = clamp(hudScale * 1.55, 2.1, 3.5);
+			string title = "EXTRA LIFE";
+			Screen.DrawText(BigFont, Font.CR_RED,
+				(sw - BigFont.StringWidth(title) * titleScale) / 2, int(sh * 0.43), title,
+				DTA_ScaleX, titleScale, DTA_ScaleY, titleScale);
+			string quote = LifeReviveJohnQuote(overlayData.LifeReviveQuote);
+			double quoteScale = clamp(hudScale * 1.12, 1.55, 2.25);
+			Screen.DrawText(font, Font.CR_WHITE,
+				(sw - font.StringWidth(quote) * quoteScale) / 2, int(sh * 0.55), quote,
+				DTA_ScaleX, quoteScale, DTA_ScaleY, quoteScale);
+		}
+		else if (overlayData && overlayData.LifeReviveFadeTics > 0)
+		{
+			Screen.Dim(Color(130, 0, 0), 0.18 * overlayData.LifeReviveFadeTics / 24.0,
+				0, 0, sw, sh);
+		}
 		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomBloodPunchFlashTics > 0)
 		{
 			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 22.0;

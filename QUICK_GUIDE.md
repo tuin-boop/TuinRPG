@@ -60,7 +60,7 @@ John carries your health, weapons, variants, coins and RPG progress into the nex
 
 ## Lives and mission ratings
 
-You begin with three lives. When lethal damage spends a life, you return to the map start at full health with brief protection while keeping your weapons, progression, and completed map actions. Rare and stronger enemies can drop a floating red heart that grants one extra life, up to nine by default.
+You begin with three lives. When lethal damage spends a life, a short red revival scene freezes the action while John appears with an encouragement line. You then return to the map start at full health with brief protection while keeping your weapons, progression, and completed map actions. Rare and stronger enemies can drop a floating red heart that grants one extra life, up to nine by default.
 
 The Mission Report scores kills, items, secrets, completion pace, and lives preserved. Avoiding deaths contributes up to 300 of the 1000 available points, so survival matters as much as clearing the map. The report also records damage, XP, coins, special enemies, Bosses, critical hits, class abilities, and John's verdict on the run.
 
