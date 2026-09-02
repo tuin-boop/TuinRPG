@@ -2570,7 +2570,7 @@ class TuinRPGHandler : EventHandler
 		case 25: return "Your flashlight can expose a very bad idea early.";
 		case 26: return "Fresh ammunition is useless if you forget to reload.";
 		case 27: return "A weaker weapon level can still carry better traits.";
-		case 28: return "Critical chance is capped, so build damage too.";
+		case 28: return "Critical chance tops out at 50%. Put the rest into raw damage.";
 		case 29: return "Firing speed has a limit outside Tank Overdrive.";
 		case 30: return "Tank charges fastest by fighting in the thick of it.";
 		case 31: return "Overdrive turns saved ammunition into ten wild seconds.";

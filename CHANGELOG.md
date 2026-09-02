@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.65
+
+- Reworded John's unclear critical-chance tip to state the 50% cap directly and recommend raw damage afterward.
+
 ## 0.6.64
 
 - Fixed the new John tip cues being silent by routing the local HUD event through UZDoom's direct UI sound function at full volume.
