@@ -453,6 +453,9 @@ class TuinPlayerData : Inventory
 	bool LifeReviveFreezeApplied;
 	bool LifeReviveWasFrozen;
 	int LifeGraceTics;
+	double LifeEssenceHealingPool;
+	double LifeEssenceHealingRemainder;
+	int LifeEssenceHealingTics;
 	int PlayerClass;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;

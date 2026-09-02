@@ -198,6 +198,64 @@ class TuinLifePickup : Inventory
 	}
 }
 
+class TuinLifeEssencePickup : Inventory
+{
+	override void BeginPlay()
+	{
+		Super.BeginPlay();
+		A_AttachLight('TuinLifeEssenceGlow', DynamicLight.PulseLight,
+			Color(70, 255, 130), 32, 56, DynamicLight.LF_ATTENUATE, (0, 0, 12), 0.65);
+	}
+
+	override void Tick()
+	{
+		Super.Tick();
+		if ((level.Time % 7) == 0)
+			A_SpawnParticle(Color(85, 255, 145), SPF_FULLBRIGHT | SPF_FACECAMERA,
+				11, 2.2, 0, FRandom[TuinLifeEssenceSpark](-8.0, 8.0),
+				FRandom[TuinLifeEssenceSpark](-8.0, 8.0),
+				FRandom[TuinLifeEssenceSpark](1.0, 22.0), 0, 0,
+				FRandom[TuinLifeEssenceSpark](0.25, 0.9), 0, 0, -0.015, 0.12, 0.04);
+	}
+
+	override bool TryPickup(in out Actor toucher)
+	{
+		if (!toucher || !toucher.player || toucher.Health <= 0) return false;
+		let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
+		if (!data) return false;
+		data.LifeEssenceHealingPool += 30.0;
+		data.LifeEssenceHealingTics = max(data.LifeEssenceHealingTics, 350);
+		toucher.A_StartSound("pickups/lifeessence", CHAN_ITEM,
+			CHANF_MAYBE_LOCAL, 1.0, ATTN_NONE);
+		let handler = TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
+		if (handler)
+			handler.SetLootNotification(toucher.PlayerNumber(),
+				"LIFE ESSENCE   REGENERATING 30 HEALTH", 1);
+		A_RemoveLight('TuinLifeEssenceGlow');
+		GoAwayAndDie();
+		return true;
+	}
+
+	Default
+	{
+		Radius 12;
+		Height 20;
+		Scale 0.4;
+		Inventory.PickupMessage "Life Essence absorbed.";
+		+FLOATBOB
+		+RELATIVETOFLOOR
+		+INVENTORY.ALWAYSPICKUP
+		-COUNTITEM
+	}
+
+	States
+	{
+	Spawn:
+		LIFE A -1 Bright;
+		Stop;
+	}
+}
+
 class TuinJohnShopNPC : Actor
 {
 	Default

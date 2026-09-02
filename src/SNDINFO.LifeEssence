@@ -1,0 +1,6 @@
+$random pickups/lifeessence { pickups/essence1 pickups/essence2 pickups/essence3 pickups/essence4 pickups/essence5 }
+pickups/essence1 DSLE1UP
+pickups/essence2 DSLE2UP
+pickups/essence3 DSLE3UP
+pickups/essence4 DSLE4UP
+pickups/essence5 DSLE5UP

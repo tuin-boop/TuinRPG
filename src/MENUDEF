@@ -91,6 +91,8 @@ OptionMenu "TuinRPGOptions"
 	Slider "Catch-up bonus levels", "tuin_catchup_bonus_levels", 0, 10, 1
 	Slider "Base XP requirement", "tuin_xp_base", 25, 500, 25
 	Slider "XP curve exponent", "tuin_xp_exponent", 1.0, 2.5, 0.1, 1
+	Slider "Life Essence drop chance (%)", "tuin_life_essence_drop_chance", 0, 100, 1, 0
+	Command "Testing: spawn Life Essence", "netevent tuin_test_life_essence"
 	StaticText "Later starts gain levels, points, 3 Rare+ weapons and ammo", 1
 	Submenu "Ammo progression", "TuinRPGAmmoOptions"
 	Submenu "Character screen", "TuinRPGCharacter"

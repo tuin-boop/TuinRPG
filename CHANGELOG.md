@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.58
+
+- Integrated the supplied handmade Life Essence KVX model, its sprite fallback, and all five randomized pickup sounds.
+- Added a configurable 10% chance for every counted monster to drop a floating, spinning Life Essence.
+- Life Essence regenerates 30 health smoothly over ten seconds. Multiple pickups combine their remaining healing without erasing one another.
+- Added subtle green light, pickup particles, regeneration particles, and a test command under the Player RPG options.
+- Kept Life Essence free of counters, 50-pickup milestones, and collection rewards from its old implementation.
+
 ## 0.6.57
 
 - Added a quiet Doom chat notification sound when John's milestone portrait and comment appear.

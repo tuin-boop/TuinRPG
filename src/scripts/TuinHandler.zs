@@ -2159,6 +2159,48 @@ class TuinRPGHandler : EventHandler
 		if (heart) heart.bDROPPED = true;
 	}
 
+	void TryDropLifeEssence(Actor corpse)
+	{
+		if (!corpse || !corpse.bCOUNTKILL) return;
+		double chance = clamp(CVFloat('tuin_life_essence_drop_chance', 10.0), 0.0, 100.0);
+		if (chance <= 0.0 || FRandom[TuinRPGLifeEssenceDrop](0.0, 100.0) >= chance) return;
+		Vector3 dropPosition = (corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 14.0);
+		let essence = TuinLifeEssencePickup(Actor.Spawn('TuinLifeEssencePickup',
+			dropPosition, NO_REPLACE));
+		if (essence) essence.bDROPPED = true;
+	}
+
+	void ApplyLifeEssenceHealing(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.LifeEssenceHealingTics <= 0 ||
+			data.LifeEssenceHealingPool <= 0.0) return;
+		double healingShare = data.LifeEssenceHealingPool / data.LifeEssenceHealingTics;
+		data.LifeEssenceHealingPool = max(0.0,
+			data.LifeEssenceHealingPool - healingShare);
+		data.LifeEssenceHealingRemainder += healingShare;
+		data.LifeEssenceHealingTics--;
+		int healing = int(data.LifeEssenceHealingRemainder + 0.0001);
+		if (healing > 0)
+		{
+			data.LifeEssenceHealingRemainder -= healing;
+			if (pawn.Health > 0 && pawn.Health < pawn.GetMaxHealth(true))
+			{
+				pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
+				pawn.A_SpawnParticle(Color(70, 255, 125),
+					SPF_FULLBRIGHT | SPF_FACECAMERA, 12, 2.5, 0,
+					FRandom[TuinLifeEssenceHeal](-10.0, 10.0),
+					FRandom[TuinLifeEssenceHeal](-10.0, 10.0),
+					FRandom[TuinLifeEssenceHeal](4.0, pawn.Height), 0, 0, 0.4,
+					0, 0, -0.02, 0.12, 0.04);
+			}
+		}
+		if (data.LifeEssenceHealingTics <= 0)
+		{
+			data.LifeEssenceHealingPool = 0.0;
+			data.LifeEssenceHealingRemainder = 0.0;
+		}
+	}
+
 	void ReviveWithLife(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !pawn.player || !data || !data.LifeRevivePending) return;
@@ -2205,7 +2247,7 @@ class TuinRPGHandler : EventHandler
 			pawn.player.cheats |= CF_TOTALLYFROZEN;
 			pawn.A_RemoveLight('TuinLifeReviveGlow');
 			pawn.A_AttachLight('TuinLifeReviveGlow', DynamicLight.PulseLight,
-				Color(255, 8, 4), 96, 190, 0.42);
+				Color(255, 8, 4), 96, 190, 0, (0, 0, 0), 0.42);
 			pawn.A_StartSound("misc/secret", CHAN_BODY);
 		}
 		pawn.Vel = (0, 0, 0);
@@ -4632,6 +4674,7 @@ class TuinRPGHandler : EventHandler
 		}
 		SpawnCoinReward(e.Thing, data);
 		TryDropExtraLife(e.Thing, data);
+		TryDropLifeEssence(e.Thing);
 		if (!IsIconicEpisodeFinale() && !FinaleBossPromoted) TryPromoteFinaleBoss();
 		if (data.MonsterRarity >= 6 && !JohnMerchant)
 		{
@@ -5029,6 +5072,7 @@ class TuinRPGHandler : EventHandler
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
+			ApplyLifeEssenceHealing(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
 			ApplyExecutionerDeathSentence(i, players[i].mo, playerData);
@@ -5187,6 +5231,17 @@ class TuinRPGHandler : EventHandler
 			int percent = level.total_monsters > 0 ?
 				clamp(level.killed_monsters * 100 / level.total_monsters, 0, 100) : 10;
 			StartJohnMilestoneComment(e.Player, max(10, percent));
+			return;
+		}
+		if (e.Name ~== "tuin_test_life_essence")
+		{
+			Actor pawn = players[e.Player].mo;
+			if (pawn)
+			{
+				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 48.0,
+					sin(pawn.Angle) * 48.0, 8.0);
+				Actor.Spawn('TuinLifeEssencePickup', position, NO_REPLACE);
+			}
 			return;
 		}
 		if (e.Name ~== "tuin_test_blood_punch")
