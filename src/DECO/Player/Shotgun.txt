@@ -520,7 +520,7 @@ ACTOR TuinRiotShotgun : PerkShotgun
 	Fire:
 		TNT1 A 0
 		{
-			A_PlaySound("tuin/riot/fire", CHAN_WEAPON);
+			A_PlaySound("tuin/riot/fire", CHAN_WEAPON, 0.6);
 			A_GunFlash("Flash");
 			A_FireBullets(6.8, 0, 5, 5, "XtremeSGPuff");
 		}
@@ -534,10 +534,10 @@ ACTOR TuinRiotShotgun : PerkShotgun
 		RIOT B 1 A_WeaponOffset(0, 34, WOF_INTERPOLATE)
 		RIOT D 1 A_WeaponOffset(0, 33, WOF_INTERPOLATE)
 		RIOT A 1 A_WeaponOffset(0, 32, WOF_INTERPOLATE)
-		TNT1 A 0 A_PlaySound("tuin/riot/pumpback", CHAN_AUTO)
+		TNT1 A 0 A_PlaySound("tuin/riot/pumpback", CHAN_AUTO, 0.6)
 		RIOT EF 2
 		RIOT F 1 A_WeaponOffset(0, 34, WOF_INTERPOLATE)
-		TNT1 A 0 A_PlaySound("tuin/riot/pumpforward", CHAN_AUTO)
+		TNT1 A 0 A_PlaySound("tuin/riot/pumpforward", CHAN_AUTO, 0.6)
 		RIOT F 1 A_WeaponOffset(0, 36, WOF_INTERPOLATE)
 		TNT1 A 0 A_JumpIf(CallACS("CasingToggle")==0, +2)
 		TNT1 A 0 A_SpawnItemEx("shellcasing", 20, 0, 30, Random(2,3), Random(5,6), Random(5,6), 0)

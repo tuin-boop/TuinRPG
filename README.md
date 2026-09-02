@@ -148,7 +148,7 @@ The Hell Director also watches for complete stock-ammo exhaustion. Once per map 
 
 The default chances follow a descending curve: 15% Uncommon, 7% Rare, 2.5% Elite, 1% Legendary, and 0.5% Mythic. Each chance and the maximum affix count can be changed from **Tuin RPG Options**. Higher tiers gain health, damage, XP, additional affixes, generated names, and distinct HUD colors. Mythics may naturally roll four or five affixes; ordinary late-game finale Bosses can reach higher configurable counts, while the iconic episode encounters retain their smaller hand-balanced limits.
 
-Rare, Elite, Legendary and Mythic enemies whose base health is below a Hell Knight always reserve one trait slot for Armored. Their remaining traits are random. Normal and Uncommon fodder do not receive this guarantee.
+Rare, Elite, Legendary and Mythic enemies whose base health is below a Hell Knight normally reserve one trait slot for Armored. Their remaining traits are random. From player level 15 onward, enemies with at least a Cacodemon's 400 base health cannot roll Armored at all, because their scaled health pools already provide enough durability. Normal and Uncommon fodder do not receive the low-health guarantee.
 
 Chance values are literal percentages: `1.0` is 1%, while `100` guarantees that tier when higher-priority tier chances are zero. Manual changes normally affect newly spawned monsters, so use **Reroll living monsters now** to update the current map. **Testing preset: all Mythic** and **Reset rarity defaults** both reroll living monsters automatically.
 

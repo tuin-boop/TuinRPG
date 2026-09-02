@@ -442,7 +442,7 @@ class TuinRPGHandler : EventHandler
 			data.EngineerSentryReady[nearby] = true;
 			data.EngineerSentry[nearby] = null;
 			turret.Destroy();
-			pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.45);
+			pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.27);
 			SetLootNotification(playerNumber, String.Format("SENTRY %d PACKED: %d HP | %d ROUNDS",
 				nearby + 1, data.EngineerSentryStoredHealth[nearby], data.EngineerSentryStoredRounds[nearby]), 4);
 			return;
@@ -488,7 +488,7 @@ class TuinRPGHandler : EventHandler
 		data.EngineerSentry[deploySlot] = turret;
 		data.EngineerSentryDeployed[deploySlot] = true;
 		data.EngineerSentryReady[deploySlot] = true;
-		pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.7);
+		pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.42);
 		data.LevelAbilityUses++;
 		SetLootNotification(playerNumber, String.Format("SENTRY %d DEPLOYED: %d HP | %d ROUNDS",
 			deploySlot + 1, turret.Health, turret.ShotsRemaining), 4);
@@ -3556,13 +3556,16 @@ class TuinRPGHandler : EventHandler
 		if (DifficultyMode() == 3) wanted += 2;
 		wanted = min(wanted, DifficultyAffixMaximum());
 		let monsterData = GetMonsterData(monster);
+		bool meatyArmorBlocked = playerProgress >= 15 && monsterData &&
+			monsterData.OriginalMaxHealth >= 400;
 		bool lowBaseBoss = monster && !IsIconicEpisodeBoss(monster) && monsterData &&
-			monsterData.OriginalMaxHealth < 500;
+			monsterData.OriginalMaxHealth < 500 && !meatyArmorBlocked;
 		int flags = lowBaseBoss ? TuinMonsterData.AFFIX_ARMORED : 0;
 		while (AffixBitCount(flags) < wanted)
 		{
 			int bit = 1 << Random[TuinRPGAffix](0, 8);
 			if (flags & bit) continue;
+			if (meatyArmorBlocked && bit == TuinMonsterData.AFFIX_ARMORED) continue;
 			// Early bosses rely on attacks and movement, not long effective-HP buffs.
 			if ((playerProgress < 15 || IsIconicEpisodeBoss(monster)) && (bit == TuinMonsterData.AFFIX_ARMORED ||
 				bit == TuinMonsterData.AFFIX_REGENERATING || bit == TuinMonsterData.AFFIX_HEALER ||
@@ -3626,13 +3629,13 @@ class TuinRPGHandler : EventHandler
 		return true;
 	}
 
-	int RollAffixes(int count)
+	int RollAffixes(int count, int blockedFlags = 0)
 	{
 		int flags = 0;
 		for (int i = 0; i < count; i++)
 		{
 			int bit = 1 << Random[TuinRPGAffix](0, 8);
-			if (flags & bit) { i--; continue; }
+			if ((flags & bit) || (blockedFlags & bit)) { i--; continue; }
 			flags |= bit;
 		}
 		return flags;
@@ -3641,9 +3644,11 @@ class TuinRPGHandler : EventHandler
 	int RollOrdinaryMonsterAffixes(int originalHealth, int rarity)
 	{
 		int count = AffixCountForRarity(rarity);
+		bool meatyArmorBlocked = HighestActivePlayerLevel() >= 15 && originalHealth >= 400;
 		// Hell Knight health is the dividing line. Armor consumes one trait slot;
-		// all remaining slots keep their normal random rolls.
-		if (rarity >= 2 && rarity < 6 && originalHealth < 500)
+		// all remaining slots keep their normal random rolls. At level 15, Cacodemon-
+		// tier health pools no longer roll Armor because scaling already makes them meaty.
+		if (rarity >= 2 && rarity < 6 && originalHealth < 500 && !meatyArmorBlocked)
 		{
 			count = max(1, count);
 			int flags = TuinMonsterData.AFFIX_ARMORED;
@@ -3655,7 +3660,7 @@ class TuinRPGHandler : EventHandler
 			}
 			return flags;
 		}
-		return RollAffixes(count);
+		return RollAffixes(count, meatyArmorBlocked ? TuinMonsterData.AFFIX_ARMORED : 0);
 	}
 
 	string AffixList(TuinMonsterData data)

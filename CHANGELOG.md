@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.66
+
+- Prevented Cacodemon-tier and tougher enemies (400+ base health) from rolling Armored once the highest active player reaches level 15, including promoted finale Bosses.
+- Reduced the Riot Shotgun's firing and action sounds by 40%.
+- Reduced Engineer sentry firing, impact, deployment, packing, and destruction sounds by 40%.
+
 ## 0.6.65
 
 - Reworded John's unclear critical-chance tip to state the 50% cap directly and recommend raw damage afterward.

@@ -36,7 +36,7 @@ class TuinEngineerTracer : FastProjectile
 		TRAC A 1 Bright;
 		Loop;
 	Death:
-		TNT1 A 0 A_PlaySound("tuin/engineer/impact", CHAN_AUTO, 0.45);
+		TNT1 A 0 A_PlaySound("tuin/engineer/impact", CHAN_AUTO, 0.27);
 		Stop;
 	}
 }
@@ -134,7 +134,7 @@ class TuinEngineerTurret : Actor
 		double multiplier = (1.0 + TrainingRank * 0.10) * (1.0 + WeaponPowerPercent * 0.01);
 		bullet.FixedDamage = max(1, int(levelDamage * multiplier + 0.5));
 		ShotsRemaining--;
-		A_PlaySound("tuin/engineer/fire", CHAN_WEAPON, 0.72);
+		A_PlaySound("tuin/engineer/fire", CHAN_WEAPON, 0.43);
 		SetState(FindState('Fire'), true);
 	}
 
@@ -175,7 +175,7 @@ class TuinEngineerTurret : Actor
 		TURE B -1;
 		Stop;
 	Death:
-		TURD A 1 A_PlaySound("weapons/rocklx", CHAN_BODY, 0.8);
+		TURD A 1 A_PlaySound("weapons/rocklx", CHAN_BODY, 0.48);
 		TURD A -1;
 		Stop;
 	}
