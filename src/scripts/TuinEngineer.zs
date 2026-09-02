@@ -1,5 +1,7 @@
 class TuinEngineerTracer : FastProjectile
 {
+	int FixedDamage;
+
 	Default
 	{
 		Radius 2;
@@ -23,6 +25,11 @@ class TuinEngineerTracer : FastProjectile
 			DynamicLight.LF_ATTENUATE | DynamicLight.LF_DONTLIGHTSELF);
 	}
 
+	override int DoSpecialDamage(Actor victim, int damage, Name damageType)
+	{
+		return FixedDamage > 0 ? FixedDamage : Super.DoSpecialDamage(victim, damage, damageType);
+	}
+
 	States
 	{
 	Spawn:
@@ -34,17 +41,16 @@ class TuinEngineerTracer : FastProjectile
 	}
 }
 
-class TuinEngineerTracerII : TuinEngineerTracer { Default { DamageFunction 9; } }
-class TuinEngineerTracerIII : TuinEngineerTracer { Default { DamageFunction 10; } }
-class TuinEngineerTracerIV : TuinEngineerTracer { Default { DamageFunction 11; } }
-class TuinEngineerTracerUltimate : TuinEngineerTracer { Default { DamageFunction 14; } }
-
 class TuinEngineerTurret : Actor
 {
 	int OwnerPlayer;
+	int SentrySlot;
 	int ShotsRemaining;
 	int TrainingRank;
-	bool Ultimate;
+	int OwnerLevel;
+	int WeaponPowerPercent;
+	int WeaponHastePercent;
+	int WeaponCriticalPercent;
 	int FireClock;
 	int ScanClock;
 
@@ -68,14 +74,19 @@ class TuinEngineerTurret : Actor
 		Tag "Engineer Auto-Turret";
 	}
 
-	void Configure(int playerNumber, Actor ownerPawn, int training, bool ultimate)
+	void Configure(int playerNumber, int sentrySlot, Actor ownerPawn, int training, int ownerLevel,
+		int weaponPower, int weaponHaste, int weaponCritical, int startingHealth, int startingRounds)
 	{
 		OwnerPlayer = playerNumber;
+		self.SentrySlot = sentrySlot;
 		master = ownerPawn;
 		TrainingRank = clamp(training, 0, 3);
-		Ultimate = ultimate;
-		ShotsRemaining = ultimate ? 400 : 250;
-		Health = Ultimate ? 600 : 400;
+		self.OwnerLevel = max(1, ownerLevel);
+		WeaponPowerPercent = max(0, weaponPower);
+		WeaponHastePercent = max(0, weaponHaste);
+		WeaponCriticalPercent = max(0, weaponCritical);
+		ShotsRemaining = clamp(startingRounds, 1, 250);
+		Health = clamp(startingHealth, 1, 400);
 		A_SetHealth(Health);
 	}
 
@@ -112,17 +123,16 @@ class TuinEngineerTurret : Actor
 		Vector3 delta = level.Vec3Diff(start, finish);
 		double distance = delta.length();
 		if (distance <= 0.01) return;
-		Name projectileType = Ultimate ? 'TuinEngineerTracerUltimate' :
-			TrainingRank >= 3 ? 'TuinEngineerTracerIV' :
-			TrainingRank == 2 ? 'TuinEngineerTracerIII' :
-			TrainingRank == 1 ? 'TuinEngineerTracerII' : 'TuinEngineerTracer';
-		TuinEngineerTracer bullet = TuinEngineerTracer(Actor.Spawn(projectileType, start, NO_REPLACE));
+		TuinEngineerTracer bullet = TuinEngineerTracer(Actor.Spawn('TuinEngineerTracer', start, NO_REPLACE));
 		if (!bullet) return;
 		bullet.target = self;
 		bullet.master = master;
 		bullet.Angle = atan2(delta.y, delta.x);
 		bullet.Pitch = -asin(delta.z / distance);
 		bullet.Vel = delta / distance * bullet.Speed;
+		int levelDamage = 8 + max(0, OwnerLevel - 1) / 5;
+		double multiplier = (1.0 + TrainingRank * 0.10) * (1.0 + WeaponPowerPercent * 0.01);
+		bullet.FixedDamage = max(1, int(levelDamage * multiplier + 0.5));
 		ShotsRemaining--;
 		A_PlaySound("tuin/engineer/fire", CHAN_WEAPON, 0.72);
 		SetState(FindState('Fire'), true);
@@ -148,7 +158,7 @@ class TuinEngineerTurret : Actor
 		if (--FireClock <= 0)
 		{
 			FireTracer();
-			FireClock = Ultimate ? 5 : 7;
+			FireClock = max(4, int(7.0 / (1.0 + WeaponHastePercent * 0.01) + 0.5));
 		}
 	}
 

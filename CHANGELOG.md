@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.60
+
+- Reworked Engineer into a recoverable sentry-management class with 15% less maximum health and 10% less personal weapon damage.
+- Removed the deployment timer. Turrets now persist until broken or out of ammunition, and pressing the Class Ability key near a healthy turret packs it while preserving its exact health and rounds.
+- Added Fabrication: an unavailable sentry is rebuilt by kills and ammunition pickups. Stronger monsters grant more progress, ammo types are weighted by value, and Class Training increases Fabrication gains by 10% per rank.
+- Replaced Sentry Protocol with **Twin Sentries**, giving the Ultimate two independent turret slots that must each be maintained and rebuilt.
+- Added level scaling to turret rounds and a deployment-time snapshot of 50% of the held weapon variant's item-level Power, Power, Haste, and critical bonuses.
+- Expanded the Engineer HUD to show each slot as active, packed, or rebuilding, together with current HP, rounds, or Fabrication percentage.
+
 ## 0.6.59
 
 - Added Engineer as a sixth permanent class, with a placeable auto-turret on the Class Ability key.

@@ -31,7 +31,7 @@ Monsters also scale with the map and can appear as **Uncommon, Rare, Elite, Lege
 
 Every five levels grants a perk point. The first point permanently chooses Tank, Healer, Executioner, Doom Guy, Rogue, or Engineer under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, and class perks. Class Ultimates unlock at level 20 after Class Training II.
 
-Each class has a distinct V ability. Tank charges Overdrive by dealing and taking damage. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy holds V to ready Blood Punch and releases it to strike. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires. Engineer places one persistent auto-turret that automatically attacks visible hostiles with physical 3D tracer rounds.
+Each class has a distinct V ability. Tank charges Overdrive by dealing and taking damage. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy holds V to ready Blood Punch and releases it to strike. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires. Engineer places one persistent auto-turret that automatically attacks visible hostiles with physical 3D tracer rounds; press V near it to pack it without losing its remaining health or ammunition. If it breaks or empties, kills and ammo pickups rebuild its Fabrication meter. Its Ultimate unlocks a second independently maintained turret.
 
 ## Weapon loot
 

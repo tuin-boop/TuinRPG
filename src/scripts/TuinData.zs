@@ -461,6 +461,18 @@ class TuinPlayerData : Inventory
 	int HealerSupplyCooldownTics;
 	int EngineerTurretCooldownTics;
 	Actor EngineerTurret;
+	bool EngineerSentriesInitialized;
+	bool EngineerSecondSentryGranted;
+	Actor EngineerSentry[2];
+	bool EngineerSentryDeployed[2];
+	bool EngineerSentryReady[2];
+	int EngineerSentryStoredHealth[2];
+	int EngineerSentryStoredRounds[2];
+	double EngineerSentryFabrication[2];
+	string EngineerSentryMap;
+	class<Ammo> EngineerAmmoType[32];
+	int EngineerAmmoLastAmount[32];
+	int EngineerAmmoCount;
 	int PerkVitalCore;
 	int PerkScavenger;
 	int PerkKillerInstinct;

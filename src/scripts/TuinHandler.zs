@@ -271,27 +271,193 @@ class TuinRPGHandler : EventHandler
 		return 700;
 	}
 
-	clearscope static int EngineerTurretCooldown(TuinPlayerData data)
+	clearscope static int EngineerSlotCount(TuinPlayerData data)
 	{
-		double multiplier = 1.0 - (data ? data.PerkClassMastery : 0) * 0.10;
-		if (data && data.PerkCapstone) multiplier *= 0.75;
-		return max(350, int(1050 * multiplier));
+		return data && data.PerkCapstone ? 2 : 1;
 	}
 
-	void DeployEngineerTurret(int playerNumber, Actor pawn, TuinPlayerData data)
+	void InitializeEngineerSentries(TuinPlayerData data)
+	{
+		if (!data || data.EngineerSentriesInitialized) return;
+		data.EngineerSentriesInitialized = true;
+		data.EngineerSentryMap = String.Format("%s", level.MapName);
+		let legacyTurret = TuinEngineerTurret(data.EngineerTurret);
+		if (legacyTurret && legacyTurret.Health > 0 && legacyTurret.ShotsRemaining > 0)
+		{
+			legacyTurret.SentrySlot = 0;
+			data.EngineerSentry[0] = legacyTurret;
+			data.EngineerSentryDeployed[0] = true;
+			data.EngineerSentryReady[0] = true;
+			data.EngineerSentryStoredHealth[0] = legacyTurret.Health;
+			data.EngineerSentryStoredRounds[0] = legacyTurret.ShotsRemaining;
+		}
+		else
+		{
+			data.EngineerSentryReady[0] = true;
+			data.EngineerSentryStoredHealth[0] = 400;
+			data.EngineerSentryStoredRounds[0] = 250;
+		}
+		data.EngineerTurret = null;
+		data.EngineerTurretCooldownTics = 0;
+		if (data.PerkCapstone)
+		{
+			data.EngineerSecondSentryGranted = true;
+			data.EngineerSentryReady[1] = true;
+			data.EngineerSentryStoredHealth[1] = 400;
+			data.EngineerSentryStoredRounds[1] = 250;
+		}
+	}
+
+	void AddEngineerFabrication(int playerNumber, TuinPlayerData data, double amount)
+	{
+		if (!data || data.PlayerClass != 6 || amount <= 0.0) return;
+		InitializeEngineerSentries(data);
+		double remaining = amount * (1.0 + data.PerkClassMastery * 0.10);
+		for (int slot = 0; slot < EngineerSlotCount(data) && remaining > 0.0; slot++)
+		{
+			if (data.EngineerSentryReady[slot] || data.EngineerSentryDeployed[slot]) continue;
+			double needed = 100.0 - data.EngineerSentryFabrication[slot];
+			double applied = min(needed, remaining);
+			data.EngineerSentryFabrication[slot] += applied;
+			remaining -= applied;
+			if (data.EngineerSentryFabrication[slot] >= 99.999)
+			{
+				data.EngineerSentryFabrication[slot] = 0.0;
+				data.EngineerSentryReady[slot] = true;
+				data.EngineerSentryStoredHealth[slot] = 400;
+				data.EngineerSentryStoredRounds[slot] = 250;
+				SetLootNotification(playerNumber, String.Format("SENTRY %d REBUILT - READY TO DEPLOY", slot + 1), 4);
+			}
+		}
+	}
+
+	void UpdateEngineerAmmoFabrication(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 6) return;
+		InitializeEngineerSentries(data);
+		for (Inventory item = pawn.Inv; item; item = item.Inv)
+		{
+			let ammo = Ammo(item);
+			if (!ammo) continue;
+			class<Ammo> ammoType = (class<Ammo>)(ammo.GetClass());
+			int index = -1;
+			for (int i = 0; i < data.EngineerAmmoCount; i++)
+				if (data.EngineerAmmoType[i] == ammoType) { index = i; break; }
+			if (index < 0)
+			{
+				if (data.EngineerAmmoCount >= 32) continue;
+				index = data.EngineerAmmoCount++;
+				data.EngineerAmmoType[index] = ammoType;
+				data.EngineerAmmoLastAmount[index] = ammo.Amount;
+				continue;
+			}
+			int gained = ammo.Amount - data.EngineerAmmoLastAmount[index];
+			if (gained > 0)
+			{
+				double weight = ammo is 'RocketAmmo' ? 2.5 : ammo is 'Shell' ? 1.0 : 0.25;
+				AddEngineerFabrication(playerNumber, data, min(8.0, gained * weight));
+			}
+			data.EngineerAmmoLastAmount[index] = ammo.Amount;
+		}
+	}
+
+	void UpdateEngineerSentries(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 6) return;
+		InitializeEngineerSentries(data);
+		string currentMap = String.Format("%s", level.MapName);
+		if (!(data.EngineerSentryMap ~== currentMap))
+		{
+			for (int slot = 0; slot < 2; slot++)
+			{
+				data.EngineerSentry[slot] = null;
+				data.EngineerSentryDeployed[slot] = false;
+				if (data.EngineerSentryStoredHealth[slot] > 0 && data.EngineerSentryStoredRounds[slot] > 0)
+					data.EngineerSentryReady[slot] = true;
+			}
+			data.EngineerSentryMap = currentMap;
+		}
+		if (data.PerkCapstone && !data.EngineerSecondSentryGranted)
+		{
+			data.EngineerSecondSentryGranted = true;
+			data.EngineerSentryReady[1] = true;
+			data.EngineerSentryStoredHealth[1] = 400;
+			data.EngineerSentryStoredRounds[1] = 250;
+		}
+		for (int slot = 0; slot < EngineerSlotCount(data); slot++)
+		{
+			if (!data.EngineerSentryDeployed[slot]) continue;
+			let turret = TuinEngineerTurret(data.EngineerSentry[slot]);
+			if (turret && turret.Health > 0 && turret.ShotsRemaining > 0)
+			{
+				turret.master = pawn;
+				turret.TrainingRank = clamp(data.PerkClassMastery, 0, 3);
+				data.EngineerSentryStoredHealth[slot] = turret.Health;
+				data.EngineerSentryStoredRounds[slot] = turret.ShotsRemaining;
+				continue;
+			}
+			bool ranDry = turret && turret.ShotsRemaining <= 0;
+			if (turret) turret.Destroy();
+			data.EngineerSentry[slot] = null;
+			data.EngineerSentryDeployed[slot] = false;
+			data.EngineerSentryReady[slot] = false;
+			data.EngineerSentryStoredHealth[slot] = 0;
+			data.EngineerSentryStoredRounds[slot] = 0;
+			data.EngineerSentryFabrication[slot] = 0.0;
+			SetLootNotification(playerNumber, ranDry ?
+				String.Format("SENTRY %d EMPTY - KILLS OR AMMO REBUILD IT", slot + 1) :
+				String.Format("SENTRY %d DESTROYED - KILLS OR AMMO REBUILD IT", slot + 1), 0);
+		}
+	}
+
+	int NearbyEngineerSentry(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return -1;
+		int nearest = -1;
+		double nearestDistance = 113.0;
+		for (int slot = 0; slot < EngineerSlotCount(data); slot++)
+		{
+			let turret = TuinEngineerTurret(data.EngineerSentry[slot]);
+			if (!data.EngineerSentryDeployed[slot] || !turret || turret.Health <= 0 ||
+				turret.ShotsRemaining <= 0) continue;
+			double distance = pawn.Distance3D(turret);
+			if (distance >= nearestDistance || !pawn.CheckSight(turret, SF_IGNOREWATERBOUNDARY)) continue;
+			nearest = slot;
+			nearestDistance = distance;
+		}
+		return nearest;
+	}
+
+	void UseEngineerTurret(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data || data.PlayerClass != 6 || pawn.Health <= 0) return;
-		let activeTurret = TuinEngineerTurret(data.EngineerTurret);
-		if (activeTurret && activeTurret.Health > 0 && activeTurret.ShotsRemaining > 0)
+		UpdateEngineerSentries(playerNumber, pawn, data);
+		int nearby = NearbyEngineerSentry(pawn, data);
+		if (nearby >= 0)
 		{
-			SetLootNotification(playerNumber, String.Format("SENTRY ACTIVE: %d HP | %d ROUNDS",
-				activeTurret.Health, activeTurret.ShotsRemaining), 0);
+			let turret = TuinEngineerTurret(data.EngineerSentry[nearby]);
+			data.EngineerSentryStoredHealth[nearby] = turret.Health;
+			data.EngineerSentryStoredRounds[nearby] = turret.ShotsRemaining;
+			data.EngineerSentryDeployed[nearby] = false;
+			data.EngineerSentryReady[nearby] = true;
+			data.EngineerSentry[nearby] = null;
+			turret.Destroy();
+			pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.45);
+			SetLootNotification(playerNumber, String.Format("SENTRY %d PACKED: %d HP | %d ROUNDS",
+				nearby + 1, data.EngineerSentryStoredHealth[nearby], data.EngineerSentryStoredRounds[nearby]), 4);
 			return;
 		}
-		if (data.EngineerTurretCooldownTics > 0)
+		int deploySlot = -1;
+		for (int slot = 0; slot < EngineerSlotCount(data); slot++)
+			if (data.EngineerSentryReady[slot] && !data.EngineerSentryDeployed[slot]) { deploySlot = slot; break; }
+		if (deploySlot < 0)
 		{
-			SetLootNotification(playerNumber, String.Format("SENTRY RECHARGING: %.1f SEC",
-				data.EngineerTurretCooldownTics / 35.0), 0);
+			bool hasActive;
+			for (int slot = 0; slot < EngineerSlotCount(data); slot++)
+				if (data.EngineerSentryDeployed[slot]) { hasActive = true; break; }
+			SetLootNotification(playerNumber, hasActive ?
+				"MOVE NEAR YOUR SENTRY AND PRESS V TO PACK IT" :
+				"NO SENTRY - BUILD FABRICATION WITH KILLS OR AMMO", 0);
 			return;
 		}
 		Vector3 position = pawn.Pos + (cos(pawn.Angle) * 64.0,
@@ -304,13 +470,28 @@ class TuinRPGHandler : EventHandler
 			return;
 		}
 		turret.Angle = pawn.Angle;
-		turret.Configure(playerNumber, pawn, data.PerkClassMastery, data.PerkCapstone);
-		data.EngineerTurret = turret;
-		data.EngineerTurretCooldownTics = EngineerTurretCooldown(data);
+		int weaponPower = 0;
+		int weaponHaste = 0;
+		int weaponCritical = 0;
+		int variantIndex = ActiveWeaponVariantIndex(playerNumber, data);
+		if (variantIndex >= 0)
+		{
+			weaponPower = int((WeaponItemLevelPowerPercent(data.VariantItemLevel[variantIndex]) +
+				data.VariantPowerPercent[variantIndex]) * 0.50 + 0.5);
+			weaponHaste = int(data.VariantHastePercent[variantIndex] * 0.50 + 0.5);
+			weaponCritical = int(WeaponCriticalPercent(data.VariantAffixFlags[variantIndex],
+				data.VariantQuality[variantIndex], data.VariantItemLevel[variantIndex]) * 0.50 + 0.5);
+		}
+		turret.Configure(playerNumber, deploySlot, pawn, data.PerkClassMastery, data.PlayerLevel,
+			weaponPower, weaponHaste, weaponCritical, data.EngineerSentryStoredHealth[deploySlot],
+			data.EngineerSentryStoredRounds[deploySlot]);
+		data.EngineerSentry[deploySlot] = turret;
+		data.EngineerSentryDeployed[deploySlot] = true;
+		data.EngineerSentryReady[deploySlot] = true;
 		pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.7);
 		data.LevelAbilityUses++;
-		SetLootNotification(playerNumber, String.Format("AUTO-TURRET DEPLOYED: %d ROUNDS",
-			turret.ShotsRemaining), 4);
+		SetLootNotification(playerNumber, String.Format("SENTRY %d DEPLOYED: %d HP | %d ROUNDS",
+			deploySlot + 1, turret.Health, turret.ShotsRemaining), 4);
 	}
 
 	clearscope static int ExecutionerMarkDuration(TuinPlayerData data)
@@ -686,7 +867,8 @@ class TuinRPGHandler : EventHandler
 		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
 		int desiredModifier = data.PlayerClass == 1 ? 300 - baseMaximum :
 			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
-			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) : 0;
+			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) :
+			data.PlayerClass == 6 ? -max(1, int(unmodifiedMaximum * 0.15 + 0.5)) : 0;
 		int currentModifier = -data.AppliedClassHealthPenalty;
 		int delta = desiredModifier - currentModifier;
 		if (delta != 0)
@@ -1379,8 +1561,8 @@ class TuinRPGHandler : EventHandler
 		}
 		else if (chosenClass == 6)
 		{
-			data.EngineerTurretCooldownTics = 0;
-			data.EngineerTurret = null;
+			data.EngineerSentriesInitialized = false;
+			InitializeEngineerSentries(data);
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -4426,6 +4608,9 @@ class TuinRPGHandler : EventHandler
 		bool wasCritical = false;
 		bool rogueAmbushAttack = false;
 		bool engineerTurretAttack = e.DamageType == 'TuinEngineerTurret';
+		let engineerTurret = engineerTurretAttack && e.Inflictor ?
+			TuinEngineerTurret(e.Inflictor.target) : null;
+		int engineerCriticalBonus = engineerTurret ? engineerTurret.WeaponCriticalPercent : 0;
 		// Damage callbacks occur after the engine applies the original hit.
 		// Preserve the reconstructed pre-hit health for charge and leech so a
 		// lethal hit still receives credit for the damage it actually dealt.
@@ -4474,6 +4659,8 @@ class TuinRPGHandler : EventHandler
 					if (markBonus > 0.0) multiplier *= 1.0 + markBonus;
 				}
 				else if (playerData.PlayerClass == 4) multiplier *= 1.10;
+				else if (playerData.PlayerClass == 6 && !engineerTurretAttack)
+					playerBaseDamageFactor = 0.90;
 				bool firstAmbushHit = playerData.PlayerClass == 5 &&
 					(playerData.RogueVeiled || playerData.RogueAmbushGraceTics > 0);
 				bool rogueAmbush = firstAmbushHit ||
@@ -4504,7 +4691,8 @@ class TuinRPGHandler : EventHandler
 				int variantIndex = (bloodPunchAttack || engineerTurretAttack) ? -1 :
 					ActiveWeaponVariantIndex(attacker, playerData);
 				if (victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
-					FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
+					FRandom[TuinRPGCritical](0.0, 100.0) <
+					TotalCriticalChance(playerData, variantIndex) + engineerCriticalBonus)
 				{
 					multiplier *= 2.0;
 					wasCritical = true;
@@ -4722,8 +4910,15 @@ class TuinRPGHandler : EventHandler
 			{
 				if (data.MonsterRarity >= 6) playerData.LevelBossKills++;
 				else if (data.MonsterRarity >= 2) playerData.LevelEliteKills++;
+				if (playerData.PlayerClass == 6)
+				{
+					double fabrication = 5.0 + clamp(data.MonsterLevel / 5, 0, 10) +
+						min(20, data.MonsterRarity * 3);
+					AddEngineerFabrication(killer, playerData, fabrication);
+				}
 			}
-			int variantIndex = ActiveWeaponVariantIndex(killer, playerData);
+			int variantIndex = e.DamageType == 'TuinEngineerTurret' ? -1 :
+				ActiveWeaponVariantIndex(killer, playerData);
 			if (variantIndex >= 0)
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
@@ -5129,8 +5324,8 @@ class TuinRPGHandler : EventHandler
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
-			if (playerData && playerData.EngineerTurretCooldownTics > 0)
-				playerData.EngineerTurretCooldownTics--;
+			UpdateEngineerSentries(i, players[i].mo, playerData);
+			UpdateEngineerAmmoFabrication(i, players[i].mo, playerData);
 			ApplyLifeEssenceHealing(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
@@ -5265,7 +5460,7 @@ class TuinRPGHandler : EventHandler
 			}
 			if (rogueData && pawn && rogueData.PlayerClass == 6)
 			{
-				DeployEngineerTurret(e.Player, pawn, rogueData);
+				UseEngineerTurret(e.Player, pawn, rogueData);
 				return;
 			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
@@ -5315,11 +5510,21 @@ class TuinRPGHandler : EventHandler
 			if (testData && testPawn)
 			{
 				testData.PlayerClass = 6;
-				testData.EngineerTurretCooldownTics = 0;
-				if (testData.EngineerTurret) testData.EngineerTurret.Destroy();
-				testData.EngineerTurret = null;
+				for (int slot = 0; slot < 2; slot++)
+				{
+					if (testData.EngineerSentry[slot]) testData.EngineerSentry[slot].Destroy();
+					testData.EngineerSentry[slot] = null;
+					testData.EngineerSentryDeployed[slot] = false;
+					testData.EngineerSentryReady[slot] = false;
+					testData.EngineerSentryStoredHealth[slot] = 0;
+					testData.EngineerSentryStoredRounds[slot] = 0;
+					testData.EngineerSentryFabrication[slot] = 0.0;
+				}
+				testData.EngineerSentriesInitialized = false;
+				testData.EngineerSecondSentryGranted = false;
+				InitializeEngineerSentries(testData);
 				ApplyClassHealth(testPawn, testData);
-				DeployEngineerTurret(e.Player, testPawn, testData);
+				UseEngineerTurret(e.Player, testPawn, testData);
 			}
 			return;
 		}
@@ -5751,24 +5956,27 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 6) return;
-		let turret = TuinEngineerTurret(data.EngineerTurret);
 		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
-		string status;
-		int statusColor;
-		if (turret && turret.Health > 0 && turret.ShotsRemaining > 0)
+		string status = "";
+		int statusColor = Font.CR_GOLD;
+		for (int slot = 0; slot < (data.PerkCapstone ? 2 : 1); slot++)
 		{
-			status = String.Format("SENTRY ACTIVE  %d HP  |  %d ROUNDS", turret.Health, turret.ShotsRemaining);
-			statusColor = Font.CR_CYAN;
-		}
-		else if (data.EngineerTurretCooldownTics > 0)
-		{
-			status = String.Format("SENTRY RECHARGING  %.1f SEC", data.EngineerTurretCooldownTics / 35.0);
-			statusColor = Font.CR_GOLD;
-		}
-		else
-		{
-			status = "AUTO-TURRET READY  -  PRESS V TO DEPLOY";
-			statusColor = Font.CR_GREEN;
+			if (slot > 0) status.AppendFormat("  |  ");
+			let turret = TuinEngineerTurret(data.EngineerSentry[slot]);
+			if (data.EngineerSentryDeployed[slot] && turret && turret.Health > 0 && turret.ShotsRemaining > 0)
+			{
+				status.AppendFormat("S%d ACTIVE %dHP/%dR", slot + 1, turret.Health, turret.ShotsRemaining);
+				statusColor = Font.CR_CYAN;
+			}
+			else if (data.EngineerSentryReady[slot])
+			{
+				status.AppendFormat("S%d PACKED %dHP/%dR", slot + 1,
+					data.EngineerSentryStoredHealth[slot], data.EngineerSentryStoredRounds[slot]);
+				if (statusColor != Font.CR_CYAN) statusColor = Font.CR_GREEN;
+			}
+			else
+				status.AppendFormat("S%d FABRICATION %.0f%%", slot + 1,
+					clamp(data.EngineerSentryFabrication[slot], 0.0, 100.0));
 		}
 		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
 		int panelX = screenWidth - panelWidth - 10;

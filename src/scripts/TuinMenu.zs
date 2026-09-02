@@ -170,7 +170,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		double luckCritical = data.Luck * 0.5;
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data);
 		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 0.50) : data.PlayerClass == 2 ? 0.75 :
-			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : 1.0;
+			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : data.PlayerClass == 6 ? 0.90 : 1.0;
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
 		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
 			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
@@ -424,11 +424,11 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		else
 		{
 			role = "FIELD ENGINEER";
-			bonuses = "DEPLOYABLE 400 HP AUTO-TURRET | 250 ROUNDS";
-			tradeoff = "ONLY ONE ACTIVE SENTRY | 30 SEC REDEPLOY";
-			ability = "V: PLACE AN AUTO-TURRET WITH 3D TRACER ROUNDS";
-			training = "+10% TURRET DAMAGE | 10% FASTER REDEPLOY PER RANK";
-			ultimate = "SENTRY PROTOCOL: 600 HP | 400 ROUNDS | FASTER FIRE";
+			bonuses = "DEPLOYABLE 400 HP AUTO-TURRET | 250 TRACER ROUNDS";
+			tradeoff = "-15% MAX HP | -10% WEAPON DAMAGE";
+			ability = "V: DEPLOY | PRESS V NEAR SENTRY TO PACK IT";
+			training = "+10% TURRET DAMAGE AND FABRICATION PER RANK";
+			ultimate = "TWIN SENTRIES: OWN AND DEPLOY TWO TURRETS";
 		}
 
 		int center = Screen.GetWidth() / 2;
