@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.74
+
+- The quick-grenade system now recognizes every weapon flagged as melee, including the Rogue Knife, and hides it during the throw so the grenade animation cannot produce three hands.
+- Mirrored the Rogue Silenced Pistol into the left hand, leaving the right hand visually free for quick-grenade throws.
+- Removed the post-shot upward/equip motion from both Rogue weapons by returning attacks directly to their steady ready state.
+
 ## 0.6.73
 
 - Assigned the Rogue Knife and Rogue Silenced Pistol to weapon slots 1 and 2, so both can be selected normally.

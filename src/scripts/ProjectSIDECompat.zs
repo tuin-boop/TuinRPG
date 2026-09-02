@@ -472,7 +472,8 @@ class PSCompatWeaponHandler : EventHandler
 
 		Weapon currentWeapon = pawn.player.ReadyWeapon;
 		name currentWeaponName = currentWeapon ? currentWeapon.GetClassName() : 'None';
-		bool hideMeleeWeapon = engineer || currentWeaponName == 'PerkFist' ||
+		bool hideMeleeWeapon = engineer || (currentWeapon && currentWeapon.bMELEEWEAPON) ||
+			currentWeaponName == 'PerkFist' ||
 			currentWeaponName == 'Fist' || currentWeaponName == 'Z86Chainsaw' ||
 			currentWeaponName == 'Chainsaw';
 

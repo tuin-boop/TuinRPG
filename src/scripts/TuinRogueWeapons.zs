@@ -75,7 +75,7 @@ class TuinRogueKnife : TuinRogueWeapon
 		NIFE FGH 1;
 		NIHA ABCDEF 1;
 		NIFE A 4 A_ReFire;
-		Goto Ready;
+		Goto ReadyLoop;
 	}
 }
 
@@ -100,31 +100,31 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 		PSSI A -1;
 		Stop;
 	Ready:
-		SIEQ ABCD 1;
-		SIPI A 1;
+		RQEQ ABCD 1;
+		RQPI A 1;
 		Goto ReadyLoop;
 	ReadyLoop:
-		SIPI A 1 A_WeaponReady;
+		RQPI A 1 A_WeaponReady;
 		Loop;
 	Select:
 		TNT1 A 1 A_Raise;
 		Loop;
 	Deselect:
-		SIPI A 1 A_Lower;
+		RQPI A 1 A_Lower;
 		Loop;
 	Fire:
-		SIPI A 1;
-		SIPI B 2;
-		SIPI C 2
+		RQPI A 1;
+		RQPI B 2;
+		RQPI C 2
 		{
 			A_PlaySound("tuin/rogue/silenced", CHAN_WEAPON, 0.8);
 			A_FireBullets(1.4, 0.6, 1, 8, "TuinRogueSilencedPuff");
 		}
-		SIPI DEFGHI 1;
-		SIPI F 2;
-		SIPI B 1 A_ReFire;
-		SIPI A 1;
-		Goto Ready;
+		RQPI DEFGHI 1;
+		RQPI F 2;
+		RQPI B 1 A_ReFire;
+		RQPI A 1;
+		Goto ReadyLoop;
 	}
 }
 

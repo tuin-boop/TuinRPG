@@ -46,6 +46,74 @@ Sprite EXSPA0, 766, 782
 	Patch "graphics/TuinExplosiveSupply.png", 0, 0
 }
 
+// Left-handed first-person frames for the Rogue's silenced pistol. The source
+// sprites remain untouched; these virtual sprites mirror their art and offsets.
+Sprite RQEQA0, 94, 103
+{
+	Offset 291, -116
+	Patch SIEQA0, 0, 0 { FlipX }
+}
+Sprite RQEQB0, 142, 163
+{
+	Offset 264, -46
+	Patch SIEQB0, 0, 0 { FlipX }
+}
+Sprite RQEQC0, 91, 83
+{
+	Offset 240, -111
+	Patch SIEQC0, 0, 0 { FlipX }
+}
+Sprite RQEQD0, 57, 71
+{
+	Offset 197, -98
+	Patch SIEQD0, 0, 0 { FlipX }
+}
+Sprite RQPIA0, 57, 71
+{
+	Offset 194, -97
+	Patch SIPIA0, 0, 0 { FlipX }
+}
+Sprite RQPIB0, 128, 128
+{
+	Offset 224, -43
+	Patch SIPIB0, 0, 0 { FlipX }
+}
+Sprite RQPIC0, 128, 128
+{
+	Offset 224, -43
+	Patch SIPIC0, 0, 0 { FlipX }
+}
+Sprite RQPID0, 128, 128
+{
+	Offset 223, -43
+	Patch SIPID0, 0, 0 { FlipX }
+}
+Sprite RQPIE0, 128, 128
+{
+	Offset 223, -41
+	Patch SIPIE0, 0, 0 { FlipX }
+}
+Sprite RQPIF0, 128, 128
+{
+	Offset 223, -40
+	Patch SIPIF0, 0, 0 { FlipX }
+}
+Sprite RQPIG0, 128, 128
+{
+	Offset 224, -40
+	Patch SIPIG0, 0, 0 { FlipX }
+}
+Sprite RQPIH0, 128, 128
+{
+	Offset 224, -41
+	Patch SIPIH0, 0, 0 { FlipX }
+}
+Sprite RQPII0, 128, 128
+{
+	Offset 224, -42
+	Patch SIPII0, 0, 0 { FlipX }
+}
+
 // Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
 // 70x59 menu units it is centered above the stock menu choices.
 Graphic M_DOOM, 1115, 941
