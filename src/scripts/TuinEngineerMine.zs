@@ -16,7 +16,7 @@ class TuinEngineerMineVisual : Inventory
 	Throw:
 		MINE BCD 1;
 		MINE E 2;
-		MINE F 1 A_PlaySound("tuin/mine/beep", CHAN_BODY, 0.7);
+		MINE F 1;
 		MINE G 3;
 		MINE H 2;
 		MINE IJKL 1;

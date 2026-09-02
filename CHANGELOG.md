@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.68
+
+- Fixed an Engineer mine crash when its first-person overlay tried to execute a mine-owned sound action through the currently equipped weapon. The overlay is now visual-only and its arming cue is safely played by the quick-use handler.
+
 ## 0.6.67
 
 - Added an Engineer-only proximity mine adapted from Doom Deluxe's slot-0 mine. Pressing the normal grenade key throws it onto the ground, where it settles, arms after about one second, and watches a 130-unit radius for visible hostile monsters.

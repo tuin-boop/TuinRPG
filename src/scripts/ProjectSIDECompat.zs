@@ -346,6 +346,8 @@ class PSCompatWeaponHandler : EventHandler
 				ThrowTimer[i]--;
 				if (!EngineerMineThrow[i] && ThrowTimer[i] == 26) PullGrenadePin(i, pawn);
 				if (!EngineerMineThrow[i] && ThrowTimer[i] == 13) LaunchGrenade(pawn);
+				if (EngineerMineThrow[i] && ThrowTimer[i] == 29)
+					pawn.A_StartSound("tuin/mine/beep", CHAN_BODY, 0, 0.7);
 				if (EngineerMineThrow[i] && ThrowTimer[i] == 15) LaunchEngineerMine(pawn);
 				if (ThrowTimer[i] == 0) RestoreWeaponAfterGrenade(i, pawn);
 			}
