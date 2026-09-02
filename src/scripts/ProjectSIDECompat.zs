@@ -47,7 +47,7 @@ class PSQuickGrenadeAmmo : Ammo
 		Inventory.Icon "EXSPA0";
 		Radius 14;
 		Height 24;
-		Scale 0.055;
+		Scale 0.0275;
 		+FORCEXYBILLBOARD
 	}
 

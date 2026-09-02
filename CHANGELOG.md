@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.71
+
+- Reduced the explosive-supply crate's visual size by 50% while retaining its forgiving pickup radius.
+
 ## 0.6.70
 
 - Replaced dropped grenade models with a class-neutral explosive-supply crate supplied by Tuin. The pickup still feeds the shared reserve: grenades for normal classes and proximity mines for the Engineer.
