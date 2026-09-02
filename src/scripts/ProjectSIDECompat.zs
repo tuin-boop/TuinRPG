@@ -491,7 +491,7 @@ class PSCompatWeaponHandler : EventHandler
 		}
 
 		pawn.player.SetPSprite(1001, visual.FindState("Throw"));
-		if (hideMeleeWeapon && !engineer) AdjustMeleeGrenadeLayer(pawn.player, 1001);
+		if (hideMeleeWeapon) AdjustMeleeGrenadeLayer(pawn.player, 1001);
 		EngineerMineThrow[playerNumber] = engineer;
 		ThrowTimer[playerNumber] = engineer ? 35 : 28;
 		ThrowCooldown[playerNumber] = engineer ? 45 : 38;

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.69
+
+- Lowered the Engineer mine's first-person arm animation so it remains anchored below the bottom edge of the screen, matching the corrected melee grenade positioning.
+
 ## 0.6.68
 
 - Fixed an Engineer mine crash when its first-person overlay tried to execute a mine-owned sound action through the currently equipped weapon. The overlay is now visual-only and its arming cue is safely played by the quick-use handler.
