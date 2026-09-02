@@ -29,9 +29,9 @@ Killing monsters awards XP. Every level grants one stat point:
 
 Monsters also scale with the map and can appear as **Uncommon, Rare, Elite, Legendary, Mythic**, or the special **Boss** tier. Higher rarities have more health, damage, XP and affixes. Legendary and Mythic enemies may use special attacks, so watch for their warning glow.
 
-Every five levels grants a perk point. The first point permanently chooses Tank, Healer, Executioner, Doom Guy, or Rogue under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, and class perks. Class Ultimates unlock at level 20 after Class Training II.
+Every five levels grants a perk point. The first point permanently chooses Tank, Healer, Executioner, Doom Guy, Rogue, or Engineer under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, and class perks. Class Ultimates unlock at level 20 after Class Training II.
 
-Each class has a distinct V ability. Tank charges Overdrive by dealing and taking damage. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy holds V to ready Blood Punch and releases it to strike. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires.
+Each class has a distinct V ability. Tank charges Overdrive by dealing and taking damage. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy holds V to ready Blood Punch and releases it to strike. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires. Engineer places one persistent auto-turret that automatically attacks visible hostiles with physical 3D tracer rounds.
 
 ## Weapon loot
 

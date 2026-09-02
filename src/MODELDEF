@@ -1,0 +1,15 @@
+Model TuinEngineerTracer
+{
+	Path "models/projectiles"
+	Model 0 "tracer.md3"
+	Skin 0 "tracer1.tga"
+	Scale 0.40 0.82 0.82
+	PitchFromMomentum
+	DontCullBackfaces
+	FrameIndex TRAC A 0 0
+}
+
+Model TuinEngineerTracerII { Path "models/projectiles" Model 0 "tracer.md3" Skin 0 "tracer1.tga" Scale 0.40 0.82 0.82 PitchFromMomentum DontCullBackfaces FrameIndex TRAC A 0 0 }
+Model TuinEngineerTracerIII { Path "models/projectiles" Model 0 "tracer.md3" Skin 0 "tracer1.tga" Scale 0.40 0.82 0.82 PitchFromMomentum DontCullBackfaces FrameIndex TRAC A 0 0 }
+Model TuinEngineerTracerIV { Path "models/projectiles" Model 0 "tracer.md3" Skin 0 "tracer1.tga" Scale 0.40 0.82 0.82 PitchFromMomentum DontCullBackfaces FrameIndex TRAC A 0 0 }
+Model TuinEngineerTracerUltimate { Path "models/projectiles" Model 0 "tracer.md3" Skin 0 "tracer1.tga" Scale 0.40 0.82 0.82 PitchFromMomentum DontCullBackfaces FrameIndex TRAC A 0 0 }

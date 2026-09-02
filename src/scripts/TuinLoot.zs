@@ -225,8 +225,6 @@ class TuinLifeEssencePickup : Inventory
 		if (!data) return false;
 		data.LifeEssenceHealingPool += 30.0;
 		data.LifeEssenceHealingTics = max(data.LifeEssenceHealingTics, 350);
-		toucher.A_StartSound("pickups/lifeessence", CHAN_ITEM,
-			CHANF_MAYBE_LOCAL, 1.0, ATTN_NONE);
 		let handler = TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
 		if (handler)
 			handler.SetLootNotification(toucher.PlayerNumber(),
@@ -242,6 +240,7 @@ class TuinLifeEssencePickup : Inventory
 		Height 20;
 		Scale 0.4;
 		Inventory.PickupMessage "Life Essence absorbed.";
+		Inventory.PickupSound "pickups/lifeessence";
 		+FLOATBOB
 		+RELATIVETOFLOOR
 		+INVENTORY.ALWAYSPICKUP

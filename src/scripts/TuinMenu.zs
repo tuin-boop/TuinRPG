@@ -412,7 +412,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			training = "BLOOD PUNCH CHARGE +10% / +20% / +30%";
 			ultimate = "+45% CHARGE | HEAL 30% DAMAGE, MAX 110 HP";
 		}
-		else
+		else if (mLabel ~== "ROGUE")
 		{
 			role = "AMBUSHER";
 			bonuses = "+5% CRITICAL CHANCE | CRITICAL HITS CAUSE BLEEDING";
@@ -420,6 +420,15 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			ability = "V: SHADOW VEIL - ATTACK FROM STEALTH TO AMBUSH";
 			training = "+2% CRIT | LONGER VEIL | FASTER CHARGE PER RANK";
 			ultimate = "AMBUSH: X6 RANGED DAMAGE / X30 FIST DAMAGE";
+		}
+		else
+		{
+			role = "FIELD ENGINEER";
+			bonuses = "DEPLOYABLE 400 HP AUTO-TURRET | 250 ROUNDS";
+			tradeoff = "ONLY ONE ACTIVE SENTRY | 30 SEC REDEPLOY";
+			ability = "V: PLACE AN AUTO-TURRET WITH 3D TRACER ROUNDS";
+			training = "+10% TURRET DAMAGE | 10% FASTER REDEPLOY PER RANK";
+			ultimate = "SENTRY PROTOCOL: 600 HP | 400 ROUNDS | FASTER FIRE";
 		}
 
 		int center = Screen.GetWidth() / 2;
@@ -462,6 +471,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 			else if (item.mLabel ~== "EXECUTIONER") command = "netevent tuin_choose_class 3";
 			else if (item.mLabel ~== "DOOM GUY") command = "netevent tuin_choose_class 4";
 			else if (item.mLabel ~== "ROGUE") command = "netevent tuin_choose_class 5";
+			else if (item.mLabel ~== "ENGINEER") command = "netevent tuin_choose_class 6";
 			else continue;
 			mDesc.mItems[i] = new ('TuinRPGClassChoiceItem').Init(item.mLabel, command);
 		}

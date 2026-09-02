@@ -1,0 +1,5 @@
+tuin/engineer/fire SOUNDS/ENGINEER/HVMGFIR
+tuin/engineer/deploy SOUNDS/ENGINEER/SECDRON3
+tuin/engineer/impact1 SOUNDS/ENGINEER/HITWALL1
+tuin/engineer/impact2 SOUNDS/ENGINEER/HITWALL2
+$random tuin/engineer/impact { tuin/engineer/impact1 tuin/engineer/impact2 }

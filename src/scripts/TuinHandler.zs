@@ -246,6 +246,7 @@ class TuinRPGHandler : EventHandler
 		case 3: return "EXECUTIONER";
 		case 4: return "DOOM GUY";
 		case 5: return "ROGUE";
+		case 6: return "ENGINEER";
 		default: return "UNSELECTED";
 		}
 	}
@@ -268,6 +269,48 @@ class TuinRPGHandler : EventHandler
 	clearscope static int HealerSupplyCooldown()
 	{
 		return 700;
+	}
+
+	clearscope static int EngineerTurretCooldown(TuinPlayerData data)
+	{
+		double multiplier = 1.0 - (data ? data.PerkClassMastery : 0) * 0.10;
+		if (data && data.PerkCapstone) multiplier *= 0.75;
+		return max(350, int(1050 * multiplier));
+	}
+
+	void DeployEngineerTurret(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 6 || pawn.Health <= 0) return;
+		let activeTurret = TuinEngineerTurret(data.EngineerTurret);
+		if (activeTurret && activeTurret.Health > 0 && activeTurret.ShotsRemaining > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("SENTRY ACTIVE: %d HP | %d ROUNDS",
+				activeTurret.Health, activeTurret.ShotsRemaining), 0);
+			return;
+		}
+		if (data.EngineerTurretCooldownTics > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("SENTRY RECHARGING: %.1f SEC",
+				data.EngineerTurretCooldownTics / 35.0), 0);
+			return;
+		}
+		Vector3 position = pawn.Pos + (cos(pawn.Angle) * 64.0,
+			sin(pawn.Angle) * 64.0, 8.0);
+		TuinEngineerTurret turret = TuinEngineerTurret(Actor.Spawn('TuinEngineerTurret', position, NO_REPLACE));
+		if (!turret || !turret.TestMobjLocation())
+		{
+			if (turret) turret.Destroy();
+			SetLootNotification(playerNumber, "NOT ENOUGH ROOM TO DEPLOY SENTRY", 0);
+			return;
+		}
+		turret.Angle = pawn.Angle;
+		turret.Configure(playerNumber, pawn, data.PerkClassMastery, data.PerkCapstone);
+		data.EngineerTurret = turret;
+		data.EngineerTurretCooldownTics = EngineerTurretCooldown(data);
+		pawn.A_StartSound("tuin/engineer/deploy", CHAN_ITEM, 0, 0.7);
+		data.LevelAbilityUses++;
+		SetLootNotification(playerNumber, String.Format("AUTO-TURRET DEPLOYED: %d ROUNDS",
+			turret.ShotsRemaining), 4);
 	}
 
 	clearscope static int ExecutionerMarkDuration(TuinPlayerData data)
@@ -1274,7 +1317,7 @@ class TuinRPGHandler : EventHandler
 	{
 		let data = EnsurePlayerData(playerNumber);
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
-		if (!data || !pawn || chosenClass < 1 || chosenClass > 5) return;
+		if (!data || !pawn || chosenClass < 1 || chosenClass > 6) return;
 		if (data.PlayerClass != 0)
 		{
 			pawn.A_Log(String.Format("Your class is permanently set to %s.", PlayerClassName(data.PlayerClass)));
@@ -1333,6 +1376,11 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchPrepareTics = 0;
 			data.DoomBloodPunchFistRaiseTics = 0;
 			data.DoomBloodPunchAttackTics = 0;
+		}
+		else if (chosenClass == 6)
+		{
+			data.EngineerTurretCooldownTics = 0;
+			data.EngineerTurret = null;
 		}
 		data.ClassHealClock = 0;
 		data.ClassAmmoCount = 0;
@@ -4123,7 +4171,14 @@ class TuinRPGHandler : EventHandler
 	static int PlayerNumberFromSource(Actor source, Actor inflictor)
 	{
 		if (source && source.player) return source.PlayerNumber();
+		if (source is 'TuinEngineerTurret' && source.master && source.master.player)
+			return source.master.PlayerNumber();
 		if (inflictor && inflictor.target && inflictor.target.player) return inflictor.target.PlayerNumber();
+		if (inflictor is 'TuinEngineerTracer' && inflictor.master && inflictor.master.player)
+			return inflictor.master.PlayerNumber();
+		if (inflictor is 'TuinEngineerTracer' && inflictor.target &&
+			inflictor.target.master && inflictor.target.master.player)
+			return inflictor.target.master.PlayerNumber();
 		return -1;
 	}
 
@@ -4370,6 +4425,7 @@ class TuinRPGHandler : EventHandler
 			targetBaseDamageFactor = 0.25;
 		bool wasCritical = false;
 		bool rogueAmbushAttack = false;
+		bool engineerTurretAttack = e.DamageType == 'TuinEngineerTurret';
 		// Damage callbacks occur after the engine applies the original hit.
 		// Preserve the reconstructed pre-hit health for charge and leech so a
 		// lethal hit still receives credit for the damage it actually dealt.
@@ -4445,7 +4501,8 @@ class TuinRPGHandler : EventHandler
 				if (playerBaseDamageFactor < 1.0)
 					e.NewDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 				multiplier *= 1.0 + playerData.Strength * 0.02;
-				int variantIndex = bloodPunchAttack ? -1 : ActiveWeaponVariantIndex(attacker, playerData);
+				int variantIndex = (bloodPunchAttack || engineerTurretAttack) ? -1 :
+					ActiveWeaponVariantIndex(attacker, playerData);
 				if (victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) < TotalCriticalChance(playerData, variantIndex))
 				{
@@ -5072,6 +5129,8 @@ class TuinRPGHandler : EventHandler
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
+			if (playerData && playerData.EngineerTurretCooldownTics > 0)
+				playerData.EngineerTurretCooldownTics--;
 			ApplyLifeEssenceHealing(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
@@ -5204,6 +5263,11 @@ class TuinRPGHandler : EventHandler
 						rogueData.DoomBloodPunchCharge), 0);
 				return;
 			}
+			if (rogueData && pawn && rogueData.PlayerClass == 6)
+			{
+				DeployEngineerTurret(e.Player, pawn, rogueData);
+				return;
+			}
 			if (!rogueData || !pawn || rogueData.PlayerClass != 5)
 			{
 				SetLootNotification(e.Player, "CHOOSE A CLASS WITH AN ACTIVE ABILITY", 0);
@@ -5241,6 +5305,21 @@ class TuinRPGHandler : EventHandler
 				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 48.0,
 					sin(pawn.Angle) * 48.0, 8.0);
 				Actor.Spawn('TuinLifeEssencePickup', position, NO_REPLACE);
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_test_engineer_turret")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 6;
+				testData.EngineerTurretCooldownTics = 0;
+				if (testData.EngineerTurret) testData.EngineerTurret.Destroy();
+				testData.EngineerTurret = null;
+				ApplyClassHealth(testPawn, testData);
+				DeployEngineerTurret(e.Player, testPawn, testData);
 			}
 			return;
 		}
@@ -5612,7 +5691,7 @@ class TuinRPGHandler : EventHandler
 			double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
 			panelY = playerStatusY + int(47 * statusScale) + 7;
 			let targetPlayerData = GetPlayerData(players[playerNumber].mo);
-			if (targetPlayerData && targetPlayerData.PlayerClass >= 1 && targetPlayerData.PlayerClass <= 5)
+			if (targetPlayerData && targetPlayerData.PlayerClass >= 1 && targetPlayerData.PlayerClass <= 6)
 				panelY += int(22 * statusScale) + 5;
 			panelWidth = mapSize;
 		}
@@ -5662,6 +5741,50 @@ class TuinRPGHandler : EventHandler
 		}
 		Screen.Dim(Color(2, 14, 9), 0.94, panelX, panelY, panelWidth, int(20 * scale));
 		Screen.DrawLineFrame(Color(35, 210, 105), panelX, panelY, panelWidth, int(20 * scale), 2);
+		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
+		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
+			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+	}
+
+	ui void DrawEngineerTurretStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 6) return;
+		let turret = TuinEngineerTurret(data.EngineerTurret);
+		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		string status;
+		int statusColor;
+		if (turret && turret.Health > 0 && turret.ShotsRemaining > 0)
+		{
+			status = String.Format("SENTRY ACTIVE  %d HP  |  %d ROUNDS", turret.Health, turret.ShotsRemaining);
+			statusColor = Font.CR_CYAN;
+		}
+		else if (data.EngineerTurretCooldownTics > 0)
+		{
+			status = String.Format("SENTRY RECHARGING  %.1f SEC", data.EngineerTurretCooldownTics / 35.0);
+			statusColor = Font.CR_GOLD;
+		}
+		else
+		{
+			status = "AUTO-TURRET READY  -  PRESS V TO DEPLOY";
+			statusColor = Font.CR_GREEN;
+		}
+		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		int panelX = screenWidth - panelWidth - 10;
+		int panelY = 10;
+		if (CVInt('tuin_minimap_enabled', 1))
+		{
+			int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, screenHeight - 32));
+			double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
+			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
+				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+			panelWidth = mapSize;
+		}
+		Screen.Dim(Color(2, 10, 15), 0.94, panelX, panelY, panelWidth, int(20 * scale));
+		Screen.DrawLineFrame(Color(45, 185, 235), panelX, panelY, panelWidth, int(20 * scale), 2);
 		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
 		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
@@ -5986,6 +6109,7 @@ class TuinRPGHandler : EventHandler
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
 		DrawHealerSupplyStatus(pnum, font, sw, sh, hudScale);
+		DrawEngineerTurretStatus(pnum, font, sw, sh, hudScale);
 		DrawExecutionerStatus(pnum, font, sw, sh, hudScale);
 		DrawRogueStatus(pnum, font, sw, sh, hudScale);
 		DrawTankStatus(pnum, font, sw, sh, hudScale);

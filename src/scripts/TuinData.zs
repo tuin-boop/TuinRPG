@@ -459,6 +459,8 @@ class TuinPlayerData : Inventory
 	int PlayerClass;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;
+	int EngineerTurretCooldownTics;
+	Actor EngineerTurret;
 	int PerkVitalCore;
 	int PerkScavenger;
 	int PerkKillerInstinct;

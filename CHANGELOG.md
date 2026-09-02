@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.59
+
+- Added Engineer as a sixth permanent class, with a placeable auto-turret on the Class Ability key.
+- Integrated the supplied Aliens auto-turret sprites and sounds, and Doomtopmode's moving MD3 tracer model for its physical rounds.
+- The sentry has 400 health, 250 rounds, a 1,280-unit engagement range, one-active-turret limit, and a 30-second deployment recharge.
+- Engineer Class Training adds 10% turret damage and shortens redeployment by 10% per rank. Sentry Protocol upgrades the turret to 600 health, 400 rounds, faster fire, and a shorter recharge.
+- Turret damage and kills are credited to its Engineer for RPG statistics and rewards, while equipped weapon traits cannot leak into turret shots.
+- Added an Engineer HUD readout for sentry health, ammunition, and redeployment readiness, plus a one-command turret test option.
+- Fixed Life Essence playing Doom's ordinary item pickup sound alongside its randomized custom sounds.
+
 ## 0.6.58
 
 - Integrated the supplied handmade Life Essence KVX model, its sprite fallback, and all five randomized pickup sounds.

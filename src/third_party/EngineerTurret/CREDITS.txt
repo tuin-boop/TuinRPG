@@ -1,0 +1,10 @@
+Engineer auto-turret integration
+================================
+
+Turret sprites and sounds were supplied by the project owner from the
+"Aliens Eradication Auto Turret extraction" archive, sourced from
+ALIENS_ERADICATION_TC_2_0.pk3.
+
+The moving tracer.md3 and tracer1.tga assets were supplied from the project
+owner's Doomtopmode project. TuinRPG uses a new ZScript deployment, targeting,
+combat, ownership, HUD, and progression implementation.

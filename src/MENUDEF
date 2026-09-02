@@ -93,6 +93,7 @@ OptionMenu "TuinRPGOptions"
 	Slider "XP curve exponent", "tuin_xp_exponent", 1.0, 2.5, 0.1, 1
 	Slider "Life Essence drop chance (%)", "tuin_life_essence_drop_chance", 0, 100, 1, 0
 	Command "Testing: spawn Life Essence", "netevent tuin_test_life_essence"
+	Command "Testing: deploy Engineer turret", "netevent tuin_test_engineer_turret"
 	StaticText "Later starts gain levels, points, 3 Rare+ weapons and ammo", 1
 	Submenu "Ammo progression", "TuinRPGAmmoOptions"
 	Submenu "Character screen", "TuinRPGCharacter"
@@ -259,6 +260,7 @@ OptionMenu "TuinRPGClassChoice"
 	Command "EXECUTIONER", "netevent tuin_choose_class 3"
 	Command "DOOM GUY", "netevent tuin_choose_class 4"
 	Command "ROGUE", "netevent tuin_choose_class 5"
+	Command "ENGINEER", "netevent tuin_choose_class 6"
 	Class "TuinRPGClassChoiceMenu"
 }
 
@@ -312,6 +314,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "EXECUTIONER: JUDGMENT CHARGE +10% / +20% / +30%", 1
 	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
 	StaticText "ROGUE: +2% CRIT + LONGER VEIL + MORE DAMAGE CHARGE", 1
+	StaticText "ENGINEER: +10% TURRET DAMAGE + 10% FASTER REDEPLOY / RANK", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
 	Class "TuinRPGPerkMenu"
@@ -330,6 +333,7 @@ OptionMenu "TuinRPGClassCapstone"
 	StaticText "EXECUTIONER - NO APPEALS: STRONGER 12-SEC MARK + 25% REFUND", 1
 	StaticText "DOOM GUY: +45% BLOOD PUNCH CHARGE | HEALS 30% DAMAGE", 1
 	StaticText "ROGUE: AMBUSH DEALS X6 RANGED / X30 FIST DAMAGE", 1
+	StaticText "ENGINEER - SENTRY PROTOCOL: 600 HP | 400 ROUNDS | FASTER FIRE", 1
 	StaticText " "
 	Command "UNLOCK YOUR CLASS ULTIMATE", "netevent tuin_buy_perk 7"
 	Class "TuinRPGPerkMenu"
