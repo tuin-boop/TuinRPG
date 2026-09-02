@@ -746,7 +746,7 @@ class TuinPlayerData : Inventory
 				Lives--;
 				LevelLivesUsed++;
 				LifeRevivePending = true;
-				LifeReviveTics = 49;
+				LifeReviveTics = 147;
 				LifeReviveQuote = Random[TuinLifeReviveQuote](0, 4);
 				newdamage = max(0, Owner.Health - 1);
 			}

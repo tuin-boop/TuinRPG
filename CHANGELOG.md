@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.52
+
+- Tripled the protected life-revival scene from 1.4 seconds to 4.2 seconds before returning the player to the map start.
+- Added slow vertical bobbing and subtle sideways drift to John's floating revival portrait.
+- Added the supplied full-screen Tuin Doom RPG guide as the F1 help page.
+
 ## 0.6.51
 
 - Reworked life revival into a dramatic 1.4-second protected sequence at the defeat location. Movement pauses beneath a pulsing red screen effect, red particles, light, sound, and one of five John encouragement lines before the player returns to the map start.

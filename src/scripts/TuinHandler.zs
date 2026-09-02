@@ -5756,7 +5756,9 @@ class TuinRPGHandler : EventHandler
 			{
 				int faceSize = clamp(int(sh * 0.29), 150, 330);
 				double facePulse = 0.84 + 0.10 * sin(level.Time * 18.0);
-				Screen.DrawTexture(johnFace, false, (sw - faceSize) / 2, int(sh * 0.10),
+				int faceX = (sw - faceSize) / 2 + int(sin(level.Time * 3.0) * 9.0);
+				int faceY = int(sh * 0.10) + int(sin(level.Time * 6.0) * 13.0);
+				Screen.DrawTexture(johnFace, false, faceX, faceY,
 					DTA_DestWidth, faceSize, DTA_DestHeight, faceSize, DTA_Alpha, facePulse);
 			}
 			double titleScale = clamp(hudScale * 1.55, 2.1, 3.5);

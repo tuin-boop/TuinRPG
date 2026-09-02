@@ -2,6 +2,8 @@
 
 TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a merchant to Doom. Its release includes the complete ProjectSIDE compatibility-edition weapon/effect set and quick grenades, while leaving maps, monsters and the player class intact.
 
+Press **F1** at any time to open the illustrated Tuin Doom RPG help page.
+
 ## Controls
 
 - **K:** Character screen and stat spending

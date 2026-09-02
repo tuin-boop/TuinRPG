@@ -11,6 +11,12 @@ Sprite TLIFA0, 1012, 937
 	Patch "graphics/TuinLifeHeart.png", 0, 0
 }
 
+// Full-screen F1 guide supplied for TuinRPG.
+Graphic TUINHELP, 1672, 941
+{
+	Patch "graphics/TuinF1Help.png", 0, 0
+}
+
 Sprite JOHNA0, 37, 56
 {
 	Offset 18, 56
