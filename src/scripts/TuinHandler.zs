@@ -2298,6 +2298,10 @@ class TuinRPGHandler : EventHandler
 			Random[TuinJohnMilestones](0, 49);
 		JohnCommentPercent[playerNumber] = percent;
 		JohnCommentTics[playerNumber] = 245;
+		Actor listener = playerInGame[playerNumber] ? players[playerNumber].mo : null;
+		if (listener)
+			listener.A_StartSound("misc/chat", CHAN_7, CHANF_LOCAL | CHANF_UI,
+				0.22, ATTN_NONE);
 	}
 
 	void UpdateJohnMilestoneComments()

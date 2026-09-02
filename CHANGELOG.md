@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.57
+
+- Added a quiet Doom chat notification sound when John's milestone portrait and comment appear.
+
 ## 0.6.56
 
 - Removed the visible kill percentage from John's combat-tip popup. Milestones still trigger the system internally, while the dialogue panel now simply identifies John.
