@@ -4002,16 +4002,19 @@ class TuinRPGHandler : EventHandler
 		while (monster = Actor(iterator.Next()))
 		{
 			let data = GetMonsterData(monster);
-			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bDORMANT || monster.bBOSS ||
+			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
 				monster.bBOSSDEATH || !data || data.MonsterRarity >= targetRarity || IsIconicEpisodeBoss(monster)) continue;
 			candidateCount++;
 			if (Random[TuinRPGDirector](1, candidateCount) == 1) candidate = monster;
-			if (preferHeavy && data.OriginalMaxHealth >= 500)
+			// Build the preferred pool independently. Dormant and unseen monsters
+			// still belong to the level roster and may awaken when their trap opens.
+			if (preferHeavy && data.OriginalMaxHealth >= 400)
 			{
 				heavyCandidateCount++;
 				if (Random[TuinRPGDirector](1, heavyCandidateCount) == 1) heavyCandidate = monster;
 			}
 		}
+		// Fodder is legal only when the entire eligible heavy pool is empty.
 		if (heavyCandidate) candidate = heavyCandidate;
 		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);
 	}

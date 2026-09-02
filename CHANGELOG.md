@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.61
+
+- Expanded the Hell Director's high-level preferred pool to include Cacodemons alongside Hell Knights, Barons, and stronger monsters (400+ original health).
+- From player level 15 onward, the Director scans the complete living roster, including dormant and unseen monsters, and promotes lighter monsters such as Imps only when no eligible heavy candidate exists.
+
 ## 0.6.60
 
 - Reworked Engineer into a recoverable sentry-management class with 15% less maximum health and 10% less personal weapon damage.
