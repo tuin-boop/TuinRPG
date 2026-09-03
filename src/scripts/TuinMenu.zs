@@ -170,7 +170,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		double luckCritical = data.Luck * 0.5;
 		Weapon activeWeapon = players[consoleplayer].ReadyWeapon;
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data, activeWeapon);
-		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 0.50) : data.PlayerClass == 2 ? 0.75 :
+		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 1.00) : data.PlayerClass == 2 ? 0.75 :
 			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : data.PlayerClass == 6 ? 0.90 : 1.0;
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
 		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
@@ -381,7 +381,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		{
 			role = "HEAVY WEAPONS BULWARK";
 			bonuses = "175 BASE HP | 25% RESIST | 3X BULLETS | STARTS MINIGUN";
-			tradeoff = "-30% MOVE SPEED | WEAPON DAMAGE REDUCED BY 50%";
+			tradeoff = "-20% MOVE SPEED";
 			ability = "V: OVERDRIVE | B: RADIO - 2-3 MARINES FOR 30 SEC";
 			training = "+3% RESIST | RADIO DAMAGE REQUIRED -10% PER RANK";
 			ultimate = "LAST STAND BELOW 30% HEALTH";

@@ -2,7 +2,7 @@ class TuinHeavyMovementPenalty : Powerup
 {
 	override double GetSpeedFactor()
 	{
-		return 0.70;
+		return 0.80;
 	}
 
 	Default

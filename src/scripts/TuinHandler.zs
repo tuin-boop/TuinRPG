@@ -915,10 +915,8 @@ class TuinRPGHandler : EventHandler
 	void ApplyClassAmmoBonus(Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
-		// Heavy weapons deal half damage outside Overdrive, so double their ammo
-		// pickups to keep sustained damage roughly neutral without granting
-		// passive regeneration or removing the need to manage ammunition.
-		double rate = (data.PlayerClass == 1 ? 1.00 : data.PlayerClass == 2 ? 0.25 : 0.0) +
+		// Healer retains its class pickup bonus; Scavenger applies universally.
+		double rate = (data.PlayerClass == 2 ? 0.25 : 0.0) +
 			data.PerkScavenger * 0.10;
 		if (rate <= 0.0) return;
 		for (Inventory item = pawn.Inv; item; item = item.Inv)
@@ -2139,7 +2137,7 @@ class TuinRPGHandler : EventHandler
 				int scaledHealth = bossData ? max(1, bossData.ScaledMaxHealth) : max(1, boss.GetMaxHealth(true));
 				// Iconic bosses may swallow all or nearly all native radius damage. Add a
 				// controlled impact component: 2% scaled HP, bounded for balance. Existing
-				// armor, Heavy output penalties, and other damage rules still apply.
+				// Armor, class modifiers, and other damage rules still apply.
 				int impactDamage = clamp(int(scaledHealth * 0.02 + 0.5), 128, 500);
 				boss.DamageMobj(inflictor, source, impactDamage, 'TuinGrenadeBossImpact');
 			}
@@ -6622,7 +6620,7 @@ class TuinRPGHandler : EventHandler
 		int statusColor;
 		if (data.TankOverdriveActive)
 		{
-			status = String.Format("HEAVY OVERDRIVE  %.1f SEC  -  +150%% DAMAGE / FIRE SPEED",
+			status = String.Format("HEAVY OVERDRIVE  %.1f SEC  -  +25%% DAMAGE / +150%% FIRE SPEED",
 				max(0, data.TankOverdriveTics) / 35.0);
 			statusColor = Font.CR_RED;
 		}

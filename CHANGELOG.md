@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.98
+
+- Removed the Heavy's permanent 50% weapon-damage penalty. Ordinary Heavy attacks now deal full damage, while Overdrive still raises weapon damage by 25% and firing speed by 150%.
+- Softened the Heavy's movement penalty from 30% to 20%.
+- Removed the obsolete 100% Heavy ammunition-pickup compensation. Triple bullet capacity and the starting Minigun remain unchanged.
+- Corrected the Heavy character screen, live damage statistic, Overdrive HUD and guides to match the new balance.
+
 ## 0.6.97
 
 - Increased Heavy support-marine ground speed from 3 to 6 and added a proactive seven-tic scan for the nearest visible hostile within 1,536 units. New targets receive an immediate reaction and the marines use missile attacks more readily.

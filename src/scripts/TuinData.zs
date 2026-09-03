@@ -806,12 +806,11 @@ class TuinPlayerData : Inventory
 
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
-		// The active pass belongs to the attacker's inventory. Apply the Heavy's
-		// weapon-output rule here so both stock and custom weapons use the same
-		// reliable 50% / 125% factors before the hit reaches its target.
+		// The active pass belongs to the attacker's inventory. Overdrive raises
+		// Heavy weapon damage by 25%; ordinary Heavy attacks retain full damage.
 		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed' &&
 			damageType != 'TuinRocketBurn' && damageType != 'TuinPlasmaArc')
-			newdamage = max(1, int(newdamage * (TankOverdriveActive ? 1.25 : 0.50) + 0.5));
+			newdamage = max(1, int(newdamage * (TankOverdriveActive ? 1.25 : 1.00) + 0.5));
 		// Rogue is deliberately high-risk: every incoming damage source is amplified,
 		// before Endurance and defensive perks apply their normal reductions.
 		if (passive && PlayerClass == 5 && newdamage > 0)
