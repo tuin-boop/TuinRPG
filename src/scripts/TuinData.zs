@@ -20,6 +20,29 @@ class TuinRogueDeathDecoy : Actor
 	}
 }
 
+class TuinVolatileMarker : Actor
+{
+	Default
+	{
+		Radius 0;
+		Height 0;
+		Scale 0.024;
+		Alpha 0.94;
+		RenderStyle "Translucent";
+		+NOINTERACTION
+		+NOGRAVITY
+		+FORCEXYBILLBOARD
+		+BRIGHT
+	}
+
+	States
+	{
+	Spawn:
+		TVOL A -1 Bright;
+		Stop;
+	}
+}
+
 class TuinMonsterData : Inventory
 {
 	const AFFIX_SWIFT = 1;
@@ -46,6 +69,7 @@ class TuinMonsterData : Inventory
 	int GlowClock;
 	int AppliedGlowRarity;
 	int AppliedGlowRadius;
+	Actor VolatileMarkerVisual;
 	int SupportClock;
 	int WardTics;
 	int HealerSelfLockTics;
@@ -253,6 +277,25 @@ class TuinMonsterData : Inventory
 			Owner.A_AttachLight('TuinRarityGlow', 1, Color(255, 24, 64), desiredRadius * 2 / 3, desiredRadius, 0, (0, 0, Owner.Height * 0.5), 0.55);
 	}
 
+	void UpdateVolatileMarker()
+	{
+		bool visible = Owner && Owner.Health > 0 && (AffixFlags & AFFIX_EXPLOSIVE);
+		if (!visible)
+		{
+			if (VolatileMarkerVisual) VolatileMarkerVisual.Destroy();
+			VolatileMarkerVisual = null;
+			return;
+		}
+		if (!VolatileMarkerVisual)
+			VolatileMarkerVisual = Actor.Spawn('TuinVolatileMarker',
+				Owner.Pos + (0, 0, Owner.Height + 14), NO_REPLACE);
+		if (!VolatileMarkerVisual) return;
+		double bob = 14.0 + sin((level.Time + UniqueID * 7) * 7.0) * 2.5;
+		VolatileMarkerVisual.SetOrigin(Owner.Pos + (0, 0, Owner.Height + bob), false);
+		VolatileMarkerVisual.Alpha = 0.86 +
+			(sin((level.Time + UniqueID * 5) * 9.0) + 1.0) * 0.06;
+	}
+
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && Owner &&
@@ -340,6 +383,7 @@ class TuinMonsterData : Inventory
 			GlowClock = 0;
 			UpdateRarityGlow();
 		}
+		UpdateVolatileMarker();
 		if (Owner.Health <= 0)
 		{
 			if (SignatureWindup > 0) Owner.A_RemoveLight('TuinSignatureTell');

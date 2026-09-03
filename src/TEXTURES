@@ -31,6 +31,13 @@ Sprite EXSKA0, 1230, 1278
 	Patch "graphics/TuinExecutionerSkull.png", 0, 0
 }
 
+// Small floating warning marker for Volatile monsters.
+Sprite TVOLA0, 1254, 1254
+{
+	Offset 627, 1254
+	Patch "graphics/TuinVolatileMarker.png", 0, 0
+}
+
 // A world-oriented fist/knuckle pickup. PUNGA0 is available in every Doom IWAD,
 // while many weapon mods provide only an offset-less first-person pickup frame.
 Sprite TKNKA0, 67, 57

@@ -419,7 +419,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			tradeoff = "-20% MAXIMUM HEALTH";
 			ability = "V: SHADOW VEIL - ATTACK FROM STEALTH TO AMBUSH";
 			training = "+2% CRIT | LONGER VEIL | FASTER CHARGE PER RANK";
-			ultimate = "AMBUSH: X6 RANGED DAMAGE / X30 FIST DAMAGE";
+			ultimate = "AMBUSH: X6 RANGED DAMAGE / X15 KNIFE DAMAGE";
 		}
 		else
 		{

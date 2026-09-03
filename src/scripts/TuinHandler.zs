@@ -4791,13 +4791,15 @@ class TuinRPGHandler : EventHandler
 					rogueAmbushAttack = true;
 					let readyWeapon = players[attacker].ReadyWeapon;
 					bool melee = IsRogueMeleeWeapon(readyWeapon);
-					double ambushMultiplier = melee ? (playerData.PerkCapstone ? 30.0 : 20.0) :
-						(playerData.PerkCapstone ? 6.0 : 4.0);
+					bool knifeAmbush = e.DamageType == 'TuinRogueKnife';
+					double ambushMultiplier = knifeAmbush ? (playerData.PerkCapstone ? 15.0 : 10.0) :
+						melee ? 1.0 : (playerData.PerkCapstone ? 6.0 : 4.0);
 					if (victimData.MonsterRarity >= 6 && IsIconicEpisodeBoss(e.Thing))
-						ambushMultiplier = min(ambushMultiplier, melee ?
-							(playerData.PerkCapstone ? 7.0 : 5.0) : (playerData.PerkCapstone ? 3.0 : 2.0));
+						ambushMultiplier = min(ambushMultiplier, knifeAmbush ?
+							(playerData.PerkCapstone ? 7.0 : 5.0) :
+							melee ? 1.0 : (playerData.PerkCapstone ? 3.0 : 2.0));
 					multiplier *= ambushMultiplier;
-					wasCritical = true;
+					wasCritical = ambushMultiplier > 1.0;
 					if (playerData.RogueVeiled) BreakRogueVeil(attacker, playerData, true);
 					if (firstAmbushHit)
 					{

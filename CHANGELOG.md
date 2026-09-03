@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.87
+
+- Rebalanced Shadow Veil by giving the Rogue Knife x10 Ambush damage normally and x15 with the Class Ultimate. Fists, knuckles and other melee weapons receive no special Ambush damage bonus; ranged Ambush remains x4/x6.
+- Iconic episode-end bosses retain reduced knife Ambush multipliers of x5 normally and x7 with the Ultimate.
+- Added the supplied compact, gently bobbing bomb marker above living Volatile enemies so their dangerous death explosion is clearly visible before close combat.
+
 ## 0.6.86
 
 - Rogue Knife Bleed continues stacking and refreshing from repeated knife hits, including criticals.
