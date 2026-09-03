@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.86
+
+- Rogue Knife Bleed continues stacking and refreshing from repeated knife hits, including criticals.
+- Iconic episode-end bosses now cap accumulated knife Bleed at 10% of scaled maximum health normally or 15% for a Shadow Veil ambush, instead of the ordinary 24%/36% ceilings.
+- The knife's powerful direct Shadow Veil ambush critical is unchanged; only its additional stacked damage-over-time is boss-limited.
+
 ## 0.6.85
 
 - Reworked Shadow Veil around a true fake-death decoy. Pursuing monsters receive an invisible dead target and let their native Doom AI process the target's death naturally, replacing the forced idle/dormant changes that could still produce a brief twitch or scramble.

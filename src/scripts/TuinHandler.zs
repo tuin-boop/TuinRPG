@@ -4527,11 +4527,15 @@ class TuinRPGHandler : EventHandler
 		if (data.BleedPulsesRemaining <= 0) data.BleedNextTime = level.Time + 35;
 		data.BleedPulsesRemaining = 8;
 		data.BleedPlayerNumber = playerNumber;
-		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) *
-			(stealthKnife ? 0.36 : 0.24) + 0.5));
+		double healthCapPercent = stealthKnife ? 0.36 : 0.24;
+		// Knife Bleed remains stackable on finale bosses, but cannot erase a huge
+		// share of an episode-ending health pool after one short attack sequence.
+		if (knifeHit && data.MonsterRarity >= 6 && IsIconicEpisodeBoss(data.Owner))
+			healthCapPercent = stealthKnife ? 0.15 : 0.10;
+		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) * healthCapPercent + 0.5));
 		if (knifeHit)
-			data.BleedDamageRemaining = min(healthCap,
-				data.BleedDamageRemaining + triggeringDamage);
+			data.BleedDamageRemaining = max(data.BleedDamageRemaining,
+				min(healthCap, data.BleedDamageRemaining + triggeringDamage));
 		else data.BleedDamageRemaining = min(triggeringDamage, healthCap);
 		data.BleedResistanceTics = 0;
 		data.LastPlayerNumber = playerNumber;
