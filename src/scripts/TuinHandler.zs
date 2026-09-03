@@ -1771,6 +1771,14 @@ class TuinRPGHandler : EventHandler
 			data.UnspentSkillPoints--;
 			SetLootNotification(playerNumber, "CLASS ULTIMATE UNLOCKED", 5);
 			return;
+		case 8:
+			if (data.PlayerLevel < 20)
+			{
+				SetLootNotification(playerNumber, "GIANT SLAYER REQUIRES LEVEL 20", 0);
+				return;
+			}
+			rank = data.PerkGiantSlayer;
+			break;
 		default: return;
 		}
 		if (rank >= 3)
@@ -1784,6 +1792,7 @@ class TuinRPGHandler : EventHandler
 		else if (perk == 4) data.PerkIronSkin++;
 		else if (perk == 5) data.PerkBloodDrinker++;
 		else if (perk == 6) data.PerkClassMastery++;
+		else if (perk == 8) data.PerkGiantSlayer++;
 		data.UnspentSkillPoints--;
 		ApplyPerkHealth(pawn, data);
 		ApplyClassHealth(pawn, data);
@@ -2381,6 +2390,19 @@ class TuinRPGHandler : EventHandler
 			if (!duplicate) choices.Push(type);
 		}
 		return choices.Size() ? choices[Random[TuinRPGLoot](0, choices.Size() - 1)] : null;
+	}
+
+	class<Weapon> PickClassRewardWeapon(Actor pawn, TuinPlayerData playerData)
+	{
+		if (!pawn || !playerData) return null;
+		// Classes with their own arsenal receive one of those signature weapons.
+		// The remaining classes receive an already-owned weapon, which guarantees
+		// compatibility with both custom loadouts and multiplayer class choices.
+		if (playerData.PlayerClass == 1 && pawn.FindInventory('TuinMinigun')) return 'TuinMinigun';
+		if (playerData.PlayerClass == 4 && pawn.FindInventory('TuinDoomGuyQuadShotgun'))
+			return 'TuinDoomGuyQuadShotgun';
+		if (playerData.PlayerClass == 5) return RandomRogueWeaponType();
+		return PickOwnedWeapon(pawn);
 	}
 
 	TuinWeaponDrop SpawnRolledWeaponDrop(Vector3 position, class<Weapon> weaponType, int itemLevel, int quality)
@@ -3269,21 +3291,33 @@ class TuinRPGHandler : EventHandler
 		let playerData = EnsurePlayerData(playerNumber);
 		double luckMultiplier = playerData ? min(1.5, 1.0 + playerData.Luck * 0.02) : 1.0;
 		double chance = clamp(CVFloat('tuin_weapon_drop_chance', 1.50) * rarityMultiplier * luckMultiplier, 0.0, 100.0);
+		int scaledMaximum = max(1, monsterData.ScaledMaxHealth);
+		bool colossalGodly = scaledMaximum >= 20000;
+		double colossalProgress = clamp(double(scaledMaximum - 5000) / 15000.0, 0.0, 1.0);
+		if (scaledMaximum >= 5000)
+			chance = max(chance, 10.0 + colossalProgress * 40.0);
 		bool trueFinale = monsterData.MonsterRarity >= 6 && IsIconicEpisodeBoss(corpse);
 		bool nativeBossGodly = monsterData.MonsterRarity < 6 && corpse.bBOSS &&
 			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_native_boss_godly_chance', 5.0), 0.0, 25.0);
-		if (monsterData.MonsterRarity < 6 && !nativeBossGodly && FRandom[TuinRPGLoot](0.0, 100.0) >= chance) return;
+		if (monsterData.MonsterRarity < 6 && !nativeBossGodly && !colossalGodly &&
+			FRandom[TuinRPGLoot](0.0, 100.0) >= chance) return;
 		class<Weapon> weaponType;
 		// Half of a Rogue's successful weapon-drop rolls stay class-relevant.
 		// The drop remains a shared world object, so multiplayer pickup rules
 		// still let another Rogue claim it without a non-Rogue consuming it.
-		if (playerData && playerData.PlayerClass == 5 && Random[TuinRPGLoot](0, 1) == 0)
+		if (colossalGodly)
+			weaponType = PickClassRewardWeapon(players[playerNumber].mo, playerData);
+		else if (playerData && playerData.PlayerClass == 5 && Random[TuinRPGLoot](0, 1) == 0)
 			weaponType = RandomRogueWeaponType();
 		else
 			weaponType = PickOwnedWeapon(players[playerNumber].mo);
 		if (!weaponType) return;
 		int itemLevel = clamp(monsterData.MonsterLevel + Random[TuinRPGLoot](-2, 2), 1, max(1, CVInt('tuin_monster_max_level', 40)));
-		int quality = nativeBossGodly ? 6 : monsterData.MonsterRarity >= 6 ? RollBossWeaponQuality(trueFinale) : RollWeaponQuality(monsterData.MonsterRarity);
+		int quality = colossalGodly || nativeBossGodly ? 6 : monsterData.MonsterRarity >= 6 ?
+			RollBossWeaponQuality(trueFinale) : RollWeaponQuality(monsterData.MonsterRarity);
+		if (!colossalGodly && scaledMaximum >= 5000 && quality < 5 &&
+			FRandom[TuinRPGLoot](0.0, 100.0) < 15.0 + colossalProgress * 35.0)
+			quality = 5;
 		SpawnRolledWeaponDrop((corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 8.0), weaponType, itemLevel, quality);
 	}
 
@@ -5298,6 +5332,24 @@ class TuinRPGHandler : EventHandler
 			int damageBeforeWeakness = max(1, int(e.Damage * playerBaseDamageFactor + 0.5)) +
 				max(0, bonusDamage);
 			bonusDamage += max(1, int(damageBeforeWeakness * 0.50 + 0.5));
+		}
+		// Giant Slayer is a level-20 total-damage multiplier, not another
+		// maximum-health strike. Apply it after all ordinary hit bonuses so every
+		// weapon and build receives the advertised 10/20/30% against 2500+ HP.
+		bool giantSlayerFollowup = e.DamageType == 'TuinBleed' ||
+			e.DamageType == 'TuinRoguePoison' || e.DamageType == 'TuinRocketBurn' ||
+			e.DamageType == 'TuinPlasmaArc';
+		if (victimData && attacker >= 0 && attacker < TUIN_MAX_PLAYERS &&
+			victimData.ScaledMaxHealth >= 2500 && !giantSlayerFollowup)
+		{
+			let giantData = EnsurePlayerData(attacker);
+			int giantRank = giantData ? clamp(giantData.PerkGiantSlayer, 0, 3) : 0;
+			if (giantRank > 0)
+			{
+				int damageBeforeGiantSlayer = max(1, int(e.Damage * playerBaseDamageFactor + 0.5)) +
+					max(0, bonusDamage);
+				bonusDamage += max(1, int(damageBeforeGiantSlayer * giantRank * 0.10 + 0.5));
+			}
 		}
 		if (bonusDamage > 0 && e.Thing.Health > 0)
 		{

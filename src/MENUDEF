@@ -298,6 +298,9 @@ OptionMenu "TuinRPGGeneralPerks"
 	Command "KILLER INSTINCT: +2% CRITICAL CHANCE", "netevent tuin_buy_perk 3"
 	Command "BLOOD DRINKER: LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
 	Command "SCAVENGER: +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
+	StaticText " "
+	StaticText "LEVEL 20 PERK", 1
+	Command "GIANT SLAYER: +10% / +20% / +30% VS 2500+ HP", "netevent tuin_buy_perk 8"
 	Class "TuinRPGPerkMenu"
 }
 

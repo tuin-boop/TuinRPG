@@ -222,6 +222,9 @@ class TuinRPGCharacterMenu : OptionMenu
 			"IRON SKIN %d | BLOOD DRINKER %d | CLASS TRAINING %d | ULTIMATE %s",
 			data.PerkIronSkin, data.PerkBloodDrinker, data.PerkClassMastery,
 			data.PerkCapstone ? "YES" : "NO"), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 8,
+			String.Format("GIANT SLAYER %d", data.PerkGiantSlayer),
+			DTA_ScaleX, scale, DTA_ScaleY, scale);
 
 		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 9, "CURRENT WEAPON", DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, weaponColor, x, y + line * 10, variantIndex >= 0 ? String.Format("%s  -  ITEM LEVEL %d", weaponName, weaponLevel) : weaponName, DTA_ScaleX, scale, DTA_ScaleY, scale);

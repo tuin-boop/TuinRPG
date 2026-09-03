@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.05
+
+- Added the level-20 Giant Slayer general perk. Its three ranks multiply complete attack damage by 1.10, 1.20, or 1.30 against monsters with at least 2,500 RPG-scaled maximum health; it does not deal a percentage of target health. Follow-up Bleed, venom, rocket burn and plasma arc ticks inherit the boosted triggering hit without multiplying twice.
+- Enemies from 5,000 to 20,000 scaled maximum health now gain a 10%-50% weapon-drop chance floor and a 15%-50% chance to upgrade a successful ordinary reward to Mythic.
+- Enemies with at least 20,000 scaled maximum health now guarantee a Godly weapon tailored to the killing player's class. Heavy receives a Minigun, Doom Guy and Rogue use their exclusive weapon pools, and classes without signature weapons receive an owned compatible weapon.
+
 ## 0.7.04
 
 - Soft-capped the Rogue Venom Bow's maximum-health strike without removing its boss-killer role. It retains the full 10% rate through 10,000 scaled HP, then applies 3% to health above that point; iconic finale bosses retain half those rates.
