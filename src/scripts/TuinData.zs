@@ -580,6 +580,11 @@ class TuinPlayerData : Inventory
 	bool TankOverdriveActive;
 	int TankOverdriveTics;
 	Actor TankOverdriveOwner;
+	int HeavyRadioCooldownTics;
+	int HeavyRadioCallTics;
+	bool HeavyRadioMarinesDeployed;
+	bool HeavyRadioWeaponHidden;
+	Actor HeavyRadioOwner;
 	int ExecutionerCharge;
 	double ExecutionerChargeRemainder;
 	bool ExecutionerReadyNotified;
@@ -801,7 +806,7 @@ class TuinPlayerData : Inventory
 
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
-		// The active pass belongs to the attacker's inventory. Apply the Tank's
+		// The active pass belongs to the attacker's inventory. Apply the Heavy's
 		// weapon-output rule here so both stock and custom weapons use the same
 		// reliable 50% / 125% factors before the hit reaches its target.
 		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed' &&
@@ -816,7 +821,7 @@ class TuinPlayerData : Inventory
 			double multiplier = 1.0;
 			if (Endurance > 0) multiplier *= 1.0 - clamp(Endurance * 0.01, 0.0, 0.75);
 			if (PerkIronSkin > 0) multiplier *= 1.0 - clamp(PerkIronSkin * 0.03, 0.0, 0.25);
-			if (PlayerClass == 1) multiplier *= 0.50;
+			if (PlayerClass == 1) multiplier *= 0.75;
 			else if (PlayerClass == 4) multiplier *= 0.90;
 			if (PlayerClass == 1 && PerkClassMastery > 0)
 				multiplier *= 1.0 - clamp(PerkClassMastery * 0.03, 0.0, 0.20);

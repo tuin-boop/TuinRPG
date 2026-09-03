@@ -177,7 +177,7 @@ class TuinRPGCharacterMenu : OptionMenu
 			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
 		double criticalChance = TuinRPGHandler.TotalCriticalChance(data, variantIndex, activeWeapon);
 		double bonusXPChance = (1.0 - exp(log(0.97) * max(0, data.Luck))) * 100.0;
-		double classProtection = data.PlayerClass == 1 ? 0.50 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
+		double classProtection = data.PlayerClass == 1 ? 0.75 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
 			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.10 : 1.0;
 		double perkProtection = 1.0 - data.PerkIronSkin * 0.03;
 		int totalDamageReduction = int((1.0 - (1.0 - min(75, data.Endurance) * 0.01) * classProtection * perkProtection) * 100.0 + 0.5);
@@ -377,13 +377,13 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		string ability;
 		string training;
 		string ultimate;
-		if (mLabel ~== "TANK")
+		if (mLabel ~== "HEAVY")
 		{
-			role = "BULWARK";
-			bonuses = "300 BASE HP | 50% DAMAGE RESISTANCE | +100% AMMO";
-			tradeoff = "WEAPON DAMAGE REDUCED BY 50%";
-			ability = "V: OVERDRIVE - DAMAGE + FIRE SPEED FOR 10 SEC";
-			training = "+3% DAMAGE RESISTANCE PER RANK";
+			role = "HEAVY WEAPONS BULWARK";
+			bonuses = "300 BASE HP | 25% RESIST | 3X BULLETS | STARTS MINIGUN";
+			tradeoff = "-30% MOVE SPEED | WEAPON DAMAGE REDUCED BY 50%";
+			ability = "V: OVERDRIVE | B: RADIO - 2-3 MARINES FOR 30 SEC";
+			training = "+3% RESIST | RADIO COOLDOWN -10% PER RANK";
 			ultimate = "LAST STAND BELOW 30% HEALTH";
 		}
 		else if (mLabel ~== "HEALER")
@@ -436,7 +436,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		int classX = center - 650;
 		int detailX = center - 250;
 		int valueX = center + 20;
-		if (mLabel ~== "TANK")
+		if (mLabel ~== "HEAVY")
 			drawText(classX, y - 28, Font.CR_GOLD, "SELECT A CLASS");
 		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE,
 			selected ? String.Format("> %s", mLabel) : String.Format("  %s", mLabel));
@@ -467,7 +467,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		{
 			let item = mDesc.mItems[i];
 			string command;
-			if (item.mLabel ~== "TANK") command = "netevent tuin_choose_class 1";
+			if (item.mLabel ~== "HEAVY") command = "netevent tuin_choose_class 1";
 			else if (item.mLabel ~== "HEALER") command = "netevent tuin_choose_class 2";
 			else if (item.mLabel ~== "EXECUTIONER") command = "netevent tuin_choose_class 3";
 			else if (item.mLabel ~== "DOOM GUY") command = "netevent tuin_choose_class 4";

@@ -237,7 +237,7 @@ class TuinRPGHandler : EventHandler
 	{
 		switch (playerClass)
 		{
-		case 1: return "TANK";
+		case 1: return "HEAVY";
 		case 2: return "HEALER";
 		case 3: return "EXECUTIONER";
 		case 4: return "DOOM GUY";
@@ -260,6 +260,12 @@ class TuinRPGHandler : EventHandler
 	clearscope static int TankOverdriveDuration()
 	{
 		return 350;
+	}
+
+	clearscope static int HeavyRadioCooldown(TuinPlayerData data)
+	{
+		double trainingReduction = clamp(data ? data.PerkClassMastery : 0, 0, 3) * 0.10;
+		return max(35, int(90 * 35 * (1.0 - trainingReduction) + 0.5));
 	}
 
 	clearscope static int HealerSupplyCooldown()
@@ -862,7 +868,7 @@ class TuinRPGHandler : EventHandler
 		int unmodifiedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty -
 			data.AppliedLifeEssenceOverhealth);
 		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
-		int desiredModifier = data.PlayerClass == 1 ? 300 - baseMaximum :
+		int desiredModifier = data.PlayerClass == 1 ? 300 + data.Strength * 5 - baseMaximum :
 			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
 			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) :
 			data.PlayerClass == 6 ? -max(1, int(unmodifiedMaximum * 0.15 + 0.5)) : 0;
@@ -900,7 +906,7 @@ class TuinRPGHandler : EventHandler
 	void ApplyClassAmmoBonus(Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
-		// Tank weapons deal half damage outside Overdrive, so double their ammo
+		// Heavy weapons deal half damage outside Overdrive, so double their ammo
 		// pickups to keep sustained damage roughly neutral without granting
 		// passive regeneration or removing the need to manage ammunition.
 		double rate = (data.PlayerClass == 1 ? 1.00 : data.PlayerClass == 2 ? 0.25 : 0.0) +
@@ -1152,7 +1158,142 @@ class TuinRPGHandler : EventHandler
 		pawn.GiveInventory('TuinTankOverdriveFiringSpeed', 1);
 		pawn.A_AttachLight('TuinTankOverdriveGlow', DynamicLight.PulseLight, Color(255, 24, 8), 62, 128,
 			DynamicLight.LF_ATTENUATE, (0, 0, pawn.Height * 0.52), 0.45);
-		SetLootNotification(playerNumber, "TANK OVERDRIVE - 10 SECONDS", 5);
+		SetLootNotification(playerNumber, "HEAVY OVERDRIVE - 10 SECONDS", 5);
+	}
+
+	void ApplyHeavyMovement(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		if (data.PlayerClass == 1)
+		{
+			if (!pawn.FindInventory('TuinHeavyMovementPenalty'))
+				pawn.GiveInventory('TuinHeavyMovementPenalty', 1);
+		}
+		else pawn.TakeInventory('TuinHeavyMovementPenalty', 0x7FFFFFFF);
+	}
+
+	void RestoreHeavyRadioWeapon(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		if (pawn.player && data.HeavyRadioWeaponHidden)
+		{
+			pawn.player.SetPsprite(PSP_FLASH, null);
+			if (pawn.Health > 0 && pawn.player.ReadyWeapon)
+			{
+				pawn.player.SetPsprite(PSP_WEAPON, pawn.player.ReadyWeapon.GetUpState());
+				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+				if (weaponSprite)
+				{
+					weaponSprite.y = WEAPONBOTTOM;
+					weaponSprite.alpha = 1.0;
+					weaponSprite.ResetInterpolation();
+				}
+			}
+			else pawn.player.SetPsprite(PSP_WEAPON, null);
+		}
+		data.HeavyRadioWeaponHidden = false;
+	}
+
+	class<Actor> HeavyMarineClass(int color)
+	{
+		switch (color)
+		{
+		case 0: return 'TuinHeavySupportMarineGray';
+		case 1: return 'TuinHeavySupportMarineBrown';
+		case 2: return 'TuinHeavySupportMarineRed';
+		case 3: return 'TuinHeavySupportMarineBlue';
+		case 4: return 'TuinHeavySupportMarineGold';
+		default: return 'TuinHeavySupportMarinePurple';
+		}
+	}
+
+	void SpawnHeavySupport(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.HeavyRadioMarinesDeployed) return;
+		data.HeavyRadioMarinesDeployed = true;
+		int marineCount = Random[TuinHeavyMarineCount](2, 3);
+		for (int i = 0; i < marineCount; i++)
+		{
+			double spawnAngle = pawn.Angle + (i - (marineCount - 1) * 0.5) * 42.0;
+			Vector3 spawnPos = pawn.Pos + (cos(spawnAngle) * 48.0, sin(spawnAngle) * 48.0, 0);
+			let marine = TuinHeavySupportMarine(Actor.Spawn(HeavyMarineClass(
+				Random[TuinHeavyMarineColor](0, 5)), spawnPos, ALLOW_REPLACE));
+			if (!marine) continue;
+			if (!marine.TestMobjLocation()) marine.SetOrigin(pawn.Pos, false);
+			marine.master = pawn;
+			marine.SetFriendPlayer(pawn.player);
+			Actor.Spawn('TeleportFog', marine.Pos, ALLOW_REPLACE);
+		}
+		pawn.A_StartSound("tuin/heavy/radio_confirm", CHAN_VOICE, 0, 0.90);
+		SetLootNotification(playerNumber, String.Format("RADIO SUPPORT ARRIVED - %d MARINES / 30 SEC", marineCount), 4);
+	}
+
+	void ActivateHeavyRadio(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.PlayerClass != 1 || pawn.Health <= 0) return;
+		if (data.HeavyRadioCallTics > 0)
+		{
+			SetLootNotification(playerNumber, "RADIO SUPPORT CALL IN PROGRESS", 0);
+			return;
+		}
+		if (data.HeavyRadioCooldownTics > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("RADIO COOLDOWN: %.1f SEC",
+				data.HeavyRadioCooldownTics / 35.0), 0);
+			return;
+		}
+		data.HeavyRadioCooldownTics = HeavyRadioCooldown(data);
+		data.HeavyRadioCallTics = 69;
+		data.HeavyRadioMarinesDeployed = false;
+		data.HeavyRadioWeaponHidden = true;
+		data.HeavyRadioOwner = pawn;
+		data.LevelAbilityUses++;
+		pawn.player.SetPsprite(PSP_FLASH, null);
+		let radio = GetDefaultByType('TuinHeavyRadioOverlay');
+		pawn.player.SetPsprite(PSP_WEAPON, radio.FindState('Call'));
+		let radioSprite = pawn.player.FindPSprite(PSP_WEAPON);
+		if (radioSprite)
+		{
+			radioSprite.x = 0;
+			radioSprite.y = WEAPONTOP;
+			radioSprite.ResetInterpolation();
+		}
+		pawn.A_StartSound("tuin/heavy/radio_start", CHAN_VOICE, 0, 0.90);
+		SetLootNotification(playerNumber, "CALLING RADIO SUPPORT...", 4);
+	}
+
+	void UpdateHeavyRadio(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return;
+		if (data.HeavyRadioCooldownTics > 0)
+		{
+			data.HeavyRadioCooldownTics--;
+			if (data.HeavyRadioCooldownTics == 0 && data.PlayerClass == 1)
+				SetLootNotification(playerNumber, "RADIO SUPPORT READY - PRESS B", 4);
+		}
+		if (data.HeavyRadioCallTics <= 0) return;
+		if (data.HeavyRadioOwner != pawn || data.PlayerClass != 1 || pawn.Health <= 0)
+		{
+			if (data.HeavyRadioOwner) RestoreHeavyRadioWeapon(data.HeavyRadioOwner, data);
+			data.HeavyRadioOwner = pawn;
+			data.HeavyRadioCallTics = 0;
+			data.HeavyRadioMarinesDeployed = false;
+			return;
+		}
+		data.HeavyRadioCallTics--;
+		if (data.HeavyRadioCallTics == 58)
+			pawn.A_StartSound("tuin/heavy/radio_voice", CHAN_VOICE, 0, 0.90);
+		else if (data.HeavyRadioCallTics == 46)
+			pawn.A_StartSound("tuin/heavy/radio_request", CHAN_VOICE, 0, 0.90);
+		else if (data.HeavyRadioCallTics == 30)
+			SpawnHeavySupport(playerNumber, pawn, data);
+		else if (data.HeavyRadioCallTics == 8)
+			pawn.A_StartSound("tuin/heavy/radio_stop", CHAN_VOICE, 0, 0.75);
+		if (data.HeavyRadioCallTics <= 0)
+		{
+			RestoreHeavyRadioWeapon(pawn, data);
+			data.HeavyRadioOwner = pawn;
+		}
 	}
 
 	void ApplyTankOverdrive(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -1535,6 +1676,11 @@ class TuinRPGHandler : EventHandler
 			data.TankOverdriveActive = false;
 			data.TankOverdriveTics = 0;
 			data.TankReadyNotified = false;
+			data.HeavyRadioCooldownTics = 0;
+			data.HeavyRadioCallTics = 0;
+			pawn.GiveInventory('TuinMinigun', 1);
+			pawn.GiveInventory('Clip', 100);
+			if (pawn.player) pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinMinigun'));
 		}
 		else if (chosenClass == 3)
 		{
@@ -1697,6 +1843,7 @@ class TuinRPGHandler : EventHandler
 			if (!def || def.MaxAmount <= 0) continue;
 			int desiredMaximum = max(1, int(def.MaxAmount * multiplier + 0.5));
 			if (hasBackpack) desiredMaximum *= 2;
+			if (data.PlayerClass == 1 && ammo is 'Clip') desiredMaximum *= 3;
 			if (data.PlayerClass == 5) desiredMaximum = max(1, int(desiredMaximum * 0.50 + 0.5));
 			if (data.PlayerClass == 5)
 			{
@@ -1987,7 +2134,7 @@ class TuinRPGHandler : EventHandler
 				int scaledHealth = bossData ? max(1, bossData.ScaledMaxHealth) : max(1, boss.GetMaxHealth(true));
 				// Iconic bosses may swallow all or nearly all native radius damage. Add a
 				// controlled impact component: 2% scaled HP, bounded for balance. Existing
-				// armor, Tank output penalties, and other damage rules still apply.
+				// armor, Heavy output penalties, and other damage rules still apply.
 				int impactDamage = clamp(int(scaledHealth * 0.02 + 0.5), 128, 500);
 				boss.DamageMobj(inflictor, source, impactDamage, 'TuinGrenadeBossImpact');
 			}
@@ -2676,8 +2823,8 @@ class TuinRPGHandler : EventHandler
 		case 26: return "Fresh ammunition is useless if you forget to reload.";
 		case 27: return "A weaker weapon level can still carry better traits.";
 		case 28: return "Critical chance tops out at 50%. Put the rest into raw damage.";
-		case 29: return "Firing speed has a limit outside Tank Overdrive.";
-		case 30: return "Tank charges fastest by fighting in the thick of it.";
+		case 29: return "Firing speed has a limit outside Heavy Overdrive.";
+		case 30: return "Heavy charges fastest by fighting in the thick of it.";
 		case 31: return "Overdrive turns saved ammunition into ten wild seconds.";
 		case 32: return "Healer supplies are best called before panic begins.";
 		case 33: return "Executioner should sentence the enemy everyone fears.";
@@ -5656,6 +5803,8 @@ class TuinRPGHandler : EventHandler
 			UpdateLifeEssenceOverhealth(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
 			ApplyTankOverdrive(i, players[i].mo, playerData);
+			ApplyHeavyMovement(players[i].mo, playerData);
+			UpdateHeavyRadio(i, players[i].mo, playerData);
 			ApplyExecutionerDeathSentence(i, players[i].mo, playerData);
 			ApplyDoomBloodPunch(i, players[i].mo, playerData);
 			ApplyFlashlight(players[i].mo, playerData);
@@ -5737,6 +5886,15 @@ class TuinRPGHandler : EventHandler
 		if (e.Name ~== "tuin_toggle_minimap")
 		{
 			EventHandler.SendInterfaceEvent(e.Player, "tuin_toggle_minimap_silent");
+			return;
+		}
+		if (e.Name ~== "tuin_heavy_radio")
+		{
+			let radioData = EnsurePlayerData(e.Player);
+			let radioPawn = players[e.Player].mo;
+			if (radioData && radioPawn && radioData.PlayerClass == 1)
+				ActivateHeavyRadio(e.Player, radioPawn, radioData);
+			else SetLootNotification(e.Player, "HEAVY CLASS ONLY", 0);
 			return;
 		}
 		if (e.Name ~== "tuin_class_ability_up")
@@ -5827,6 +5985,24 @@ class TuinRPGHandler : EventHandler
 				Vector3 position = pawn.Pos + (cos(pawn.Angle) * 48.0,
 					sin(pawn.Angle) * 48.0, 8.0);
 				Actor.Spawn('TuinLifeEssencePickup', position, NO_REPLACE);
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_test_heavy_radio")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 1;
+				testData.HeavyRadioCooldownTics = 0;
+				testData.HeavyRadioCallTics = 0;
+				testData.HeavyRadioMarinesDeployed = false;
+				ApplyClassHealth(testPawn, testData);
+				ApplyAmmoCapacity(testPawn, testData);
+				ApplyHeavyMovement(testPawn, testData);
+				ActivateHeavyRadio(e.Player, testPawn, testData);
+				testPawn.A_Log("HEAVY RADIO TEST STARTED. Reinforcements arrive during the call animation.");
 			}
 			return;
 		}
@@ -6074,6 +6250,7 @@ class TuinRPGHandler : EventHandler
 		else return;
 		data.UnspentStatPoints--;
 		ApplyVitality(players[e.Player].mo, data);
+		ApplyClassHealth(players[e.Player].mo, data);
 	}
 
 	override void InterfaceProcess(ConsoleEvent e)
@@ -6433,10 +6610,11 @@ class TuinRPGHandler : EventHandler
 		if (!data || data.PlayerClass != 1) return;
 		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
 		string status;
+		string radioStatus;
 		int statusColor;
 		if (data.TankOverdriveActive)
 		{
-			status = String.Format("TANK OVERDRIVE  %.1f SEC  -  +150%% DAMAGE / FIRE SPEED",
+			status = String.Format("HEAVY OVERDRIVE  %.1f SEC  -  +150%% DAMAGE / FIRE SPEED",
 				max(0, data.TankOverdriveTics) / 35.0);
 			statusColor = Font.CR_RED;
 		}
@@ -6450,7 +6628,13 @@ class TuinRPGHandler : EventHandler
 			status = "OVERDRIVE READY  -  PRESS V";
 			statusColor = Font.CR_GREEN;
 		}
-		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		if (data.HeavyRadioCallTics > 0)
+			radioStatus = "RADIO SUPPORT  CALLING...";
+		else if (data.HeavyRadioCooldownTics > 0)
+			radioStatus = String.Format("RADIO SUPPORT  %.1f SEC", data.HeavyRadioCooldownTics / 35.0);
+		else radioStatus = "RADIO SUPPORT READY  -  PRESS B";
+		int longestWidth = max(font.StringWidth(status), font.StringWidth(radioStatus));
+		int panelWidth = min(screenWidth - 20, int(longestWidth * scale) + 16);
 		int panelX = screenWidth - panelWidth - 10;
 		int panelY = 10;
 		if (CVInt('tuin_minimap_enabled', 1))
@@ -6463,11 +6647,15 @@ class TuinRPGHandler : EventHandler
 				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
 			panelWidth = mapSize;
 		}
-		Screen.Dim(Color(15, 2, 2), 0.94, panelX, panelY, panelWidth, int(20 * scale));
-		Screen.DrawLineFrame(Color(235, 42, 18), panelX, panelY, panelWidth, int(20 * scale), 2);
+		Screen.Dim(Color(15, 2, 2), 0.94, panelX, panelY, panelWidth, int(36 * scale));
+		Screen.DrawLineFrame(Color(235, 42, 18), panelX, panelY, panelWidth, int(36 * scale), 2);
 		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
 		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+		double radioScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(radioStatus)));
+		Screen.DrawText(font, data.HeavyRadioCooldownTics <= 0 ? Font.CR_GREEN : Font.CR_GOLD,
+			panelX + 6, panelY + int(20 * scale), radioStatus,
+			DTA_ScaleX, radioScale, DTA_ScaleY, radioScale);
 	}
 
 	ui void DrawDoomBloodPunchStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)

@@ -239,7 +239,7 @@ OptionMenu "TuinRPGCharacter"
 	StaticText "First point chooses a class; later points buy perks", 1
 	StaticText " "
 	Command "VITALITY +  (+5 maximum HP)", "netevent tuin_spend_vitality"
-	Command "STRENGTH +  (+2% damage)", "netevent tuin_spend_strength"
+	Command "STRENGTH +  (+2% damage; Heavy +5 maximum HP)", "netevent tuin_spend_strength"
 	Command "LUCK +  (+0.5% critical chance and bonus XP)", "netevent tuin_spend_luck"
 	Command "AGILITY +  (+2% firing speed)", "netevent tuin_spend_agility"
 	Command "ENDURANCE +  (-1% damage taken)", "netevent tuin_spend_endurance"
@@ -255,7 +255,7 @@ OptionMenu "TuinRPGClassChoice"
 	Position 82
 	StaticText "COST: 1 PERK POINT   |   YOUR CHOICE IS PERMANENT", 1
 	StaticText " "
-	Command "TANK", "netevent tuin_choose_class 1"
+	Command "HEAVY", "netevent tuin_choose_class 1"
 	Command "HEALER", "netevent tuin_choose_class 2"
 	Command "EXECUTIONER", "netevent tuin_choose_class 3"
 	Command "DOOM GUY", "netevent tuin_choose_class 4"
@@ -309,7 +309,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "1 POINT PER RANK   |   3 RANKS MAX", 1
 	StaticText "ONLY YOUR CHOSEN CLASS RECEIVES ITS LISTED BONUS", 1
 	StaticText " "
-	StaticText "TANK: +3% DAMAGE RESISTANCE", 1
+	StaticText "HEAVY: +3% RESISTANCE + 10% FASTER RADIO COOLDOWN", 1
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
 	StaticText "EXECUTIONER: JUDGMENT CHARGE +10% / +20% / +30%", 1
 	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
@@ -328,7 +328,7 @@ OptionMenu "TuinRPGClassCapstone"
 	StaticText "COST: 1 PERK POINT", 1
 	StaticText "REQUIRES LEVEL 20 + CLASS TRAINING RANK 2", 1
 	StaticText " "
-	StaticText "TANK: LAST STAND BELOW 30% HEALTH", 1
+	StaticText "HEAVY: LAST STAND BELOW 30% HEALTH", 1
 	StaticText "HEALER: DOUBLE ALL CLASS HEALING", 1
 	StaticText "EXECUTIONER - NO APPEALS: STRONGER 12-SEC MARK + 25% REFUND", 1
 	StaticText "DOOM GUY: +45% BLOOD PUNCH CHARGE | HEALS 30% DAMAGE", 1

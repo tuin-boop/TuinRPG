@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.95
+
+- Renamed Tank to **Heavy** and rebalanced the class to 25% innate damage resistance, 30% slower movement, 300 base health, half weapon damage, triple bullet capacity, and a starting Minigun.
+- Heavy now gains an additional 5 maximum health for every Strength point, on top of Strength's normal 2% outgoing-damage bonus.
+- Added **Radio Support** on `B`: a full handheld-radio animation and call sequence summons two or three strong, invulnerable friendly marines for 30 seconds. Each marine uses a randomly colored player model and randomly receives a Shotgun, Super Shotgun, Chaingun, Rocket Launcher, or Plasma Rifle.
+- Radio Support has a 90-second per-player cooldown. Heavy Class Training retains its 3% resistance per rank and now also shortens this cooldown by 10% per rank.
+- Added a second Heavy HUD line for Radio Support state/cooldown and the `netevent tuin_test_heavy_radio` test command.
+- Imported the supplied JohnnyDoom radio sprites and sounds; the support AI uses UZDoom's native Scripted Marine implementation for cleaner multiplayer ownership and compatibility.
+
 ## 0.6.94
 
 - Venom Bow defense-shattering now applies to every Rare-or-higher upgraded monster, as well as native and iconic bosses, instead of requiring an RPG boss.

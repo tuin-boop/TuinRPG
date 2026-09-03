@@ -1,0 +1,7 @@
+tuin/heavy/radio_start DOOMCALL
+tuin/heavy/radio_request RADCALL
+$random tuin/heavy/radio_voice { NEEDBACK NEEDHELP }
+tuin/heavy/radio_silence RADSILNC
+tuin/heavy/radio_confirm ROGERTHT
+tuin/heavy/radio_stop RADSTOP
+tuin/heavy/teleport TMNTTEL
