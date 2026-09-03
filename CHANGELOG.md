@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.97
+
+- Increased Heavy support-marine ground speed from 3 to 6 and added a proactive seven-tic scan for the nearest visible hostile within 1,536 units. New targets receive an immediate reaction and the marines use missile attacks more readily.
+- Added FriendJohn-style forward recoil while closing on a distant enemy, making the squad push into combat instead of merely following its Heavy quickly.
+- Reduced Heavy base maximum health from 300 to 175. Strength still adds 5 maximum health per point and Vitality/perk health continue stacking normally, so 175 is the class base rather than an absolute hard cap.
+
 ## 0.6.96
 
 - Reworked Heavy support-marine movement to follow the supplied FriendJohn behavior: marines settle near their owner, use smooth lunging and strafing impulses during combat, slide along walls, handle taller steps/drop-offs, and teleport back with fog if badly separated or unable to see their Heavy. FriendJohn's vertical hops were deliberately removed because standard marine sprites made them look bouncy rather than floaty.

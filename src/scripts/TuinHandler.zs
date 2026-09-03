@@ -877,7 +877,7 @@ class TuinRPGHandler : EventHandler
 		int unmodifiedMaximum = max(1, pawn.GetMaxHealth(true) + data.AppliedClassHealthPenalty -
 			data.AppliedLifeEssenceOverhealth);
 		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
-		int desiredModifier = data.PlayerClass == 1 ? 300 + data.Strength * 5 - baseMaximum :
+		int desiredModifier = data.PlayerClass == 1 ? 175 + data.Strength * 5 - baseMaximum :
 			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
 			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) :
 			data.PlayerClass == 6 ? -max(1, int(unmodifiedMaximum * 0.15 + 0.5)) : 0;

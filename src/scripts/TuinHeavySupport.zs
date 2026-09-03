@@ -63,6 +63,31 @@ class TuinHeavySupportMarine : ScriptedMarine
 	int ServiceTics;
 	int MasterSightLostTics;
 	int MovementPulse;
+	int EnemyScanTics;
+
+	bool ValidEnemy(Actor candidate)
+	{
+		return candidate && candidate.Health > 0 && candidate.bSHOOTABLE &&
+			candidate.bISMONSTER && !candidate.bFRIENDLY &&
+			Distance3D(candidate) <= 1536.0 && CheckSight(candidate, SF_IGNOREWATERBOUNDARY);
+	}
+
+	Actor FindNearestEnemy()
+	{
+		Actor nearest;
+		double nearestDistance = 1537.0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (!ValidEnemy(candidate)) continue;
+			double distance = Distance3D(candidate);
+			if (distance >= nearestDistance) continue;
+			nearest = candidate;
+			nearestDistance = distance;
+		}
+		return nearest;
+	}
 
 	override void BeginPlay()
 	{
@@ -75,6 +100,16 @@ class TuinHeavySupportMarine : ScriptedMarine
 	override void Tick()
 	{
 		Super.Tick();
+		if (--EnemyScanTics <= 0 || !ValidEnemy(target))
+		{
+			target = FindNearestEnemy();
+			EnemyScanTics = 7;
+			if (target)
+			{
+				threshold = 100;
+				reactiontime = 0;
+			}
+		}
 		if (master)
 		{
 			double masterDistance = Distance3D(master);
@@ -94,6 +129,11 @@ class TuinHeavySupportMarine : ScriptedMarine
 			{
 				Vel.X += FRandom[TuinHeavyMarineMotion](-1.5, 1.5);
 				Vel.Y += FRandom[TuinHeavyMarineMotion](-1.5, 1.5);
+			}
+			if (target && target.Health > 0 && Distance3D(target) > 160.0)
+			{
+				Angle = AngleTo(target);
+				A_Recoil(-0.65);
 			}
 			else if ((!target || target.Health <= 0) && masterDistance > 86.0)
 			{
@@ -118,7 +158,7 @@ class TuinHeavySupportMarine : ScriptedMarine
 	Default
 	{
 		Health 1000;
-		Speed 3;
+		Speed 6;
 		PainChance 0;
 		MaxStepHeight 48;
 		MaxDropOffHeight 48;
@@ -127,6 +167,7 @@ class TuinHeavySupportMarine : ScriptedMarine
 		+INVULNERABLE
 		+NOBLOOD
 		+QUICKTORETALIATE
+		+MISSILEMORE
 		+LOOKALLAROUND
 		+NOBLOCKMONST
 		+SLIDESONWALLS
