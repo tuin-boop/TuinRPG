@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.01
+
+- Fixed silent Quad Shotgun secondary fire by registering all three Project Brutality half-blast samples as explicit sound aliases before random selection.
+
 ## 0.7.00
 - Replaced the Doom Guy quad shotgun audio with Project Brutality's quieter dedicated set: its four-barrel blast, randomized two-barrel blasts, and matching pickup/open/load/close sounds.
 - Tightened level-15 Hell Director promotion priority to Baron-or-stronger first, then Hell Knight-or-stronger, with Cacodemons and lower monsters used only when the complete preferred pool is empty.

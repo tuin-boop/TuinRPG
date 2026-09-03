@@ -1,5 +1,13 @@
 tuin/doomguy/quadprimary PBQSFIR
-$random tuin/doomguy/quaddouble { PBQSD0 PBQSD2 PBQSD3 }
+tuin/doomguy/quaddouble0 PBQSD0
+tuin/doomguy/quaddouble2 PBQSD2
+tuin/doomguy/quaddouble3 PBQSD3
+$random tuin/doomguy/quaddouble
+{
+	tuin/doomguy/quaddouble0
+	tuin/doomguy/quaddouble2
+	tuin/doomguy/quaddouble3
+}
 tuin/doomguy/quadopen    PBQSOPN
 tuin/doomguy/quadload    PBQSIN
 tuin/doomguy/quadclose   PBQSCLS
