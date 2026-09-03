@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.91
+
+- The Rogue Venom Bow now keeps firing while the attack button is held.
+- Removed its three-shot magazine and reload sequence; each shot now draws directly from the bolt-ammo reserve.
+- Venom remains stackable: every bolt adds 50% of that hit as six-second poison, within the existing monster-type health caps.
+
 ## 0.6.90
 
 - Halved the Rogue Venom Bow's oversized world-loot billboard while preserving its first-person weapon animation.

@@ -193,8 +193,6 @@ class TuinRogueBoltAmmo : Ammo
 
 class TuinRogueBow : TuinRogueWeapon
 {
-	int LoadedShots;
-
 	Default
 	{
 		Tag "ROGUE VENOM BOW";
@@ -207,7 +205,6 @@ class TuinRogueBow : TuinRogueWeapon
 		Weapon.AmmoUse1 1;
 		Weapon.AmmoGive1 12;
 		Weapon.UpSound "tuin/rogue/bowdraw";
-		+WEAPON.NOAUTOFIRE
 		+WEAPON.NOALERT
 	}
 
@@ -231,25 +228,9 @@ class TuinRogueBow : TuinRogueWeapon
 		{
 			A_PlaySound("tuin/rogue/bowfire", CHAN_WEAPON, 0.85);
 			A_FireProjectile("TuinRogueVenomBolt");
-			invoker.LoadedShots++;
 			A_GunFlash();
 		}
 		RBOW FG 2;
-		TNT1 A 0 A_JumpIf(invoker.LoadedShots >= 3, "Reload");
-		Goto Ready;
-	Reload:
-		RBOW H 2;
-		RBOW IJK 2;
-		RBOW L 1;
-		RBOW MNOPQRS 2;
-		RBOW T 1 A_PlaySound("tuin/rogue/bowpull", CHAN_WEAPON, 0.75);
-		RBOW U 1;
-		RBOW V 2;
-		RBOW WX 1;
-		RBOW Y 2;
-		RBOW Z 4;
-		RBL2 ABCDE 2;
-		TNT1 A 0 { invoker.LoadedShots = 0; }
 		Goto Ready;
 	Flash:
 		TNT1 A 2 Bright A_Light1;
