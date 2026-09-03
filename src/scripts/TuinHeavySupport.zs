@@ -43,10 +43,17 @@ class TuinHeavyRadioOverlay : Weapon
 	States
 	{
 	Call:
-		RADI ABCDE 2;
-		RADI GHI 2;
-		RADI J 35;
-		RADI IHGFEDCBA 2;
+		RADI ABCDE 1;
+		RADI GHI 1;
+		RADI J 57;
+		RADI JJJJJIHG 1;
+		RADI F 25;
+		RADI F 29;
+		RADI F 31;
+		RADI F 13;
+		RADI F 16;
+		RADI F 4;
+		RADI EDCBA 1;
 		Stop;
 	}
 }
@@ -54,6 +61,8 @@ class TuinHeavyRadioOverlay : Weapon
 class TuinHeavySupportMarine : ScriptedMarine
 {
 	int ServiceTics;
+	int MasterSightLostTics;
+	int MovementPulse;
 
 	override void BeginPlay()
 	{
@@ -66,6 +75,37 @@ class TuinHeavySupportMarine : ScriptedMarine
 	override void Tick()
 	{
 		Super.Tick();
+		if (master)
+		{
+			double masterDistance = Distance3D(master);
+			if (!CheckSight(master)) MasterSightLostTics++;
+			else MasterSightLostTics = 0;
+			if (masterDistance > 1024.0 || MasterSightLostTics >= 70)
+			{
+				Actor.Spawn('TeleportFog', Pos, ALLOW_REPLACE);
+				Warp(master, FRandom[TuinHeavyMarineFollow](-64.0, -24.0),
+					FRandom[TuinHeavyMarineFollow](-64.0, 64.0), 0, 0,
+					WARPF_STOP | WARPF_TOFLOOR);
+				Actor.Spawn('TeleportFog', Pos, ALLOW_REPLACE);
+				MasterSightLostTics = 0;
+			}
+			MovementPulse++;
+			if (target && target.Health > 0 && (MovementPulse % 7) == 0)
+			{
+				Vel.X += FRandom[TuinHeavyMarineMotion](-1.5, 1.5);
+				Vel.Y += FRandom[TuinHeavyMarineMotion](-1.5, 1.5);
+			}
+			else if ((!target || target.Health <= 0) && masterDistance > 86.0)
+			{
+				Angle = AngleTo(master);
+				A_Recoil(-0.75);
+			}
+			else if ((!target || target.Health <= 0) && masterDistance < 70.0)
+			{
+				Vel.X *= 0.72;
+				Vel.Y *= 0.72;
+			}
+		}
 		if (ServiceTics > 0) ServiceTics--;
 		if (ServiceTics <= 0)
 		{
@@ -78,8 +118,10 @@ class TuinHeavySupportMarine : ScriptedMarine
 	Default
 	{
 		Health 1000;
-		Speed 12;
+		Speed 3;
 		PainChance 0;
+		MaxStepHeight 48;
+		MaxDropOffHeight 48;
 		Species "TuinHeavySupport";
 		+FRIENDLY
 		+INVULNERABLE
@@ -87,6 +129,8 @@ class TuinHeavySupportMarine : ScriptedMarine
 		+QUICKTORETALIATE
 		+LOOKALLAROUND
 		+NOBLOCKMONST
+		+SLIDESONWALLS
+		+FLOORCLIP
 		-COUNTKILL
 	}
 }
@@ -109,14 +153,4 @@ class TuinHeavySupportMarineRed : TuinHeavySupportMarine
 class TuinHeavySupportMarineBlue : TuinHeavySupportMarine
 {
 	Default { Translation "112:127=192:207"; }
-}
-
-class TuinHeavySupportMarineGold : TuinHeavySupportMarine
-{
-	Default { Translation "112:127=160:175"; }
-}
-
-class TuinHeavySupportMarinePurple : TuinHeavySupportMarine
-{
-	Default { Translation "112:127=176:191"; }
 }

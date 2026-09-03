@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.96
+
+- Reworked Heavy support-marine movement to follow the supplied FriendJohn behavior: marines settle near their owner, use smooth lunging and strafing impulses during combat, slide along walls, handle taller steps/drop-offs, and teleport back with fog if badly separated or unable to see their Heavy. FriendJohn's vertical hops were deliberately removed because standard marine sprites made them look bouncy rather than floaty.
+- Restricted support-marine translations to the four clean Doom player-color ranges—gray, brown, red and blue—removing the experimental gold/purple rolls that could produce an odd palette.
+- Replaced Radio Support's passive time countdown with a damage-powered recharge. Rank 0 requires 3,150 actual monster damage after a call; Heavy Class Training reduces that requirement by 10% per rank. Waiting no longer restores the radio.
+- Changed the Heavy HUD and cooldown message to show the exact remaining damage instead of seconds.
+- Slowed the handheld radio to the original JohnnyDoom sequence: the complete call now lasts about 5.6 seconds, with voice, static, confirmation, reinforcement arrival and hang-up synchronized to their original frame timings.
+
 ## 0.6.95
 
 - Renamed Tank to **Heavy** and rebalanced the class to 25% innate damage resistance, 30% slower movement, 300 base health, half weapon damage, triple bullet capacity, and a starting Minigun.

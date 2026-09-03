@@ -383,7 +383,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			bonuses = "300 BASE HP | 25% RESIST | 3X BULLETS | STARTS MINIGUN";
 			tradeoff = "-30% MOVE SPEED | WEAPON DAMAGE REDUCED BY 50%";
 			ability = "V: OVERDRIVE | B: RADIO - 2-3 MARINES FOR 30 SEC";
-			training = "+3% RESIST | RADIO COOLDOWN -10% PER RANK";
+			training = "+3% RESIST | RADIO DAMAGE REQUIRED -10% PER RANK";
 			ultimate = "LAST STAND BELOW 30% HEALTH";
 		}
 		else if (mLabel ~== "HEALER")

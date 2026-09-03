@@ -268,6 +268,15 @@ class TuinRPGHandler : EventHandler
 		return max(35, int(90 * 35 * (1.0 - trainingReduction) + 0.5));
 	}
 
+	void ReduceHeavyRadioCooldown(int playerNumber, TuinPlayerData data, int damage)
+	{
+		if (!data || data.PlayerClass != 1 || data.HeavyRadioCooldownTics <= 0 || damage <= 0) return;
+		int previous = data.HeavyRadioCooldownTics;
+		data.HeavyRadioCooldownTics = max(0, data.HeavyRadioCooldownTics - damage);
+		if (previous > 0 && data.HeavyRadioCooldownTics == 0)
+			SetLootNotification(playerNumber, "RADIO SUPPORT READY - PRESS B", 4);
+	}
+
 	clearscope static int HealerSupplyCooldown()
 	{
 		return 700;
@@ -1202,8 +1211,7 @@ class TuinRPGHandler : EventHandler
 		case 1: return 'TuinHeavySupportMarineBrown';
 		case 2: return 'TuinHeavySupportMarineRed';
 		case 3: return 'TuinHeavySupportMarineBlue';
-		case 4: return 'TuinHeavySupportMarineGold';
-		default: return 'TuinHeavySupportMarinePurple';
+		default: return 'TuinHeavySupportMarineBlue';
 		}
 	}
 
@@ -1217,14 +1225,13 @@ class TuinRPGHandler : EventHandler
 			double spawnAngle = pawn.Angle + (i - (marineCount - 1) * 0.5) * 42.0;
 			Vector3 spawnPos = pawn.Pos + (cos(spawnAngle) * 48.0, sin(spawnAngle) * 48.0, 0);
 			let marine = TuinHeavySupportMarine(Actor.Spawn(HeavyMarineClass(
-				Random[TuinHeavyMarineColor](0, 5)), spawnPos, ALLOW_REPLACE));
+				Random[TuinHeavyMarineColor](0, 3)), spawnPos, ALLOW_REPLACE));
 			if (!marine) continue;
 			if (!marine.TestMobjLocation()) marine.SetOrigin(pawn.Pos, false);
 			marine.master = pawn;
 			marine.SetFriendPlayer(pawn.player);
 			Actor.Spawn('TeleportFog', marine.Pos, ALLOW_REPLACE);
 		}
-		pawn.A_StartSound("tuin/heavy/radio_confirm", CHAN_VOICE, 0, 0.90);
 		SetLootNotification(playerNumber, String.Format("RADIO SUPPORT ARRIVED - %d MARINES / 30 SEC", marineCount), 4);
 	}
 
@@ -1238,12 +1245,12 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.HeavyRadioCooldownTics > 0)
 		{
-			SetLootNotification(playerNumber, String.Format("RADIO COOLDOWN: %.1f SEC",
-				data.HeavyRadioCooldownTics / 35.0), 0);
+			SetLootNotification(playerNumber, String.Format("RADIO RECHARGE: %d DAMAGE",
+				data.HeavyRadioCooldownTics), 0);
 			return;
 		}
 		data.HeavyRadioCooldownTics = HeavyRadioCooldown(data);
-		data.HeavyRadioCallTics = 69;
+		data.HeavyRadioCallTics = 196;
 		data.HeavyRadioMarinesDeployed = false;
 		data.HeavyRadioWeaponHidden = true;
 		data.HeavyRadioOwner = pawn;
@@ -1265,12 +1272,6 @@ class TuinRPGHandler : EventHandler
 	void UpdateHeavyRadio(int playerNumber, Actor pawn, TuinPlayerData data)
 	{
 		if (!pawn || !data) return;
-		if (data.HeavyRadioCooldownTics > 0)
-		{
-			data.HeavyRadioCooldownTics--;
-			if (data.HeavyRadioCooldownTics == 0 && data.PlayerClass == 1)
-				SetLootNotification(playerNumber, "RADIO SUPPORT READY - PRESS B", 4);
-		}
 		if (data.HeavyRadioCallTics <= 0) return;
 		if (data.HeavyRadioOwner != pawn || data.PlayerClass != 1 || pawn.Health <= 0)
 		{
@@ -1281,13 +1282,17 @@ class TuinRPGHandler : EventHandler
 			return;
 		}
 		data.HeavyRadioCallTics--;
-		if (data.HeavyRadioCallTics == 58)
+		if (data.HeavyRadioCallTics == 185)
 			pawn.A_StartSound("tuin/heavy/radio_voice", CHAN_VOICE, 0, 0.90);
-		else if (data.HeavyRadioCallTics == 46)
+		else if (data.HeavyRadioCallTics == 128)
 			pawn.A_StartSound("tuin/heavy/radio_request", CHAN_VOICE, 0, 0.90);
-		else if (data.HeavyRadioCallTics == 30)
+		else if (data.HeavyRadioCallTics == 95)
+			pawn.A_StartSound("tuin/heavy/radio_silence", CHAN_VOICE, 0, 0.75);
+		else if (data.HeavyRadioCallTics == 66)
+			pawn.A_StartSound("tuin/heavy/radio_confirm", CHAN_VOICE, 0, 0.90);
+		else if (data.HeavyRadioCallTics == 22)
 			SpawnHeavySupport(playerNumber, pawn, data);
-		else if (data.HeavyRadioCallTics == 8)
+		else if (data.HeavyRadioCallTics == 4)
 			pawn.A_StartSound("tuin/heavy/radio_stop", CHAN_VOICE, 0, 0.75);
 		if (data.HeavyRadioCallTics <= 0)
 		{
@@ -5170,6 +5175,9 @@ class TuinRPGHandler : EventHandler
 			}
 			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
 				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
+			if (attackData && attackData.PlayerClass == 1)
+				ReduceHeavyRadioCooldown(attacker, attackData,
+					min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 3)
 				AddExecutionerDamageCharge(attacker, attackData,
 					min(totalDamage, max(0, victimHealthBefore)));
@@ -6631,7 +6639,7 @@ class TuinRPGHandler : EventHandler
 		if (data.HeavyRadioCallTics > 0)
 			radioStatus = "RADIO SUPPORT  CALLING...";
 		else if (data.HeavyRadioCooldownTics > 0)
-			radioStatus = String.Format("RADIO SUPPORT  %.1f SEC", data.HeavyRadioCooldownTics / 35.0);
+			radioStatus = String.Format("RADIO RECHARGE  %d DAMAGE - DEAL DAMAGE", data.HeavyRadioCooldownTics);
 		else radioStatus = "RADIO SUPPORT READY  -  PRESS B";
 		int longestWidth = max(font.StringWidth(status), font.StringWidth(radioStatus));
 		int panelWidth = min(screenWidth - 20, int(longestWidth * scale) + 16);
