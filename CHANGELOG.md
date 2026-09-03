@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.94
+
+- Venom Bow defense-shattering now applies to every Rare-or-higher upgraded monster, as well as native and iconic bosses, instead of requiring an RPG boss.
+- Renamed the feedback to `DEFENSES SHATTERED` so it also reads naturally when Armored, Regenerating or Healer is removed from an elite.
+
 ## 0.6.93
 
 - Venom Bow bolts now deal additional damage equal to 10% of the target's scaled maximum health. Iconic episode-end bosses instead take 5%; this defining health strike is not reduced by the generic RPG burst limiter.

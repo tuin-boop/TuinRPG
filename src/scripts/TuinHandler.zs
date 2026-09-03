@@ -4964,8 +4964,8 @@ class TuinRPGHandler : EventHandler
 			bool iconicBowTarget = IsIconicEpisodeBoss(e.Thing);
 			bowHealthDamage = max(1, int(max(1, victimData.ScaledMaxHealth) *
 				(iconicBowTarget ? 0.05 : 0.10) + 0.5));
-			bool bowBossTarget = victimData.MonsterRarity >= 6 || iconicBowTarget || e.Thing.bBOSS;
-			if (bowBossTarget)
+			bool upgradedBowTarget = victimData.MonsterRarity >= 2 || iconicBowTarget || e.Thing.bBOSS;
+			if (upgradedBowTarget)
 			{
 				int strippedAffixes = victimData.AffixFlags &
 					(TuinMonsterData.AFFIX_ARMORED | TuinMonsterData.AFFIX_REGENERATING |
@@ -4974,7 +4974,7 @@ class TuinRPGHandler : EventHandler
 					TuinMonsterData.AFFIX_REGENERATING | TuinMonsterData.AFFIX_HEALER);
 				victimData.HealerSelfLockTics = 0;
 				if (strippedAffixes && attacker >= 0)
-					SetLootNotification(attacker, "BOSS DEFENSES SHATTERED", 5);
+					SetLootNotification(attacker, "DEFENSES SHATTERED", 5);
 			}
 		}
 		if (victimData && bonusDamage > 0)
