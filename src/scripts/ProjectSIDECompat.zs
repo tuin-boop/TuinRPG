@@ -507,7 +507,13 @@ class PSCompatWeaponHandler : EventHandler
 		pawn.player.SetPSprite(1001, null);
 		pawn.player.SetPSprite(1002, null);
 		if (pawn.health > 0 && pawn.player.ReadyWeapon)
-			pawn.player.SetPSprite(PSP_WEAPON, pawn.player.ReadyWeapon.GetReadyState());
+		{
+			Weapon readyWeapon = pawn.player.ReadyWeapon;
+			State restoreState = readyWeapon.GetReadyState();
+			if (readyWeapon.GetClassName() == 'TuinRogueSilencedPistol')
+				restoreState = readyWeapon.FindState('ReadyLoop');
+			pawn.player.SetPSprite(PSP_WEAPON, restoreState);
+		}
 		GrenadeHidingWeapon[playerNumber] = false;
 		EngineerMineThrow[playerNumber] = false;
 	}

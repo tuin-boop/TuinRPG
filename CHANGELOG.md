@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.79
+
+- Rogue grenade recovery now returns the Silenced Pistol directly to its normal idle frame instead of briefly replaying its unusual equip animation.
+
 ## 0.6.78
 
 - Restored the Rogue Silenced Pistol to its original unmirrored orientation so its visible barrel and perfectly accurate hitscan share the expected sightline.
