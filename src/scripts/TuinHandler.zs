@@ -1048,19 +1048,18 @@ class TuinRPGHandler : EventHandler
 			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
 			{
 				if (!actor.bISMONSTER || actor.bFRIENDLY || actor.Health <= 0) continue;
-				bool lostActiveTarget = actor.Target == pawn;
-				bool rememberedRogue = lostActiveTarget || actor.Tracer == pawn ||
-					actor.LastHeard == pawn || actor.LastEnemy == pawn;
-				if (!rememberedRogue) continue;
-				if (lostActiveTarget) actor.Target = null;
-				if (actor.Tracer == pawn) actor.Tracer = null;
+				// Only disengage monsters actively hunting this Rogue. Rewriting the
+				// memories and tracer state of every monster caused a visible burst of
+				// map-wide AI state changes when Veil began.
+				if (actor.Target != pawn) continue;
+				double facing = actor.Angle;
+				double verticalVelocity = actor.Vel.Z;
+				actor.Target = null;
 				if (actor.LastHeard == pawn) actor.LastHeard = null;
 				if (actor.LastEnemy == pawn) actor.LastEnemy = null;
-				// Do not force A_Wander here. It made every affected monster repeatedly
-				// choose new angles, creating a map-wide confused spinning reaction.
-				// Only a monster that actually lost its current target needs to idle;
-				// monsters fighting another player remain completely undisturbed.
-				if (lostActiveTarget) actor.SetIdle();
+				actor.SetIdle();
+				actor.Angle = facing;
+				actor.Vel = (0, 0, verticalVelocity);
 			}
 		}
 	}

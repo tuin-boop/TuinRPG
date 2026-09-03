@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.83
+
+- Further stabilized Shadow Veil disengagement: only monsters actively targeting the Rogue are changed, their exact facing is preserved, and their horizontal chase momentum is stopped. Passive monster memories and tracer state are no longer rewritten map-wide.
+
 ## 0.6.82
 
 - Shadow Veil no longer repeatedly forces monsters to wander and turn in random directions. Monsters calmly forget the hidden Rogue while keeping their current facing, and multiplayer monsters targeting somebody else are left undisturbed.
