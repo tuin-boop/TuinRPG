@@ -1527,6 +1527,7 @@ class TuinRPGHandler : EventHandler
 			pawn.GiveInventory('TuinRogueSilencedPistol', 1);
 			if (pawn.player)
 				pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
+			EnsureRogueCatchupChoice(playerNumber);
 		}
 		else if (chosenClass == 1)
 		{
@@ -2252,6 +2253,25 @@ class TuinRPGHandler : EventHandler
 		return 2;
 	}
 
+	void EnsureRogueCatchupChoice(int playerNumber)
+	{
+		TuinWeaponDrop replacement;
+		ThinkerIterator it = ThinkerIterator.Create('TuinWeaponDrop');
+		TuinWeaponDrop drop;
+		while (drop = TuinWeaponDrop(it.Next()))
+		{
+			if (!drop.CatchupReward || drop.CatchupPlayerNumber != playerNumber) continue;
+			if (IsRogueOnlyWeaponType(drop.WeaponType)) return;
+			if (!replacement) replacement = drop;
+		}
+		if (!replacement) return;
+		replacement.WeaponType = Random[TuinRPGLoot](0, 1) == 0 ?
+			'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+		replacement.DisplayName = WeaponVariantName(replacement.WeaponType,
+			replacement.AffixFlags, replacement.Quality, replacement.VariantID);
+		replacement.ConfigureVisuals();
+	}
+
 	void SpawnCatchupWeaponChoices(Actor pawn, int itemLevel)
 	{
 		if (!pawn) return;
@@ -2293,7 +2313,11 @@ class TuinRPGHandler : EventHandler
 				pawn.Pos.y + sin(angle) * 80.0, pawn.FloorZ + 8.0);
 			let reward = SpawnRolledWeaponDrop(position, rogueChoice, itemLevel,
 				RollCatchupWeaponQuality());
-			if (reward) reward.CatchupReward = true;
+			if (reward)
+			{
+				reward.CatchupReward = true;
+				reward.CatchupPlayerNumber = pawn.PlayerNumber();
+			}
 			firstRandomChoice = 1;
 		}
 		for (int choice = firstRandomChoice; choice < 3 && selected.Size() < candidates.Size(); choice++)
@@ -2312,7 +2336,11 @@ class TuinRPGHandler : EventHandler
 			double angle = pawn.Angle - 30.0 + choice * 30.0;
 			Vector3 position = (pawn.Pos.x + cos(angle) * 80.0, pawn.Pos.y + sin(angle) * 80.0, pawn.FloorZ + 8.0);
 			let reward = SpawnRolledWeaponDrop(position, weaponType, itemLevel, RollCatchupWeaponQuality());
-			if (reward) reward.CatchupReward = true;
+			if (reward)
+			{
+				reward.CatchupReward = true;
+				reward.CatchupPlayerNumber = pawn.PlayerNumber();
+			}
 		}
 	}
 
@@ -2322,6 +2350,7 @@ class TuinRPGHandler : EventHandler
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
 		if (!data || !pawn) return;
 		if (CatchupHandled[playerNumber]) return;
+		CatchupHandled[playerNumber] = true;
 		int mapNumber = CurrentLoadedCampaignMap;
 		if (mapNumber <= 0) mapNumber = level.LevelNum;
 		if (mapNumber <= 0) mapNumber = max(1, MapsVisited);
@@ -2335,15 +2364,11 @@ class TuinRPGHandler : EventHandler
 		// stat/perk points, reward weapons, or their accompanying ammo refill.
 		if (data.SuppressNextMapCatchup)
 		{
-			CatchupHandled[playerNumber] = true;
 			data.SuppressNextMapCatchup = false;
 			return;
 		}
 		if (!CVInt('tuin_late_start_catchup', 1) || !(gameinfo.gametype & GAME_DoomChex))
-		{
-			CatchupHandled[playerNumber] = true;
 			return;
-		}
 
 		int baseLevel = ProgressiveBaseLevel();
 		bool freshLateStart = previousMap <= 0 && baseLevel > 1;
@@ -2351,15 +2376,7 @@ class TuinRPGHandler : EventHandler
 		int targetLevel = clamp(baseLevel + clamp(CVInt('tuin_catchup_bonus_levels', 3), 0, 10),
 			1, max(1, CVInt('tuin_monster_max_level', 40)));
 		if ((!freshLateStart && !nonSequentialJump) || data.PlayerLevel >= targetLevel)
-		{
-			CatchupHandled[playerNumber] = true;
 			return;
-		}
-		// A new multiplayer arrival may still be on the class-selection screen.
-		// Delay the catch-up roll so its guaranteed class weapon matches the
-		// permanent class they actually choose.
-		if (data.PlayerClass == 0) return;
-		CatchupHandled[playerNumber] = true;
 
 		int oldLevel = max(1, data.PlayerLevel);
 		for (int newLevel = oldLevel + 1; newLevel <= targetLevel; newLevel++)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.77
+
+- Restored immediate late-start catch-up on direct starts such as E2M1; it no longer waits for class selection before awarding levels, points, and three weapon choices.
+- Catch-up choices now remember which multiplayer player they belong to. If that player subsequently chooses Rogue, one of their existing choices is converted into a level-appropriate Rogue Knife or Silenced Pistol without disturbing another player's rewards.
+
 ## 0.6.76
 
 - Made the Rogue Silenced Pistol perfectly accurate so its hitscan lands on the crosshair; native visual mirroring does not alter its aim.

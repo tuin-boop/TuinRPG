@@ -13,6 +13,7 @@ class TuinWeaponDrop : Actor
 	int Age;
 	string DisplayName;
 	bool CatchupReward;
+	int CatchupPlayerNumber;
 
 	clearscope static Color QualityColor(int quality)
 	{
