@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.93
+
+- Venom Bow bolts now deal additional damage equal to 10% of the target's scaled maximum health. Iconic episode-end bosses instead take 5%; this defining health strike is not reduced by the generic RPG burst limiter.
+- Direct bow hits permanently strip Armored, Regenerating and Healer affixes from RPG bosses, native bosses and iconic finale bosses, with a one-time `BOSS DEFENSES SHATTERED` notification when applicable.
+- The bow keeps its one-shot magazine, rare two-bolt pickups, stacking venom, full reload and triple Shadow Veil charge from direct damage.
+
 ## 0.6.92
 
 - Recast the Rogue Venom Bow as a scarce high-health hunter: it now has a one-shot magazine, restores the full reload after every bolt, and no longer fires automatically while attack is held.

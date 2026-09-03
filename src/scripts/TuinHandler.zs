@@ -4956,20 +4956,32 @@ class TuinRPGHandler : EventHandler
 			}
 		}
 		int bonusDamage = int(e.Damage * playerBaseDamageFactor * (multiplier - 1.0) + 0.5);
+		int bowHealthDamage;
 		if (victimData && e.DamageType == 'TuinRogueBolt')
 		{
-			// The scarce bow is a deliberate high-health hunter rather than another
-			// general-purpose gun. Its maximum-health strike is deliberately reduced
-			// and hard-capped against RPG and iconic finale bosses.
+			// Every scarce bolt removes a fixed share of its target's scaled health.
+			// Episode-ending monsters retain a stricter safeguard.
 			bool iconicBowTarget = IsIconicEpisodeBoss(e.Thing);
-			bool rpgBowBoss = victimData.MonsterRarity >= 6;
-			double healthPercent = iconicBowTarget ? 0.01 : rpgBowBoss ? 0.02 : 0.04;
-			int healthBonusCap = iconicBowTarget ? 120 : rpgBowBoss ? 200 : 300;
-			bonusDamage += min(healthBonusCap, max(1,
-				int(max(1, victimData.ScaledMaxHealth) * healthPercent + 0.5)));
+			bowHealthDamage = max(1, int(max(1, victimData.ScaledMaxHealth) *
+				(iconicBowTarget ? 0.05 : 0.10) + 0.5));
+			bool bowBossTarget = victimData.MonsterRarity >= 6 || iconicBowTarget || e.Thing.bBOSS;
+			if (bowBossTarget)
+			{
+				int strippedAffixes = victimData.AffixFlags &
+					(TuinMonsterData.AFFIX_ARMORED | TuinMonsterData.AFFIX_REGENERATING |
+					TuinMonsterData.AFFIX_HEALER);
+				victimData.AffixFlags &= ~(TuinMonsterData.AFFIX_ARMORED |
+					TuinMonsterData.AFFIX_REGENERATING | TuinMonsterData.AFFIX_HEALER);
+				victimData.HealerSelfLockTics = 0;
+				if (strippedAffixes && attacker >= 0)
+					SetLootNotification(attacker, "BOSS DEFENSES SHATTERED", 5);
+			}
 		}
 		if (victimData && bonusDamage > 0)
 			bonusDamage = DiminishRPGBonusDamage(e.Thing, victimData, bonusDamage);
+		// The bow's defining health strike is intentionally added after the generic
+		// RPG burst limiter so the advertised 10%/5% remains dependable per bolt.
+		bonusDamage += bowHealthDamage;
 		// Lost Souls and locally dense crowds are treated as fodder. Apply their
 		// vulnerability after the RPG bonus limiter so rarity can never erase the
 		// intended 50% weakness.
