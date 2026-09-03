@@ -5262,11 +5262,16 @@ class TuinRPGHandler : EventHandler
 		int bowHealthDamage;
 		if (victimData && e.DamageType == 'TuinRogueBolt')
 		{
-			// Every scarce bolt removes a fixed share of its target's scaled health.
-			// Episode-ending monsters retain a stricter safeguard.
+			// Every scarce bolt removes a large share of scaled health through 10k HP.
+			// Above that point, retain boss-killer growth at 30% of the original rate
+			// so extreme level scaling cannot turn one bolt into several thousand damage.
 			bool iconicBowTarget = IsIconicEpisodeBoss(e.Thing);
-			bowHealthDamage = max(1, int(max(1, victimData.ScaledMaxHealth) *
-				(iconicBowTarget ? 0.05 : 0.10) + 0.5));
+			int scaledMaximum = max(1, victimData.ScaledMaxHealth);
+			double healthPercent = iconicBowTarget ? 0.05 : 0.10;
+			int fullRateHealth = min(scaledMaximum, 10000);
+			int softenedHealth = max(0, scaledMaximum - 10000);
+			bowHealthDamage = max(1, int(fullRateHealth * healthPercent +
+				softenedHealth * healthPercent * 0.30 + 0.5));
 			bool upgradedBowTarget = victimData.MonsterRarity >= 2 || iconicBowTarget || e.Thing.bBOSS;
 			if (upgradedBowTarget)
 			{
@@ -5283,7 +5288,7 @@ class TuinRPGHandler : EventHandler
 		if (victimData && bonusDamage > 0)
 			bonusDamage = DiminishRPGBonusDamage(e.Thing, victimData, bonusDamage);
 		// The bow's defining health strike is intentionally added after the generic
-		// RPG burst limiter so the advertised 10%/5% remains dependable per bolt.
+		// RPG burst limiter so its health strike remains dependable per bolt.
 		bonusDamage += bowHealthDamage;
 		// Lost Souls and locally dense crowds are treated as fodder. Apply their
 		// vulnerability after the RPG bonus limiter so rarity can never erase the

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.04
+
+- Soft-capped the Rogue Venom Bow's maximum-health strike without removing its boss-killer role. It retains the full 10% rate through 10,000 scaled HP, then applies 3% to health above that point; iconic finale bosses retain half those rates.
+- A 25,000-30,000 HP non-finale target now receives approximately 1,450-1,600 percentage damage instead of 2,500-3,000, before the ordinary bolt and other build bonuses.
+
 ## 0.7.03
 
 - Fixed ordinary Barons being rejected by spawn rarity preference, Hell Director promotion, and promotion testing because stock Barons carry Doom's generic `BOSS` flag.
