@@ -1,3 +1,25 @@
+class TuinRogueDeathDecoy : Actor
+{
+	Default
+	{
+		Health 0;
+		Radius 1;
+		Height 1;
+		Alpha 0;
+		RenderStyle "Translucent";
+		+NOBLOCKMAP
+		+NOINTERACTION
+		+NOGRAVITY
+	}
+
+	States
+	{
+	Spawn:
+		TNT1 A -1;
+		Stop;
+	}
+}
+
 class TuinMonsterData : Inventory
 {
 	const AFFIX_SWIFT = 1;
@@ -502,6 +524,7 @@ class TuinPlayerData : Inventory
 	bool RogueChargeInitialized;
 	bool RogueVeiled;
 	Actor RogueVeilOwner;
+	Actor RogueVeilDecoy;
 	int TankOverdriveCharge;
 	double TankOverdriveChargeRemainder;
 	bool TankChargeInitialized;

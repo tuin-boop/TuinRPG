@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.85
+
+- Reworked Shadow Veil around a true fake-death decoy. Pursuing monsters receive an invisible dead target and let their native Doom AI process the target's death naturally, replacing the forced idle/dormant changes that could still produce a brief twitch or scramble.
+
 ## 0.6.84
 
 - Shadow Veil now puts monsters actively hunting the Rogue into a true dormant idle state for the Veil's duration, making them stop immediately as though their target died or vanished. They wake normally when Veil ends, while monsters fighting other players remain active.

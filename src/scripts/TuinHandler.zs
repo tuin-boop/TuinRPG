@@ -1038,10 +1038,10 @@ class TuinRPGHandler : EventHandler
 			pawn.bNOTARGET = false;
 			pawn.A_SetRenderStyle(1.0, Style_Normal);
 		}
-		ReleaseRogueDisengagement(playerNumber);
+		ReleaseRogueDisengagement(playerNumber, data);
 	}
 
-	void ReleaseRogueDisengagement(int playerNumber)
+	void ReleaseRogueDisengagement(int playerNumber, TuinPlayerData playerData)
 	{
 		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
 		int playerBit = 1 << playerNumber;
@@ -1059,33 +1059,28 @@ class TuinRPGHandler : EventHandler
 				}
 			}
 		}
+		if (playerData && playerData.RogueVeilDecoy)
+		{
+			playerData.RogueVeilDecoy.Destroy();
+			playerData.RogueVeilDecoy = null;
+		}
 	}
 
-	void MaintainRogueDisengagement(int playerNumber, Actor pawn)
+	void MaintainRogueDisengagement(Actor pawn, Actor deathDecoy)
 	{
-		if (!pawn || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
-		int playerBit = 1 << playerNumber;
+		if (!pawn || !deathDecoy) return;
 		foreach (sector: level.Sectors)
 		{
 			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
 			{
 				if (!actor.bISMONSTER || actor.bFRIENDLY || actor.Health <= 0) continue;
-				// Only disengage monsters actively hunting this Rogue. Rewriting the
-				// memories and tracer state of every monster caused a visible burst of
-				// map-wide AI state changes when Veil began.
+				// Hand active pursuers an already-dead substitute target. Their normal
+				// Doom chase logic then handles the "target died" transition itself,
+				// avoiding externally forced idle, angle, velocity, or dormant changes.
 				if (actor.Target != pawn) continue;
-				let monsterData = GetMonsterData(actor);
-				if (!monsterData) continue;
-				double facing = actor.Angle;
-				double verticalVelocity = actor.Vel.Z;
-				actor.Target = null;
-				if (actor.LastHeard == pawn) actor.LastHeard = null;
-				if (actor.LastEnemy == pawn) actor.LastEnemy = null;
-				actor.SetIdle();
-				actor.Angle = facing;
-				actor.Vel = (0, 0, verticalVelocity);
-				monsterData.RogueVeilDormantMask |= playerBit;
-				actor.bDORMANT = true;
+				actor.Target = deathDecoy;
+				if (actor.LastHeard == pawn) actor.LastHeard = deathDecoy;
+				if (actor.LastEnemy == pawn) actor.LastEnemy = deathDecoy;
 			}
 		}
 	}
@@ -1100,7 +1095,9 @@ class TuinRPGHandler : EventHandler
 		data.LevelAbilityUses++;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
-		MaintainRogueDisengagement(playerNumber, pawn);
+		ReleaseRogueDisengagement(playerNumber, data);
+		data.RogueVeilDecoy = Actor.Spawn('TuinRogueDeathDecoy', pawn.Pos, NO_REPLACE);
+		MaintainRogueDisengagement(pawn, data.RogueVeilDecoy);
 		SetLootNotification(playerNumber, "SHADOW VEIL - NEXT ATTACK IS AN AMBUSH", 4);
 	}
 
@@ -1115,6 +1112,7 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.RogueVeilOwner != pawn)
 		{
+			ReleaseRogueDisengagement(playerNumber, data);
 			data.RogueVeilOwner = pawn;
 			data.RogueVeiled = false;
 			data.RogueVeilTics = 0;
@@ -1125,6 +1123,7 @@ class TuinRPGHandler : EventHandler
 		if (data.PlayerClass != 5)
 		{
 			if (data.RogueVeiled) BreakRogueVeil(playerNumber, data);
+			else if (data.RogueVeilDecoy) ReleaseRogueDisengagement(playerNumber, data);
 			return;
 		}
 		bool attacking = (players[playerNumber].cmd.buttons & (BT_ATTACK | BT_ALTATTACK)) != 0;
@@ -1132,7 +1131,7 @@ class TuinRPGHandler : EventHandler
 		if (data.RogueVeiled)
 		{
 			data.RogueVeilTics++;
-			MaintainRogueDisengagement(playerNumber, pawn);
+			MaintainRogueDisengagement(pawn, data.RogueVeilDecoy);
 			if (attacking) BreakRogueVeil(playerNumber, data, true);
 			else if (data.RogueVeilTics >= RogueVeilDuration(data)) BreakRogueVeil(playerNumber, data);
 			return;
