@@ -2499,7 +2499,9 @@ class TuinRPGHandler : EventHandler
 		if (!playerData || playerData.PlayerClass != 5 || !pawn.FindInventory('TuinRogueBow')) return;
 		let ammo = Ammo(pawn.FindInventory('TuinRogueBoltAmmo'));
 		if (ammo && ammo.Amount >= ammo.MaxAmount) return;
-		double chance = min(20.0, 7.0 + monsterData.MonsterRarity * 2.0);
+		// Bolts are premium Rogue ammunition. Ordinary enemies can still sustain the
+		// bow, while elite and boss kills are noticeably better sources.
+		double chance = min(10.0, 2.0 + monsterData.MonsterRarity * 1.25);
 		if (FRandom[TuinRogueBoltDrop](0.0, 100.0) >= chance) return;
 		Actor.Spawn('TuinRogueBoltAmmo', (corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 8.0), NO_REPLACE);
 	}
@@ -4954,6 +4956,18 @@ class TuinRPGHandler : EventHandler
 			}
 		}
 		int bonusDamage = int(e.Damage * playerBaseDamageFactor * (multiplier - 1.0) + 0.5);
+		if (victimData && e.DamageType == 'TuinRogueBolt')
+		{
+			// The scarce bow is a deliberate high-health hunter rather than another
+			// general-purpose gun. Its maximum-health strike is deliberately reduced
+			// and hard-capped against RPG and iconic finale bosses.
+			bool iconicBowTarget = IsIconicEpisodeBoss(e.Thing);
+			bool rpgBowBoss = victimData.MonsterRarity >= 6;
+			double healthPercent = iconicBowTarget ? 0.01 : rpgBowBoss ? 0.02 : 0.04;
+			int healthBonusCap = iconicBowTarget ? 120 : rpgBowBoss ? 200 : 300;
+			bonusDamage += min(healthBonusCap, max(1,
+				int(max(1, victimData.ScaledMaxHealth) * healthPercent + 0.5)));
+		}
 		if (victimData && bonusDamage > 0)
 			bonusDamage = DiminishRPGBonusDamage(e.Thing, victimData, bonusDamage);
 		// Lost Souls and locally dense crowds are treated as fodder. Apply their
@@ -4990,7 +5004,11 @@ class TuinRPGHandler : EventHandler
 				e.DamageType != 'TuinBleed' && e.DamageType != 'TuinRocketBurn' &&
 				e.DamageType != 'TuinPlasmaArc' && e.DamageType != 'TuinRoguePoison';
 			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack && weaponChargeDamage)
-				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
+			{
+				int rogueChargeDamage = min(totalDamage, max(0, victimHealthBefore));
+				if (e.DamageType == 'TuinRogueBolt') rogueChargeDamage *= 3;
+				AddRogueDamageCharge(attacker, attackData, rogueChargeDamage);
+			}
 			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
 				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 3)

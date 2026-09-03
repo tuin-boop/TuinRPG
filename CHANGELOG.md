@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.92
+
+- Recast the Rogue Venom Bow as a scarce high-health hunter: it now has a one-shot magazine, restores the full reload after every bolt, and no longer fires automatically while attack is held.
+- Raised direct bolt damage from 45 to 70 and added maximum-health damage: 4% up to 300 against ordinary enemies, 2% up to 200 against RPG bosses, and 1% up to 120 against iconic finale bosses. Normal RPG bonus-damage safeguards still apply.
+- Bow hits now provide triple Shadow Veil charge from their direct damage; poison damage itself still does not generate charge.
+- Venom-bolt bundles now contain two bolts instead of six, maximum reserves were halved, starting bow ammo was reduced from 12 to 6, and kill-drop odds now range from 2% to 10% based on monster rarity.
+
 ## 0.6.91
 
 - The Rogue Venom Bow now keeps firing while the attack button is held.

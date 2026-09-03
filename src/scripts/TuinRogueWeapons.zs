@@ -170,13 +170,13 @@ class TuinRogueBoltAmmo : Ammo
 
 	Default
 	{
-		Inventory.Amount 6;
-		Inventory.MaxAmount 60;
+		Inventory.Amount 2;
+		Inventory.MaxAmount 30;
 		Inventory.PickupMessage "Picked up venom bolts.";
 		Inventory.PickupSound "misc/ammo_pkup";
 		Inventory.Icon "TBLTICON";
-		Ammo.BackpackAmount 6;
-		Ammo.BackpackMaxAmount 120;
+		Ammo.BackpackAmount 2;
+		Ammo.BackpackMaxAmount 60;
 		Scale 0.032;
 		+FLOATBOB
 		+RELATIVETOFLOOR
@@ -203,8 +203,9 @@ class TuinRogueBow : TuinRogueWeapon
 		Weapon.SelectionOrder 1850;
 		Weapon.AmmoType1 "TuinRogueBoltAmmo";
 		Weapon.AmmoUse1 1;
-		Weapon.AmmoGive1 12;
+		Weapon.AmmoGive1 6;
 		Weapon.UpSound "tuin/rogue/bowdraw";
+		+WEAPON.NOAUTOFIRE
 		+WEAPON.NOALERT
 	}
 
@@ -231,6 +232,18 @@ class TuinRogueBow : TuinRogueWeapon
 			A_GunFlash();
 		}
 		RBOW FG 2;
+	Reload:
+		RBOW H 2;
+		RBOW IJK 2;
+		RBOW L 1;
+		RBOW MNOPQRS 2;
+		RBOW T 1 A_PlaySound("tuin/rogue/bowpull", CHAN_WEAPON, 0.75);
+		RBOW U 1;
+		RBOW V 2;
+		RBOW WX 1;
+		RBOW Y 2;
+		RBOW Z 4;
+		RBL2 ABCDE 2;
 		Goto Ready;
 	Flash:
 		TNT1 A 2 Bright A_Light1;
@@ -246,7 +259,7 @@ class TuinRogueVenomBolt : Actor
 		Radius 5;
 		Height 5;
 		Speed 72;
-		DamageFunction 45;
+		DamageFunction 70;
 		DamageType "TuinRogueBolt";
 		DeathSound "tuin/rogue/bowhit";
 		SeeSound "tuin/rogue/boltloop";
