@@ -91,6 +91,9 @@ class TuinMonsterData : Inventory
 	int RoguePoisonDamageRemaining;
 	int RPGBonusWindowEndTime;
 	int RPGBonusWindowRawDamage;
+	// One cooldown per supported player prevents pellets and tracers from
+	// applying a complete Giant Slayer health-bar strike individually.
+	int GiantSlayerWindowEndTime[8];
 	int FodderCheckTime;
 	bool CrowdFodderDebuffed;
 	int SignatureProfile;
@@ -508,6 +511,7 @@ class TuinPlayerData : Inventory
 	int CurrentXP;
 	int UnspentStatPoints;
 	int UnspentSkillPoints;
+	bool PerkAwardScheduleMigrated;
 	int LevelDamageDealt;
 	int LevelDamageTaken;
 	int LevelXPEarned;

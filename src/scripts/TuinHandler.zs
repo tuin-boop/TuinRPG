@@ -833,6 +833,15 @@ class TuinRPGHandler : EventHandler
 			data.Lives = clamp(CVInt('tuin_starting_lives', 3), 1, 99);
 			data.LivesInitialized = true;
 		}
+		if (data && !data.PerkAwardScheduleMigrated)
+		{
+			// Existing saves earned one point at each five-level milestone. Grant
+			// exactly the difference supplied by the expanded level-30 schedule.
+			int oldSchedulePoints = max(0, data.PlayerLevel / 5);
+			int newSchedulePoints = ScheduledPerkPointsThroughLevel(data.PlayerLevel);
+			data.UnspentSkillPoints += max(0, newSchedulePoints - oldSchedulePoints);
+			data.PerkAwardScheduleMigrated = true;
+		}
 		ApplyVitality(pawn, data);
 		ApplyPerkHealth(pawn, data);
 		ApplyClassHealth(pawn, data);
@@ -844,6 +853,26 @@ class TuinRPGHandler : EventHandler
 		double baseXP = max(1.0, CVFloat('tuin_xp_base', 100.0));
 		double exponent = max(1.0, CVFloat('tuin_xp_exponent', 1.5));
 		return max(1, int(baseXP * exp(log(double(max(1, playerLevel))) * exponent) + 0.5));
+	}
+
+	clearscope static int PerkPointsAtLevel(int playerLevel)
+	{
+		if (playerLevel == 5) return 1;
+		if (playerLevel == 10) return 3;
+		if (playerLevel == 15) return 4;
+		if (playerLevel == 20 || playerLevel == 25 || playerLevel == 30) return 5;
+		// Complete builds need no more points, but later milestones retain one
+		// point for future perks and additions to the class system.
+		if (playerLevel > 30 && (playerLevel % 5) == 0) return 1;
+		return 0;
+	}
+
+	clearscope static int ScheduledPerkPointsThroughLevel(int playerLevel)
+	{
+		int total;
+		for (int milestone = 5; milestone <= playerLevel; milestone += 5)
+			total += PerkPointsAtLevel(milestone);
+		return total;
 	}
 
 	static void ApplyVitality(Actor pawn, TuinPlayerData data)
@@ -1652,8 +1681,8 @@ class TuinRPGHandler : EventHandler
 		}
 		if (data.UnspentSkillPoints <= 0)
 		{
-			pawn.A_Log("You need one perk point to choose a class. Perk points are earned every five levels.");
-			SetLootNotification(playerNumber, "ONE PERK POINT REQUIRED - EARNED EVERY 5 LEVELS", 0);
+			pawn.A_Log("You need one perk point to choose a class. Perk points are awarded at five-level milestones.");
+			SetLootNotification(playerNumber, "ONE PERK POINT REQUIRED - EARNED AT LEVEL MILESTONES", 0);
 			return;
 		}
 		data.UnspentSkillPoints--;
@@ -2591,7 +2620,7 @@ class TuinRPGHandler : EventHandler
 		for (int newLevel = oldLevel + 1; newLevel <= targetLevel; newLevel++)
 		{
 			data.UnspentStatPoints++;
-			if ((newLevel % 5) == 0) data.UnspentSkillPoints++;
+			data.UnspentSkillPoints += PerkPointsAtLevel(newLevel);
 		}
 		data.PlayerLevel = targetLevel;
 		data.CurrentXP = 0;
@@ -5333,9 +5362,9 @@ class TuinRPGHandler : EventHandler
 				max(0, bonusDamage);
 			bonusDamage += max(1, int(damageBeforeWeakness * 0.50 + 0.5));
 		}
-		// Giant Slayer is a level-20 total-damage multiplier, not another
-		// maximum-health strike. Apply it after all ordinary hit bonuses so every
-		// weapon and build receives the advertised 10/20/30% against 2500+ HP.
+		// Giant Slayer removes a visible share of a 2500+ HP target's scaled health.
+		// A short per-player, per-target window groups pellets, BFG tracers and rapid
+		// fire so one attack cannot apply the complete percentage dozens of times.
 		bool giantSlayerFollowup = e.DamageType == 'TuinBleed' ||
 			e.DamageType == 'TuinRoguePoison' || e.DamageType == 'TuinRocketBurn' ||
 			e.DamageType == 'TuinPlasmaArc';
@@ -5344,11 +5373,10 @@ class TuinRPGHandler : EventHandler
 		{
 			let giantData = EnsurePlayerData(attacker);
 			int giantRank = giantData ? clamp(giantData.PerkGiantSlayer, 0, 3) : 0;
-			if (giantRank > 0)
+			if (giantRank > 0 && victimData.GiantSlayerWindowEndTime[attacker] <= level.Time)
 			{
-				int damageBeforeGiantSlayer = max(1, int(e.Damage * playerBaseDamageFactor + 0.5)) +
-					max(0, bonusDamage);
-				bonusDamage += max(1, int(damageBeforeGiantSlayer * giantRank * 0.10 + 0.5));
+				victimData.GiantSlayerWindowEndTime[attacker] = level.Time + 18;
+				bonusDamage += max(1, int(victimData.ScaledMaxHealth * giantRank * 0.005 + 0.5));
 			}
 		}
 		if (bonusDamage > 0 && e.Thing.Health > 0)
@@ -5446,11 +5474,17 @@ class TuinRPGHandler : EventHandler
 			data.CurrentXP -= XPRequired(data.PlayerLevel);
 			data.PlayerLevel++;
 			data.UnspentStatPoints++;
-			bool gainedPerk = (data.PlayerLevel % 5) == 0;
-			if (gainedPerk) data.UnspentSkillPoints++;
-			if (players[playerNumber].mo) players[playerNumber].mo.A_Log(String.Format(
-				gainedPerk ? "LEVEL UP! You are now level %d. +1 stat point, +1 perk point" :
-				"LEVEL UP! You are now level %d. +1 stat point", data.PlayerLevel));
+			int gainedPerks = PerkPointsAtLevel(data.PlayerLevel);
+			data.UnspentSkillPoints += gainedPerks;
+			if (players[playerNumber].mo)
+			{
+				if (gainedPerks > 0)
+					players[playerNumber].mo.A_Log(String.Format(
+						"LEVEL UP! You are now level %d. +1 stat point, +%d perk point%s",
+						data.PlayerLevel, gainedPerks, gainedPerks == 1 ? "" : "s"));
+				else players[playerNumber].mo.A_Log(String.Format(
+					"LEVEL UP! You are now level %d. +1 stat point", data.PlayerLevel));
+			}
 		}
 	}
 
@@ -5463,11 +5497,12 @@ class TuinRPGHandler : EventHandler
 		{
 			data.PlayerLevel++;
 			data.UnspentStatPoints++;
-			if ((data.PlayerLevel % 5) == 0) data.UnspentSkillPoints++;
+			data.UnspentSkillPoints += PerkPointsAtLevel(data.PlayerLevel);
 		}
 		if (players[playerNumber].mo)
-			players[playerNumber].mo.A_Log(String.Format("TEST CHEAT: gained %d level%s. Now level %d with %d stat points.",
-				amount, amount == 1 ? "" : "s", data.PlayerLevel, data.UnspentStatPoints));
+			players[playerNumber].mo.A_Log(String.Format("TEST CHEAT: gained %d level%s. Now level %d with %d stat points and %d perk points.",
+				amount, amount == 1 ? "" : "s", data.PlayerLevel, data.UnspentStatPoints,
+				data.UnspentSkillPoints));
 	}
 
 	void TriggerFinalVerdict(int playerNumber, Actor corpse, TuinMonsterData corpseData,

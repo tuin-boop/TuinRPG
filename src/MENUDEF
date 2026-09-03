@@ -270,7 +270,7 @@ OptionMenu "TuinRPGPerkHub"
 	Submenu "Choose permanent class", "TuinRPGClassChoice"
 	Submenu "Spend later perk points", "TuinRPGPerks"
 	StaticText " "
-	StaticText "Earn one perk point every 5 levels", 1
+	StaticText "Milestones award 23 total perk points by level 30", 1
 	StaticText "All ranked perks have 3 ranks", 1
 }
 
@@ -300,7 +300,7 @@ OptionMenu "TuinRPGGeneralPerks"
 	Command "SCAVENGER: +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
 	StaticText " "
 	StaticText "LEVEL 20 PERK", 1
-	Command "GIANT SLAYER: +10% / +20% / +30% VS 2500+ HP", "netevent tuin_buy_perk 8"
+	Command "GIANT SLAYER: +0.5% / +1% / +1.5% TARGET HP", "netevent tuin_buy_perk 8"
 	Class "TuinRPGPerkMenu"
 }
 

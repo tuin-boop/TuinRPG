@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.06
+
+- Reworked Giant Slayer into direct health-bar damage: its three ranks add 0.5%, 1%, or 1.5% of scaled maximum health against 2,500+ HP enemies. A half-second per-player target window groups shotgun pellets, BFG tracers, and rapid fire, while secondary damage-over-time effects cannot trigger it independently.
+- Expanded perk milestone rewards to provide exactly 23 total points by level 30: 1/3/4/5/5/5 at levels 5/10/15/20/25/30. Later five-level milestones retain one point for future additions.
+- Added a one-time save migration that grants existing characters the difference between the original and expanded perk schedules without changing their purchased talents.
+
 ## 0.7.05
 
 - Added the level-20 Giant Slayer general perk. Its three ranks multiply complete attack damage by 1.10, 1.20, or 1.30 against monsters with at least 2,500 RPG-scaled maximum health; it does not deal a percentage of target health. Follow-up Bleed, venom, rocket burn and plasma arc ticks inherit the boosted triggering hit without multiplying twice.
