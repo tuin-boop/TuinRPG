@@ -46,6 +46,24 @@ Sprite EXSPA0, 766, 782
 	Patch "graphics/TuinExplosiveSupply.png", 0, 0
 }
 
+// Dedicated world-drop art supplied for the Rogue weapons. Texture scaling
+// keeps the large transparent source canvases at readable Doom pickup sizes.
+Sprite TRPPA0, 1099, 754
+{
+	Offset 549, 600
+	XScale 16
+	YScale 16
+	Patch "graphics/TuinRoguePistolPickup.png", 0, 0
+}
+
+Sprite TRKNA0, 1059, 607
+{
+	Offset 529, 470
+	XScale 16
+	YScale 16
+	Patch "graphics/TuinRogueKnifePickup.png", 0, 0
+}
+
 // Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
 // 70x59 menu units it is centered above the stock menu choices.
 Graphic M_DOOM, 1115, 941

@@ -48,7 +48,7 @@ class TuinRogueKnife : TuinRogueWeapon
 	States
 	{
 	Spawn:
-		KNIF A -1;
+		TRKN A -1;
 		Stop;
 	Ready:
 		NIFA ABCD 1;
@@ -97,7 +97,7 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 	States
 	{
 	Spawn:
-		PSSI A -1;
+		TRPP A -1;
 		Stop;
 	Ready:
 		SIEQ ABCD 1;
@@ -118,7 +118,7 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 		SIPI C 2
 		{
 			A_PlaySound("tuin/rogue/silenced", CHAN_WEAPON, 0.8);
-			A_FireBullets(1.4, 0.6, 1, 8, "TuinRogueSilencedPuff");
+			A_FireBullets(0, 0, 1, 8, "TuinRogueSilencedPuff");
 		}
 		SIPI DEFGHI 1;
 		SIPI F 2;

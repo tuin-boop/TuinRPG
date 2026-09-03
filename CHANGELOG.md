@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.76
+
+- Made the Rogue Silenced Pistol perfectly accurate so its hitscan lands on the crosshair; native visual mirroring does not alter its aim.
+- Added the supplied dedicated pistol and knife artwork to their raw pickups and RPG weapon drops.
+- Half of a Rogue killer's successful weapon-drop rolls now select a Rogue Knife or Rogue Silenced Pistol, making class weapon variants meaningfully discoverable without increasing the global drop rate.
+- Late-start catch-up now waits for a new player's permanent class selection. Rogues are then guaranteed one level-appropriate Rogue Knife or Silenced Pistol among their three catch-up weapon choices.
+- Rogue weapon drops remain shared and multiplayer-safe: non-Rogues cannot consume them, while any Rogue teammate can inspect and equip them.
+
 ## 0.6.75
 
 - Fixed the invisible Rogue Silenced Pistol by restoring its original visible sprites and mirroring the live weapon layer with UZDoom's native first-person mirror support.

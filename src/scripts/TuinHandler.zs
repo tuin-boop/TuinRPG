@@ -2255,6 +2255,7 @@ class TuinRPGHandler : EventHandler
 	void SpawnCatchupWeaponChoices(Actor pawn, int itemLevel)
 	{
 		if (!pawn) return;
+		let playerData = TuinPlayerData(pawn.FindInventory('TuinPlayerData'));
 		Array<class<Weapon> > candidates;
 		Array<class<Weapon> > baseChoices;
 		baseChoices.Push('Shotgun');
@@ -2274,9 +2275,28 @@ class TuinRPGHandler : EventHandler
 				if (candidates[j] == resolved) { duplicate = true; break; }
 			if (!duplicate) candidates.Push(resolved);
 		}
+		if (playerData && playerData.PlayerClass == 5)
+		{
+			candidates.Push('TuinRogueKnife');
+			candidates.Push('TuinRogueSilencedPistol');
+		}
 
 		Array<class<Weapon> > selected;
-		for (int choice = 0; choice < 3 && selected.Size() < candidates.Size(); choice++)
+		int firstRandomChoice = 0;
+		if (playerData && playerData.PlayerClass == 5)
+		{
+			class<Weapon> rogueChoice = Random[TuinRPGLoot](0, 1) == 0 ?
+				'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+			selected.Push(rogueChoice);
+			double angle = pawn.Angle - 30.0;
+			Vector3 position = (pawn.Pos.x + cos(angle) * 80.0,
+				pawn.Pos.y + sin(angle) * 80.0, pawn.FloorZ + 8.0);
+			let reward = SpawnRolledWeaponDrop(position, rogueChoice, itemLevel,
+				RollCatchupWeaponQuality());
+			if (reward) reward.CatchupReward = true;
+			firstRandomChoice = 1;
+		}
+		for (int choice = firstRandomChoice; choice < 3 && selected.Size() < candidates.Size(); choice++)
 		{
 			class<Weapon> weaponType;
 			for (int attempt = 0; attempt < 32 && !weaponType; attempt++)
@@ -2302,7 +2322,6 @@ class TuinRPGHandler : EventHandler
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
 		if (!data || !pawn) return;
 		if (CatchupHandled[playerNumber]) return;
-		CatchupHandled[playerNumber] = true;
 		int mapNumber = CurrentLoadedCampaignMap;
 		if (mapNumber <= 0) mapNumber = level.LevelNum;
 		if (mapNumber <= 0) mapNumber = max(1, MapsVisited);
@@ -2316,17 +2335,31 @@ class TuinRPGHandler : EventHandler
 		// stat/perk points, reward weapons, or their accompanying ammo refill.
 		if (data.SuppressNextMapCatchup)
 		{
+			CatchupHandled[playerNumber] = true;
 			data.SuppressNextMapCatchup = false;
 			return;
 		}
-		if (!CVInt('tuin_late_start_catchup', 1) || !(gameinfo.gametype & GAME_DoomChex)) return;
+		if (!CVInt('tuin_late_start_catchup', 1) || !(gameinfo.gametype & GAME_DoomChex))
+		{
+			CatchupHandled[playerNumber] = true;
+			return;
+		}
 
 		int baseLevel = ProgressiveBaseLevel();
 		bool freshLateStart = previousMap <= 0 && baseLevel > 1;
 		bool nonSequentialJump = previousMap > 0 && mapNumber != previousMap + 1;
 		int targetLevel = clamp(baseLevel + clamp(CVInt('tuin_catchup_bonus_levels', 3), 0, 10),
 			1, max(1, CVInt('tuin_monster_max_level', 40)));
-		if ((!freshLateStart && !nonSequentialJump) || data.PlayerLevel >= targetLevel) return;
+		if ((!freshLateStart && !nonSequentialJump) || data.PlayerLevel >= targetLevel)
+		{
+			CatchupHandled[playerNumber] = true;
+			return;
+		}
+		// A new multiplayer arrival may still be on the class-selection screen.
+		// Delay the catch-up roll so its guaranteed class weapon matches the
+		// permanent class they actually choose.
+		if (data.PlayerClass == 0) return;
+		CatchupHandled[playerNumber] = true;
 
 		int oldLevel = max(1, data.PlayerLevel);
 		for (int newLevel = oldLevel + 1; newLevel <= targetLevel; newLevel++)
@@ -3020,7 +3053,15 @@ class TuinRPGHandler : EventHandler
 		bool nativeBossGodly = monsterData.MonsterRarity < 6 && corpse.bBOSS &&
 			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_native_boss_godly_chance', 5.0), 0.0, 25.0);
 		if (monsterData.MonsterRarity < 6 && !nativeBossGodly && FRandom[TuinRPGLoot](0.0, 100.0) >= chance) return;
-		class<Weapon> weaponType = PickOwnedWeapon(players[playerNumber].mo);
+		class<Weapon> weaponType;
+		// Half of a Rogue's successful weapon-drop rolls stay class-relevant.
+		// The drop remains a shared world object, so multiplayer pickup rules
+		// still let another Rogue claim it without a non-Rogue consuming it.
+		if (playerData && playerData.PlayerClass == 5 && Random[TuinRPGLoot](0, 1) == 0)
+			weaponType = Random[TuinRPGLoot](0, 1) == 0 ?
+				'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+		else
+			weaponType = PickOwnedWeapon(players[playerNumber].mo);
 		if (!weaponType) return;
 		int itemLevel = clamp(monsterData.MonsterLevel + Random[TuinRPGLoot](-2, 2), 1, max(1, CVInt('tuin_monster_max_level', 40)));
 		int quality = nativeBossGodly ? 6 : monsterData.MonsterRarity >= 6 ? RollBossWeaponQuality(trueFinale) : RollWeaponQuality(monsterData.MonsterRarity);
