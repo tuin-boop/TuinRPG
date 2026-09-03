@@ -249,7 +249,7 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static int RogueVeilDuration(TuinPlayerData data)
 	{
-		return 210 + (data ? data.PerkClassMastery : 0) * 70;
+		return 630 + (data ? data.PerkClassMastery : 0) * 210;
 	}
 
 	clearscope static int RogueChargeDamageRequired(TuinPlayerData data)
@@ -1038,11 +1038,33 @@ class TuinRPGHandler : EventHandler
 			pawn.bNOTARGET = false;
 			pawn.A_SetRenderStyle(1.0, Style_Normal);
 		}
+		ReleaseRogueDisengagement(playerNumber);
 	}
 
-	void MaintainRogueDisengagement(Actor pawn)
+	void ReleaseRogueDisengagement(int playerNumber)
 	{
-		if (!pawn) return;
+		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
+		int playerBit = 1 << playerNumber;
+		foreach (sector: level.Sectors)
+		{
+			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
+			{
+				let monsterData = GetMonsterData(actor);
+				if (!monsterData || !(monsterData.RogueVeilDormantMask & playerBit)) continue;
+				monsterData.RogueVeilDormantMask &= ~playerBit;
+				if (monsterData.RogueVeilDormantMask == 0 && actor.Health > 0)
+				{
+					actor.bDORMANT = false;
+					actor.SetIdle();
+				}
+			}
+		}
+	}
+
+	void MaintainRogueDisengagement(int playerNumber, Actor pawn)
+	{
+		if (!pawn || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
+		int playerBit = 1 << playerNumber;
 		foreach (sector: level.Sectors)
 		{
 			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
@@ -1052,6 +1074,8 @@ class TuinRPGHandler : EventHandler
 				// memories and tracer state of every monster caused a visible burst of
 				// map-wide AI state changes when Veil began.
 				if (actor.Target != pawn) continue;
+				let monsterData = GetMonsterData(actor);
+				if (!monsterData) continue;
 				double facing = actor.Angle;
 				double verticalVelocity = actor.Vel.Z;
 				actor.Target = null;
@@ -1060,6 +1084,8 @@ class TuinRPGHandler : EventHandler
 				actor.SetIdle();
 				actor.Angle = facing;
 				actor.Vel = (0, 0, verticalVelocity);
+				monsterData.RogueVeilDormantMask |= playerBit;
+				actor.bDORMANT = true;
 			}
 		}
 	}
@@ -1074,7 +1100,7 @@ class TuinRPGHandler : EventHandler
 		data.LevelAbilityUses++;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
-		MaintainRogueDisengagement(pawn);
+		MaintainRogueDisengagement(playerNumber, pawn);
 		SetLootNotification(playerNumber, "SHADOW VEIL - NEXT ATTACK IS AN AMBUSH", 4);
 	}
 
@@ -1106,7 +1132,7 @@ class TuinRPGHandler : EventHandler
 		if (data.RogueVeiled)
 		{
 			data.RogueVeilTics++;
-			MaintainRogueDisengagement(pawn);
+			MaintainRogueDisengagement(playerNumber, pawn);
 			if (attacking) BreakRogueVeil(playerNumber, data, true);
 			else if (data.RogueVeilTics >= RogueVeilDuration(data)) BreakRogueVeil(playerNumber, data);
 			return;

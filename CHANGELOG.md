@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.84
+
+- Shadow Veil now puts monsters actively hunting the Rogue into a true dormant idle state for the Veil's duration, making them stop immediately as though their target died or vanished. They wake normally when Veil ends, while monsters fighting other players remain active.
+- Shadow Veil now lasts three times as long: 18 seconds base, plus 6 seconds per Class Training rank.
+
 ## 0.6.83
 
 - Further stabilized Shadow Veil disengagement: only monsters actively targeting the Rogue are changed, their exact facing is preserved, and their horizontal chase momentum is stopped. Passive monster memories and tracer state are no longer rewritten map-wide.
