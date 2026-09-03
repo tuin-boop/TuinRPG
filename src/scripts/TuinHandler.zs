@@ -4039,12 +4039,22 @@ class TuinRPGHandler : EventHandler
 		data.ResetSignatureAttack();
 	}
 
-	clearscope static int SpawnRarityPriority(TuinMonsterData data)
+	clearscope static int SpawnRarityPriority(Actor monster, TuinMonsterData data)
 	{
-		if (!data) return -1;
+		if (!monster || !data) return -1;
 		if (data.OriginalMaxHealth >= 1000) return 2; // Baron-or-stronger.
-		if (data.OriginalMaxHealth >= 500) return 1;  // Hell Knight-or-stronger.
+		if (data.OriginalMaxHealth >= 500 || monster is 'Revenant' || monster is 'PainElemental') return 1;
 		return 0;                                     // Cacodemon and lower fallback.
+	}
+
+	bool IsHeavyRarityEligible(Actor monster, TuinMonsterData data)
+	{
+		if (!IsValidMonster(monster) || !monster.bCOUNTKILL || !data || data.MonsterRarity >= 6 ||
+			IsIconicEpisodeBoss(monster)) return false;
+		// Do not filter on Doom's generic BOSS/BOSSDEATH flags: stock Barons carry
+		// them, and non-finale monsters above Baron strength belong in the same
+		// health-based preference tier. Iconic map finales are protected above.
+		return true;
 	}
 
 	void PrioritizeInitialHeavyRarities()
@@ -4053,7 +4063,7 @@ class TuinRPGHandler : EventHandler
 
 		// Rarity is initially rolled once per actor while the map is spawning. Move
 		// those complete roll packages onto the strongest eligible roster members:
-		// Baron+, then Hell Knight+, then leave any surplus rolls on lighter foes.
+		// Baron-tier first, then the remaining high-threat group, then lighter foes.
 		// Counts and rarity grades remain unchanged; the Director is not involved.
 		int maximumSwaps = max(1, level.total_monsters);
 		for (int swap = 0; swap < maximumSwaps; swap++)
@@ -4069,9 +4079,8 @@ class TuinRPGHandler : EventHandler
 			while (monster = Actor(iterator.Next()))
 			{
 				let data = GetMonsterData(monster);
-				if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
-					monster.bBOSSDEATH || !data || data.MonsterRarity >= 6 || IsIconicEpisodeBoss(monster)) continue;
-				int priority = SpawnRarityPriority(data);
+				if (!IsHeavyRarityEligible(monster, data)) continue;
+				int priority = SpawnRarityPriority(monster, data);
 				if (data.MonsterRarity >= 2)
 				{
 					if (priority < donorPriority)
@@ -4151,17 +4160,16 @@ class TuinRPGHandler : EventHandler
 		while (monster = Actor(iterator.Next()))
 		{
 			let data = GetMonsterData(monster);
-			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
-				monster.bBOSSDEATH || !data || data.MonsterRarity >= 5 || IsIconicEpisodeBoss(monster)) continue;
+			if (!IsHeavyRarityEligible(monster, data) || data.MonsterRarity >= 5) continue;
 
 			bool matches = false;
-			int priority = SpawnRarityPriority(data);
+			int priority = SpawnRarityPriority(monster, data);
 			if (requestedType == 1) matches = monster is 'HellKnight';
 			else if (requestedType == 2) matches = monster is 'BaronOfHell' && !(monster is 'HellKnight');
 			else matches = priority >= 1;
 			if (!matches) continue;
 
-			// The general command follows the same Baron+ then Hell Knight+ rule.
+			// The general command follows the same Baron-tier then high-threat rule.
 			if (requestedType == 0 && priority > candidatePriority)
 			{
 				candidatePriority = priority;
@@ -4179,7 +4187,7 @@ class TuinRPGHandler : EventHandler
 		if (!candidate)
 		{
 			if (pawn) pawn.A_Log(requestedType == 1 ? "No eligible living Hell Knight found." :
-				requestedType == 2 ? "No eligible living Baron of Hell found." : "No eligible living Hell Knight-or-stronger monster found.");
+				requestedType == 2 ? "No eligible living Baron of Hell found." : "No eligible living high-threat monster found.");
 			return false;
 		}
 
@@ -4439,27 +4447,27 @@ class TuinRPGHandler : EventHandler
 		while (monster = Actor(iterator.Next()))
 		{
 			let data = GetMonsterData(monster);
-			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
-				monster.bBOSSDEATH || !data || data.MonsterRarity >= targetRarity || IsIconicEpisodeBoss(monster)) continue;
+			if (!IsHeavyRarityEligible(monster, data) || data.MonsterRarity >= targetRarity) continue;
 			candidateCount++;
 			if (Random[TuinRPGDirector](1, candidateCount) == 1) candidate = monster;
-			// Build the preferred pool independently. Dormant and unseen monsters
-			// still belong to the level roster and may awaken when their trap opens.
-			if (preferHeavy && data.OriginalMaxHealth >= 500)
+			// Build the preferred threat pool independently. Dormant and unseen
+			// monsters still belong to the roster and may awaken when a trap opens.
+			int spawnPriority = SpawnRarityPriority(monster, data);
+			if (preferHeavy && spawnPriority >= 1)
 			{
 				heavyCandidateCount++;
 				if (Random[TuinRPGDirector](1, heavyCandidateCount) == 1) heavyCandidate = monster;
-				// Keep the random choice within each tier, but do not let a large
-				// population of Hell Knights statistically bury Barons and heavier foes.
-				if (data.OriginalMaxHealth >= 1000)
+				// Keep the random choice within each tier, but do not let the wider
+				// threat pool statistically bury Barons and heavier foes.
+				if (spawnPriority >= 2)
 				{
 					baronCandidateCount++;
 					if (Random[TuinRPGDirector](1, baronCandidateCount) == 1) baronCandidate = monster;
 				}
 			}
 		}
-		// Priority is Baron-or-higher, then Hell Knight-or-higher, then the
-		// unrestricted Cacodemon/fodder fallback when the preferred pool is empty.
+		// Priority is Baron-tier, then the high-threat roster, then the unrestricted
+		// Cacodemon/fodder fallback when the preferred pool is empty.
 		if (baronCandidate) candidate = baronCandidate;
 		else if (heavyCandidate) candidate = heavyCandidate;
 		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);

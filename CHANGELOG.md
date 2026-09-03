@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.03
+
+- Fixed ordinary Barons being rejected by spawn rarity preference, Hell Director promotion, and promotion testing because stock Barons carry Doom's generic `BOSS` flag.
+- Heavy preference now covers the complete high-threat roster: Revenants, Pain Elementals, Hell Knights, Mancubi, Arachnotrons, Arch-viles, Barons, and stronger monsters. Barons/1000+ threats receive first priority, the remaining high-threat group comes next, and Cacodemons or lower remain fallback candidates. Only the map's iconic finale actor is protected for the separate finale system.
+
 ## 0.7.02
 
 - Added level-15 spawn-time heavy rarity preference independently of the Hell Director. Existing Rare-or-higher roll packages are reassigned to Baron-or-stronger monsters first, then Hell Knight-or-stronger monsters; Cacodemons and lower retain surplus rolls only when the preferred roster is exhausted.
