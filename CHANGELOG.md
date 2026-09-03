@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.82
+
+- Shadow Veil no longer repeatedly forces monsters to wander and turn in random directions. Monsters calmly forget the hidden Rogue while keeping their current facing, and multiplayer monsters targeting somebody else are left undisturbed.
+
 ## 0.6.81
 
 - The Rogue Silenced Pistol can now critical-hit only while its target is unaware of that Rogue (including a Shadow Veil ambush); it cannot roll ordinary criticals once the monster is fighting that player.

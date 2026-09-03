@@ -4,7 +4,6 @@ class TuinRPGHandler : EventHandler
 	const TUIN_MAX_OVERHEAD_BARS = 32;
 	const TUIN_MAX_DAMAGE_NUMBERS = 64;
 	const TUIN_DAMAGE_NUMBER_LIFETIME = 42;
-	const TUIN_MAX_ROGUE_WANDERERS = 128;
 	const TUIN_MAX_TRACKED_GRENADES = 64;
 	int NextMonsterID;
 	int MapsVisited;
@@ -62,9 +61,6 @@ class TuinRPGHandler : EventHandler
 	int DamageNumberElement[TUIN_MAX_DAMAGE_NUMBERS];
 	double DamageNumberCurl[TUIN_MAX_DAMAGE_NUMBERS];
 	int NextDamageNumber;
-	Actor RogueWanderActor[TUIN_MAX_ROGUE_WANDERERS];
-	int RogueWanderPlayer[TUIN_MAX_ROGUE_WANDERERS];
-	int NextRogueWanderer;
 	Actor TrackedGrenade[TUIN_MAX_TRACKED_GRENADES];
 	Vector3 TrackedGrenadePosition[TUIN_MAX_TRACKED_GRENADES];
 	Actor TrackedGrenadeSource[TUIN_MAX_TRACKED_GRENADES];
@@ -1042,22 +1038,9 @@ class TuinRPGHandler : EventHandler
 			pawn.bNOTARGET = false;
 			pawn.A_SetRenderStyle(1.0, Style_Normal);
 		}
-		for (int i = 0; i < TUIN_MAX_ROGUE_WANDERERS; i++)
-			if (RogueWanderPlayer[i] == playerNumber) RogueWanderActor[i] = null;
 	}
 
-	void TrackRogueWanderer(int playerNumber, Actor monster)
-	{
-		if (!monster) return;
-		for (int i = 0; i < TUIN_MAX_ROGUE_WANDERERS; i++)
-			if (RogueWanderActor[i] == monster && RogueWanderPlayer[i] == playerNumber) return;
-		int slot = NextRogueWanderer;
-		NextRogueWanderer = (NextRogueWanderer + 1) % TUIN_MAX_ROGUE_WANDERERS;
-		RogueWanderActor[slot] = monster;
-		RogueWanderPlayer[slot] = playerNumber;
-	}
-
-	void MaintainRogueDisengagement(int playerNumber, Actor pawn)
+	void MaintainRogueDisengagement(Actor pawn)
 	{
 		if (!pawn) return;
 		foreach (sector: level.Sectors)
@@ -1065,29 +1048,20 @@ class TuinRPGHandler : EventHandler
 			for (Actor actor = sector.thinglist; actor; actor = actor.snext)
 			{
 				if (!actor.bISMONSTER || actor.bFRIENDLY || actor.Health <= 0) continue;
-				bool wasHuntingRogue = actor.Target == pawn || actor.Tracer == pawn ||
+				bool lostActiveTarget = actor.Target == pawn;
+				bool rememberedRogue = lostActiveTarget || actor.Tracer == pawn ||
 					actor.LastHeard == pawn || actor.LastEnemy == pawn;
-				if (!wasHuntingRogue) continue;
-				if (actor.Target == pawn) actor.Target = null;
+				if (!rememberedRogue) continue;
+				if (lostActiveTarget) actor.Target = null;
 				if (actor.Tracer == pawn) actor.Tracer = null;
 				if (actor.LastHeard == pawn) actor.LastHeard = null;
 				if (actor.LastEnemy == pawn) actor.LastEnemy = null;
-				actor.SetIdle();
-				actor.A_Wander();
-				TrackRogueWanderer(playerNumber, actor);
+				// Do not force A_Wander here. It made every affected monster repeatedly
+				// choose new angles, creating a map-wide confused spinning reaction.
+				// Only a monster that actually lost its current target needs to idle;
+				// monsters fighting another player remain completely undisturbed.
+				if (lostActiveTarget) actor.SetIdle();
 			}
-		}
-		// Monsters which lost the Rogue continue roaming instead of freezing in place.
-		for (int i = 0; i < TUIN_MAX_ROGUE_WANDERERS; i++)
-		{
-			Actor wanderer = RogueWanderActor[i];
-			if (!wanderer || RogueWanderPlayer[i] != playerNumber) continue;
-			if (wanderer.Health <= 0 || wanderer.Target)
-			{
-				RogueWanderActor[i] = null;
-				continue;
-			}
-			if (((level.Time + i) & 7) == 0) wanderer.A_Wander();
 		}
 	}
 
@@ -1101,7 +1075,7 @@ class TuinRPGHandler : EventHandler
 		data.LevelAbilityUses++;
 		pawn.bNOTARGET = true;
 		pawn.A_SetRenderStyle(0.50, Style_Translucent);
-		MaintainRogueDisengagement(playerNumber, pawn);
+		MaintainRogueDisengagement(pawn);
 		SetLootNotification(playerNumber, "SHADOW VEIL - NEXT ATTACK IS AN AMBUSH", 4);
 	}
 
@@ -1133,7 +1107,7 @@ class TuinRPGHandler : EventHandler
 		if (data.RogueVeiled)
 		{
 			data.RogueVeilTics++;
-			MaintainRogueDisengagement(playerNumber, pawn);
+			MaintainRogueDisengagement(pawn);
 			if (attacking) BreakRogueVeil(playerNumber, data, true);
 			else if (data.RogueVeilTics >= RogueVeilDuration(data)) BreakRogueVeil(playerNumber, data);
 			return;
