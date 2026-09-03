@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.99
+
+- Changed the level-15 Hell Director preference from Cacodemon strength (400 base HP) to Hell Knight strength (500 base HP). It scans the complete living roster and promotes Cacodemons, Demons, Imps or other lighter monsters only when no eligible Hell Knight-or-stronger candidate exists.
+- Increased the combat progress required to earn both Heavy abilities by 30%. Overdrive now needs `1040 + 65 × player level`, while Radio Support needs 4,095 actual monster damage before Class Training reductions.
+- Heavy ability strength and duration are unchanged.
+- Added Complex Doom v27f's Quad Shotgun as a Doom Guy-exclusive slot-3 class weapon, automatically granted to new and existing Doom Guy characters with eight shells.
+- Quad primary fire spends four shells for 52 pellets and uses Complex Doom's ordinary double-barrel blast sound in place of the louder quad-fire sound. Secondary fire retains the source weapon's two-shell, 20-pellet behavior and sound.
+- Imported the original Quad Shotgun animations, reload sounds, pickup sound and `QSGP` world sprite. Once owned, it participates in RPG weapon-variant drops; non-Doom Guy players receive a class-only warning in multiplayer.
+
 ## 0.6.98
 
 - Removed the Heavy's permanent 50% weapon-damage penalty. Ordinary Heavy attacks now deal full damage, while Overdrive still raises weapon damage by 25% and firing speed by 150%.

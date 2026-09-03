@@ -635,7 +635,9 @@ class TuinPlayerData : Inventory
 
 	clearscope int TankOverdriveDamageRequired()
 	{
-		return 800 + max(1, PlayerLevel) * 50;
+		// Full Heavy weapon damage makes charge arrive much faster than under the
+		// old half-damage model, so earning Overdrive now takes 30% more progress.
+		return 1040 + max(1, PlayerLevel) * 65;
 	}
 
 	void AddTankOverdriveCharge(int weightedDamage)

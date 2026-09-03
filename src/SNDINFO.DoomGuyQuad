@@ -1,0 +1,6 @@
+tuin/doomguy/quadprimary DSSGOB
+tuin/doomguy/quaddouble  DSQUDBL
+tuin/doomguy/quadopen    DSQSOPN
+tuin/doomguy/quadload    DSQSLL
+tuin/doomguy/quadclose   DSQSCLS
+tuin/doomguy/quadpickup  DSGETSS

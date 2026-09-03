@@ -407,7 +407,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		else if (mLabel ~== "DOOM GUY")
 		{
 			role = "SLAYER";
-			bonuses = "+10% DAMAGE | 10% RESISTANCE | REGEN 1 HP / 10 SEC";
+			bonuses = "+10% DAMAGE | 10% RESIST | REGEN | QUAD SHOTGUN";
 			tradeoff = "NO MAJOR DRAWBACKS";
 			ability = "HOLD V TO READY BLOOD PUNCH - RELEASE TO STRIKE";
 			training = "BLOOD PUNCH CHARGE +10% / +20% / +30%";

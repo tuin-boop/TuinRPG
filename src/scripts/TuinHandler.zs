@@ -265,7 +265,8 @@ class TuinRPGHandler : EventHandler
 	clearscope static int HeavyRadioCooldown(TuinPlayerData data)
 	{
 		double trainingReduction = clamp(data ? data.PerkClassMastery : 0, 0, 3) * 0.10;
-		return max(35, int(90 * 35 * (1.0 - trainingReduction) + 0.5));
+		// 4,095 damage is 30% above the original 3,150 requirement.
+		return max(35, int(4095 * (1.0 - trainingReduction) + 0.5));
 	}
 
 	void ReduceHeavyRadioCooldown(int playerNumber, TuinPlayerData data, int damage)
@@ -1716,6 +1717,9 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchPrepareTics = 0;
 			data.DoomBloodPunchFistRaiseTics = 0;
 			data.DoomBloodPunchAttackTics = 0;
+			pawn.GiveInventory('TuinDoomGuyQuadShotgun', 1);
+			if (pawn.player)
+				pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinDoomGuyQuadShotgun'));
 		}
 		else if (chosenClass == 6)
 		{
@@ -1999,6 +2003,11 @@ class TuinRPGHandler : EventHandler
 	{
 		return weaponType == 'TuinRogueKnife' || weaponType == 'TuinRogueSilencedPistol' ||
 			weaponType == 'TuinRogueBow';
+	}
+
+	clearscope static bool IsDoomGuyOnlyWeaponType(class<Weapon> weaponType)
+	{
+		return weaponType == 'TuinDoomGuyQuadShotgun';
 	}
 
 	class<Weapon> RandomRogueWeaponType()
@@ -4309,7 +4318,7 @@ class TuinRPGHandler : EventHandler
 			if (Random[TuinRPGDirector](1, candidateCount) == 1) candidate = monster;
 			// Build the preferred pool independently. Dormant and unseen monsters
 			// still belong to the level roster and may awaken when their trap opens.
-			if (preferHeavy && data.OriginalMaxHealth >= 400)
+			if (preferHeavy && data.OriginalMaxHealth >= 500)
 			{
 				heavyCandidateCount++;
 				if (Random[TuinRPGDirector](1, heavyCandidateCount) == 1) heavyCandidate = monster;
@@ -5663,6 +5672,12 @@ class TuinRPGHandler : EventHandler
 			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			return;
 		}
+		if (IsDoomGuyOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 4)
+		{
+			SetLootNotification(playerNumber, "DOOM GUY CLASS ONLY", 0);
+			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
+			return;
+		}
 		bool needsWeapon = !pawn.FindInventory(lootDrop.WeaponType);
 		int existing = data.FindEquippedVariant(lootDrop.WeaponType);
 		bool replaced = existing >= 0;
@@ -5797,6 +5812,11 @@ class TuinRPGHandler : EventHandler
 			// its persistent inventory token has transferred from the previous map.
 			ApplyLateStartCatchup(i);
 			let playerData = EnsurePlayerData(i);
+			// Existing Doom Guy saves predate the class weapon. Grant it once when
+			// their persistent class data reaches a live pawn.
+			if (playerData && playerData.PlayerClass == 4 && players[i].mo &&
+				!players[i].mo.FindInventory('TuinDoomGuyQuadShotgun'))
+				players[i].mo.GiveInventory('TuinDoomGuyQuadShotgun', 1);
 			if (playerData && playerData.LifeRevivePending) UpdateLifeRevive(i, players[i].mo, playerData);
 			if (playerData && playerData.LifeGraceTics > 0) playerData.LifeGraceTics--;
 			if (playerData && playerData.LifeReviveFadeTics > 0) playerData.LifeReviveFadeTics--;
@@ -6908,10 +6928,14 @@ class TuinRPGHandler : EventHandler
 			bool closeEnough = players[pnum].mo.Distance3D(viewedDrop) <= 128.0;
 			bool rogueRestricted = IsRogueOnlyWeaponType(viewedDrop.WeaponType) &&
 				(!playerData || playerData.PlayerClass != 5);
-			string prompt = rogueRestricted ? "ROGUE CLASS ONLY" : closeEnough ?
+			bool doomGuyRestricted = IsDoomGuyOnlyWeaponType(viewedDrop.WeaponType) &&
+				(!playerData || playerData.PlayerClass != 4);
+			bool classRestricted = rogueRestricted || doomGuyRestricted;
+			string prompt = rogueRestricted ? "ROGUE CLASS ONLY" :
+				doomGuyRestricted ? "DOOM GUY CLASS ONLY" : closeEnough ?
 				(equippedIndex >= 0 ? "PRESS USE [E] TO SWAP - OLD WEAPON DROPS" : "PRESS USE [E] TO EQUIP") :
 				"MOVE CLOSER TO INSPECT AND EQUIP";
-			Screen.DrawText(font, rogueRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,
+			Screen.DrawText(font, classRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,
 				(sw - font.StringWidth(prompt) * lootScale) / 2, panelY + panelHeight - int(15 * lootScale),
 				prompt, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 		}
