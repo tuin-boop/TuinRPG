@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.80
+
+- Fixed grenades inheriting the Rogue Silenced Pistol's once-per-target opening critical merely because the pistol was equipped.
+- Rogue pistol and knife opening criticals are now granted only by their respective weapon damage types.
+
 ## 0.6.79
 
 - Rogue grenade recovery now returns the Silenced Pistol directly to its normal idle frame instead of briefly replaying its unusual equip animation.

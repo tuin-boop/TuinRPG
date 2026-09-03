@@ -4798,11 +4798,12 @@ class TuinRPGHandler : EventHandler
 						SetLootNotification(attacker, String.Format("AMBUSH x%.0f!", ambushMultiplier), 5);
 					}
 				}
-				let activeWeapon = players[attacker].ReadyWeapon;
-				bool rogueSilencedPistol = playerData.PlayerClass == 5 && victimData && activeWeapon &&
-					activeWeapon.GetClassName() == 'TuinRogueSilencedPistol';
-				bool rogueKnife = playerData.PlayerClass == 5 && victimData && activeWeapon &&
-					activeWeapon.GetClassName() == 'TuinRogueKnife';
+				// Opening criticals belong to the Rogue weapon hit itself. Checking only
+				// the equipped weapon let grenades inherit a free opening critical.
+				bool rogueSilencedPistol = playerData.PlayerClass == 5 && victimData &&
+					e.DamageType == 'TuinRogueSilenced';
+				bool rogueKnife = playerData.PlayerClass == 5 && victimData &&
+					e.DamageType == 'TuinRogueKnife';
 				bool openingCritical = rogueSilencedPistol || rogueKnife;
 				if (openingCritical)
 				{
