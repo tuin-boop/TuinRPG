@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.78
+
+- Restored the Rogue Silenced Pistol to its original unmirrored orientation so its visible barrel and perfectly accurate hitscan share the expected sightline.
+- Rogue quick-grenade throws now hide and restore the silenced pistol exactly like the knife, preventing extra hands without mirroring the gun.
+
 ## 0.6.77
 
 - Restored immediate late-start catch-up on direct starts such as E2M1; it no longer waits for class selection before awarding levels, points, and three weapon choices.

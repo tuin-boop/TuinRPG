@@ -339,10 +339,6 @@ class PSCompatWeaponHandler : EventHandler
 
 			PlayerInfo p = players[i];
 			PlayerPawn pawn = p.mo;
-			PSprite weaponLayer = p.FindPSprite(PSP_WEAPON);
-			if (weaponLayer)
-				weaponLayer.bMirror = p.ReadyWeapon &&
-					p.ReadyWeapon.GetClassName() == 'TuinRogueSilencedPistol';
 			bool user1Now = (p.cmd.buttons & BT_USER1) != 0;
 
 			if (ThrowCooldown[i] > 0) ThrowCooldown[i]--;
@@ -479,7 +475,8 @@ class PSCompatWeaponHandler : EventHandler
 		bool hideMeleeWeapon = engineer || (currentWeapon && currentWeapon.bMELEEWEAPON) ||
 			currentWeaponName == 'PerkFist' ||
 			currentWeaponName == 'Fist' || currentWeaponName == 'Z86Chainsaw' ||
-			currentWeaponName == 'Chainsaw';
+			currentWeaponName == 'Chainsaw' ||
+			currentWeaponName == 'TuinRogueSilencedPistol';
 
 		if (hideMeleeWeapon)
 		{
