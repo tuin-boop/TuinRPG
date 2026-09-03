@@ -33,6 +33,14 @@ class TuinRogueWeapon : Weapon
 
 class TuinRogueKnife : TuinRogueWeapon
 {
+	double KnifeReach()
+	{
+		let data = Owner ? TuinPlayerData(Owner.FindInventory('TuinPlayerData')) : null;
+		int trainingRank = data && data.PlayerClass == 5 ? clamp(data.PerkClassMastery, 0, 3) : 0;
+		// 80 is the new +25% base reach over the former 64-unit strike.
+		return 80.0 * (1.0 + trainingRank * 0.20);
+	}
+
 	Default
 	{
 		Tag "ROGUE KNIFE";
@@ -69,7 +77,7 @@ class TuinRogueKnife : TuinRogueWeapon
 		NIFE E 1
 		{
 			A_CustomPunch(Random[TuinRogueKnife](28, 42), true, 0, "TuinRogueKnifePuff",
-				64, 0, 0, null, "tuin/rogue/knifehit");
+				TuinRogueKnife(invoker).KnifeReach(), 0, 0, null, "tuin/rogue/knifehit");
 			A_GunFlash();
 		}
 		NIFE FGH 1;

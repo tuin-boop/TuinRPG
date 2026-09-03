@@ -803,6 +803,10 @@ class TuinPlayerData : Inventory
 		if (!passive && PlayerClass == 1 && newdamage > 0 && damageType != 'TuinBleed' &&
 			damageType != 'TuinRocketBurn' && damageType != 'TuinPlasmaArc')
 			newdamage = max(1, int(newdamage * (TankOverdriveActive ? 1.25 : 0.50) + 0.5));
+		// Rogue is deliberately high-risk: every incoming damage source is amplified,
+		// before Endurance and defensive perks apply their normal reductions.
+		if (passive && PlayerClass == 5 && newdamage > 0)
+			newdamage = max(1, int(newdamage * 1.40 + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED))
 		{
 			double multiplier = 1.0;

@@ -313,7 +313,7 @@ OptionMenu "TuinRPGClassTraining"
 	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
 	StaticText "EXECUTIONER: JUDGMENT CHARGE +10% / +20% / +30%", 1
 	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
-	StaticText "ROGUE: +2% CRIT + LONGER VEIL + MORE DAMAGE CHARGE", 1
+	StaticText "ROGUE: +2% WEAPON CRIT | KNIFE +25% SPEED / +20% REACH", 1
 	StaticText "ENGINEER: +10% TURRET DAMAGE + FABRICATION / RANK", 1
 	StaticText " "
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"

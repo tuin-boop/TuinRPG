@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.88
+
+- Increased the Rogue Knife's base reach by 25%, from 64 to 80 units. Each Rogue Class Training rank now adds another 20% knife reach and 25% knife attack speed.
+- Rogue now takes 40% more incoming damage from all sources and has 50% lower maximum ammunition, applied after normal level progression and backpack capacity.
+- Rogue's +5% innate critical chance and +2% per Class Training rank now apply only while the Rogue Knife or Silenced Pistol is equipped; universal Luck, Killer Instinct and weapon-affix critical chance remain available to other weapons.
+
 ## 0.6.87
 
 - Rebalanced Shadow Veil by giving the Rogue Knife x10 Ambush damage normally and x15 with the Class Ultimate. Fists, knuckles and other melee weapons receive no special Ambush damage bonus; ranged Ambush remains x4/x6.

@@ -1682,10 +1682,11 @@ class TuinRPGHandler : EventHandler
 
 	void ApplyAmmoCapacity(Actor pawn, TuinPlayerData data)
 	{
-		if (!pawn || !data || !CVInt('tuin_ammo_scaling_enabled', 1)) return;
+		if (!pawn || !data) return;
 		int progressLevel = max(data.PlayerLevel, ProgressiveBaseLevel());
-		double multiplier = AmmoProgressMultiplier(progressLevel, 'tuin_ammo_capacity_per_level',
-			'tuin_ammo_capacity_max_multiplier', 2.0, 2.0);
+		double multiplier = CVInt('tuin_ammo_scaling_enabled', 1) ?
+			AmmoProgressMultiplier(progressLevel, 'tuin_ammo_capacity_per_level',
+				'tuin_ammo_capacity_max_multiplier', 2.0, 2.0) : 1.0;
 		bool hasBackpack = pawn.FindInventory('BackpackItem') != null;
 		for (Inventory item = pawn.Inv; item; item = item.Inv)
 		{
@@ -1695,6 +1696,13 @@ class TuinRPGHandler : EventHandler
 			if (!def || def.MaxAmount <= 0) continue;
 			int desiredMaximum = max(1, int(def.MaxAmount * multiplier + 0.5));
 			if (hasBackpack) desiredMaximum *= 2;
+			if (data.PlayerClass == 5) desiredMaximum = max(1, int(desiredMaximum * 0.50 + 0.5));
+			if (data.PlayerClass == 5)
+			{
+				ammo.MaxAmount = desiredMaximum;
+				ammo.Amount = min(ammo.Amount, ammo.MaxAmount);
+				continue;
+			}
 			// Never lower a limit supplied by a custom weapon mod or another power-up.
 			ammo.MaxAmount = max(ammo.MaxAmount, desiredMaximum);
 		}
@@ -1894,10 +1902,19 @@ class TuinRPGHandler : EventHandler
 		return int((levelMultiplier * rollMultiplier - 1.0) * 100.0 + 0.5);
 	}
 
-	clearscope static double TotalCriticalChance(TuinPlayerData data, int variantIndex = -1)
+	clearscope static bool IsNativeRogueWeapon(Weapon weapon)
+	{
+		if (!weapon) return false;
+		name weaponName = weapon.GetClassName();
+		return weaponName == 'TuinRogueKnife' || weaponName == 'TuinRogueSilencedPistol';
+	}
+
+	clearscope static double TotalCriticalChance(TuinPlayerData data, int variantIndex = -1,
+		Weapon activeWeapon = null)
 	{
 		if (!data) return 0.0;
-		double chance = 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 + RogueCriticalBonus(data);
+		double chance = 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 +
+			RogueCriticalBonus(data, activeWeapon);
 		if (variantIndex >= 0 && variantIndex < data.WeaponVariantCount)
 			chance += WeaponCriticalPercent(data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex],
 				data.VariantItemLevel[variantIndex]);
@@ -1905,9 +1922,10 @@ class TuinRPGHandler : EventHandler
 		return clamp(chance, 0.0, cap);
 	}
 
-	clearscope static double RogueCriticalBonus(TuinPlayerData data)
+	clearscope static double RogueCriticalBonus(TuinPlayerData data, Weapon activeWeapon = null)
 	{
-		return data && data.PlayerClass == 5 ? 5.0 + data.PerkClassMastery * 2.0 : 0.0;
+		return data && data.PlayerClass == 5 && IsNativeRogueWeapon(activeWeapon) ?
+			5.0 + data.PerkClassMastery * 2.0 : 0.0;
 	}
 
 	clearscope static bool IsGrenadeDamage(Actor inflictor, Name damageType)
@@ -4842,7 +4860,8 @@ class TuinRPGHandler : EventHandler
 					(!rogueSilencedPistol || pistolUnseen) &&
 					!IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) <
-					TotalCriticalChance(playerData, variantIndex) + engineerCriticalBonus)
+					TotalCriticalChance(playerData, variantIndex, players[attacker].ReadyWeapon) +
+					engineerCriticalBonus)
 				{
 					multiplier *= 2.0;
 					wasCritical = true;
@@ -5278,10 +5297,13 @@ class TuinRPGHandler : EventHandler
 		double speedBonus = data.Agility * 0.02;
 		int variantIndex = data.FindEquippedVariant((class<Weapon>)(weapon.GetClass()));
 		if (variantIndex >= 0) speedBonus += data.VariantHastePercent[variantIndex] * 0.01;
+		bool rogueKnife = data.PlayerClass == 5 && weapon.GetClassName() == 'TuinRogueKnife';
+		if (rogueKnife) speedBonus += clamp(data.PerkClassMastery, 0, 3) * 0.25;
 		if (data.PlayerClass == 1 && data.TankOverdriveActive) speedBonus += 0.50;
 		// The engine power doubles every weapon state, including one-tic rocket states.
 		// This manual remainder supplies the other +50%; gear may raise the combined ceiling to +200%.
-		double speedCap = data.PlayerClass == 1 && data.TankOverdriveActive ? 1.0 : 0.75;
+		double speedCap = data.PlayerClass == 1 && data.TankOverdriveActive ? 1.0 :
+			rogueKnife ? 1.50 : 0.75;
 		AgilityAccumulator[playerNumber] += min(speedCap, speedBonus);
 		int extraSteps = 0;
 		while (AgilityAccumulator[playerNumber] >= 1.0 && extraSteps < 2 && psp.CurState && psp.Tics > 0)
