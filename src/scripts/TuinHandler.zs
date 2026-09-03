@@ -7095,7 +7095,20 @@ class TuinRPGHandler : EventHandler
 			double alpha = min(1.0, min((245 - remaining) / 18.0, remaining / 24.0));
 			int faceSize = clamp(int(sh * 0.105), 64, 108);
 			int faceX = sw - faceSize - 16;
-			int faceY = sh - faceSize - 48 + int(sin((gametic + e.FracTic) * 5.0) * 5.0);
+			int faceBaseY = 16;
+			if (CVInt('tuin_minimap_enabled', 1))
+			{
+				int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, sh - 32));
+				double mapHorizontal = clamp(CVFloat('tuin_minimap_horizontal', 0.98), 0.0, 1.0);
+				double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
+				int mapLeft = int(8 + (sw - mapSize - 16) * mapHorizontal);
+				int mapTop = int(8 + (sh - mapSize - 16) * mapVertical);
+				faceX = mapLeft - faceSize - 10;
+				faceBaseY = mapTop;
+			}
+			faceX = clamp(faceX, 116, sw - faceSize - 8);
+			int faceY = clamp(faceBaseY + int(sin((gametic + e.FracTic) * 5.0) * 5.0),
+				8, sh - faceSize - 8);
 			TextureID johnFace = TexMan.CheckForTexture("graphics/TuinReviveJohn.png", TexMan.Type_Any);
 			if (johnFace.IsValid())
 				Screen.DrawTexture(johnFace, false, faceX, faceY,
@@ -7103,14 +7116,14 @@ class TuinRPGHandler : EventHandler
 			string quote = JohnMilestoneQuote(JohnCommentQuote[pnum]);
 			string heading = "JOHN";
 			double commentScale = clamp(hudScale * 0.90, 1.15, 1.65);
-			int availableWidth = max(180, faceX - 34);
+			int availableWidth = max(98, faceX - 18);
 			commentScale = min(commentScale,
 				double(availableWidth - 24) / max(1, font.StringWidth(quote)));
 			int panelWidth = min(availableWidth,
 				max(int(font.StringWidth(quote) * commentScale),
 					int(font.StringWidth(heading) * commentScale)) + 24);
 			int panelHeight = int(34 * commentScale);
-			int panelX = faceX - panelWidth - 10;
+			int panelX = max(8, faceX - panelWidth - 10);
 			int panelY = faceY + (faceSize - panelHeight) / 2;
 			Screen.Dim(Color(3, 3, 3), 0.90 * alpha, panelX, panelY, panelWidth, panelHeight);
 			Screen.DrawLineFrame(Color(185, 38, 25), panelX, panelY, panelWidth, panelHeight, 2);

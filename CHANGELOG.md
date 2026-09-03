@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.08
+
+- Moved John's combat-tip portrait and dialogue panel to the upper HUD, immediately left of the minimap and aligned with its top edge. The placement follows custom minimap position and size settings and remains clamped on-screen at smaller resolutions.
+
 ## 0.7.07
 
 - Fixed fresh late-map starts sometimes consuming the level-15 heavy-rarity redistribution before the player pawn, catch-up level, and full monster roster were ready.
