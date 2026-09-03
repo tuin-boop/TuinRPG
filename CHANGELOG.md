@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.90
+
+- Halved the Rogue Venom Bow's oversized world-loot billboard while preserving its first-person weapon animation.
+- Halved the venom-bolt inventory/HUD icon so it fits the compact ammo display cleanly; the in-world bolt pickup remains unchanged.
+
 ## 0.6.89
 
 - Reduced the Rogue's incoming-damage penalty from 40% to 10%; the existing 20% maximum-health and 50% final ammo-capacity penalties remain.

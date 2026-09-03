@@ -75,8 +75,8 @@ Sprite TRKNA0, 1059, 607
 Sprite TRBWA0, 1254, 1254
 {
 	Offset 627, 1050
-	XScale 16
-	YScale 16
+	XScale 32
+	YScale 32
 	Patch "graphics/TuinRogueBowPickup.png", 0, 0
 }
 
@@ -88,8 +88,8 @@ Sprite TBLTA0, 506, 569
 
 Graphic TBLTICON, 506, 569
 {
-	XScale 12
-	YScale 12
+	XScale 24
+	YScale 24
 	Patch "graphics/TuinRogueBoltPickup.png", 0, 0
 }
 
