@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.02
+
+- Added level-15 spawn-time heavy rarity preference independently of the Hell Director. Existing Rare-or-higher roll packages are reassigned to Baron-or-stronger monsters first, then Hell Knight-or-stronger monsters; Cacodemons and lower retain surplus rolls only when the preferred roster is exhausted.
+- Preserved the map's exact number and grades of natural rarity rolls while moving their associated monster levels onto the preferred heavy candidates.
+- Added `netevent tuin_test_promote_heavy`, `netevent tuin_test_promote_hellknight`, and `netevent tuin_test_promote_baron` testing cheats. They immediately promote a matching living monster to Mythic or report that no eligible target exists.
+
 ## 0.7.01
 
 - Fixed silent Quad Shotgun secondary fire by registering all three Project Brutality half-blast samples as explicit sound aliases before random selection.

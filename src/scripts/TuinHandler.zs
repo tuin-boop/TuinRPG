@@ -4039,6 +4039,75 @@ class TuinRPGHandler : EventHandler
 		data.ResetSignatureAttack();
 	}
 
+	clearscope static int SpawnRarityPriority(TuinMonsterData data)
+	{
+		if (!data) return -1;
+		if (data.OriginalMaxHealth >= 1000) return 2; // Baron-or-stronger.
+		if (data.OriginalMaxHealth >= 500) return 1;  // Hell Knight-or-stronger.
+		return 0;                                     // Cacodemon and lower fallback.
+	}
+
+	void PrioritizeInitialHeavyRarities()
+	{
+		if (HighestActivePlayerLevel() < 15 || !CVInt('tuin_rarity_enabled', 1)) return;
+
+		// Rarity is initially rolled once per actor while the map is spawning. Move
+		// those complete roll packages onto the strongest eligible roster members:
+		// Baron+, then Hell Knight+, then leave any surplus rolls on lighter foes.
+		// Counts and rarity grades remain unchanged; the Director is not involved.
+		int maximumSwaps = max(1, level.total_monsters);
+		for (int swap = 0; swap < maximumSwaps; swap++)
+		{
+			Actor donor;
+			Actor receiver;
+			int donorPriority = 3;
+			int receiverPriority = -1;
+			int donorChoices = 0;
+			int receiverChoices = 0;
+			ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+			Actor monster;
+			while (monster = Actor(iterator.Next()))
+			{
+				let data = GetMonsterData(monster);
+				if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
+					monster.bBOSSDEATH || !data || data.MonsterRarity >= 6 || IsIconicEpisodeBoss(monster)) continue;
+				int priority = SpawnRarityPriority(data);
+				if (data.MonsterRarity >= 2)
+				{
+					if (priority < donorPriority)
+					{
+						donorPriority = priority;
+						donorChoices = 1;
+						donor = monster;
+					}
+					else if (priority == donorPriority && Random[TuinRPGRarity](1, ++donorChoices) == 1)
+						donor = monster;
+				}
+				else
+				{
+					if (priority > receiverPriority)
+					{
+						receiverPriority = priority;
+						receiverChoices = 1;
+						receiver = monster;
+					}
+					else if (priority == receiverPriority && Random[TuinRPGRarity](1, ++receiverChoices) == 1)
+						receiver = monster;
+				}
+			}
+			if (!donor || !receiver || receiverPriority <= donorPriority) break;
+
+			let donorData = GetMonsterData(donor);
+			let receiverData = GetMonsterData(receiver);
+			int donorRarity = donorData.MonsterRarity;
+			int donorLevel = donorData.MonsterLevel;
+			int receiverRarity = receiverData.MonsterRarity;
+			int receiverLevel = receiverData.MonsterLevel;
+			ApplyOrdinaryMonsterScale(receiver, receiverData, donorLevel, donorRarity, true);
+			ApplyOrdinaryMonsterScale(donor, donorData, receiverLevel, receiverRarity, true);
+		}
+	}
+
 	void SynchronizeLivingMonsterLevels()
 	{
 		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
@@ -4068,6 +4137,60 @@ class TuinRPGHandler : EventHandler
 				String.Format("HELL DIRECTOR: %s AWAKENED", data.GeneratedName.MakeUpper());
 			SetLootNotification(playerNumber, warning, targetRarity);
 			players[playerNumber].mo.A_Log(warning);
+		}
+		return true;
+	}
+
+	bool TestPromoteHeavyMonster(int requestedType, int playerNumber)
+	{
+		Actor candidate;
+		int candidatePriority = -1;
+		int choices = 0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor monster;
+		while (monster = Actor(iterator.Next()))
+		{
+			let data = GetMonsterData(monster);
+			if (!IsValidMonster(monster) || !monster.bCOUNTKILL || monster.bBOSS ||
+				monster.bBOSSDEATH || !data || data.MonsterRarity >= 5 || IsIconicEpisodeBoss(monster)) continue;
+
+			bool matches = false;
+			int priority = SpawnRarityPriority(data);
+			if (requestedType == 1) matches = monster is 'HellKnight';
+			else if (requestedType == 2) matches = monster is 'BaronOfHell' && !(monster is 'HellKnight');
+			else matches = priority >= 1;
+			if (!matches) continue;
+
+			// The general command follows the same Baron+ then Hell Knight+ rule.
+			if (requestedType == 0 && priority > candidatePriority)
+			{
+				candidatePriority = priority;
+				choices = 1;
+				candidate = monster;
+			}
+			else if (requestedType != 0 || priority == candidatePriority)
+			{
+				choices++;
+				if (Random[TuinRPGRarity](1, choices) == 1) candidate = monster;
+			}
+		}
+
+		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
+		if (!candidate)
+		{
+			if (pawn) pawn.A_Log(requestedType == 1 ? "No eligible living Hell Knight found." :
+				requestedType == 2 ? "No eligible living Baron of Hell found." : "No eligible living Hell Knight-or-stronger monster found.");
+			return false;
+		}
+
+		let candidateData = GetMonsterData(candidate);
+		ApplyOrdinaryMonsterScale(candidate, candidateData,
+			max(candidateData.MonsterLevel, RollMonsterLevel(5)), 5, true);
+		if (pawn)
+		{
+			pawn.A_Log(String.Format("TEST PROMOTION: %s is now Mythic.", candidateData.GeneratedName));
+			SetLootNotification(playerNumber,
+				String.Format("TEST: MYTHIC %s", candidate.GetTag(candidate.GetClassName()).MakeUpper()), 5);
 		}
 		return true;
 	}
@@ -5896,6 +6019,7 @@ class TuinRPGHandler : EventHandler
 		}
 		if (!MonsterLevelsSynchronized)
 		{
+			PrioritizeInitialHeavyRarities();
 			SynchronizeLivingMonsterLevels();
 			MonsterLevelsSynchronized = true;
 		}
@@ -6113,6 +6237,14 @@ class TuinRPGHandler : EventHandler
 		{
 			if (!TryPromoteFinaleBoss(true) && players[e.Player].mo)
 				players[e.Player].mo.A_Log("No eligible monster is alive for finale-boss testing.");
+			return;
+		}
+		if (e.Name ~== "tuin_test_promote_heavy" || e.Name ~== "tuin_test_promote_hellknight" ||
+			e.Name ~== "tuin_test_promote_baron")
+		{
+			int requestedType = e.Name ~== "tuin_test_promote_hellknight" ? 1 :
+				e.Name ~== "tuin_test_promote_baron" ? 2 : 0;
+			TestPromoteHeavyMonster(requestedType, e.Player);
 			return;
 		}
 		if (e.Name ~== "tuin_test_john_shop")
