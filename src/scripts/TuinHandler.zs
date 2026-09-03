@@ -4516,20 +4516,26 @@ class TuinRPGHandler : EventHandler
 		DamageNumberCurl[slot] = FRandom[TuinRPGDamageNumber](-1.0, 1.0);
 	}
 
-	void ApplyRogueBleed(int playerNumber, TuinMonsterData data, int triggeringCriticalDamage)
+	void ApplyRogueBleed(int playerNumber, TuinMonsterData data, int triggeringDamage,
+		bool knifeHit = false, bool stealthKnife = false)
 	{
 		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
-			playerNumber >= TUIN_MAX_PLAYERS || triggeringCriticalDamage <= 0) return;
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
 		// Bleeding cannot be refreshed or stacked. This keeps rapid-fire weapons,
 		// including Tuin's Lead Spitter, from maintaining permanent percentage damage.
-		if (data.BleedPulsesRemaining > 0 || data.BleedResistanceTics > 0) return;
+		// Knife strikes are the exception: every hit adds Bleed and refreshes its
+		// duration, with a larger ceiling for a true stealth ambush.
+		if (!knifeHit && (data.BleedPulsesRemaining > 0 || data.BleedResistanceTics > 0)) return;
+		if (data.BleedPulsesRemaining <= 0) data.BleedNextTime = level.Time + 35;
 		data.BleedPulsesRemaining = 8;
-		data.BleedNextTime = level.Time + 35;
 		data.BleedPlayerNumber = playerNumber;
-		// Repeat one full critical hit over eight seconds, but never take more than
-		// 24% of the monster's scaled maximum health through a single Bleed.
-		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) * 0.24 + 0.5));
-		data.BleedDamageRemaining = min(triggeringCriticalDamage, healthCap);
+		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) *
+			(stealthKnife ? 0.36 : 0.24) + 0.5));
+		if (knifeHit)
+			data.BleedDamageRemaining = min(healthCap,
+				data.BleedDamageRemaining + triggeringDamage);
+		else data.BleedDamageRemaining = min(triggeringDamage, healthCap);
+		data.BleedResistanceTics = 0;
 		data.LastPlayerNumber = playerNumber;
 	}
 
@@ -4804,7 +4810,10 @@ class TuinRPGHandler : EventHandler
 					e.DamageType == 'TuinRogueSilenced';
 				bool rogueKnife = playerData.PlayerClass == 5 && victimData &&
 					e.DamageType == 'TuinRogueKnife';
-				bool openingCritical = rogueSilencedPistol || rogueKnife;
+				Actor roguePawn = players[attacker].mo;
+				bool pistolUnseen = rogueSilencedPistol && roguePawn &&
+					(rogueAmbushAttack || e.Thing.target != roguePawn);
+				bool openingCritical = pistolUnseen || rogueKnife;
 				if (openingCritical)
 				{
 					int playerBit = 1 << attacker;
@@ -4825,7 +4834,9 @@ class TuinRPGHandler : EventHandler
 				multiplier *= 1.0 + playerData.Strength * 0.02;
 				int variantIndex = (bloodPunchAttack || engineerTurretAttack) ? -1 :
 					ActiveWeaponVariantIndex(attacker, playerData);
-				if (!wasCritical && victimData && !bloodPunchAttack && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+				if (!wasCritical && victimData && !bloodPunchAttack &&
+					(!rogueSilencedPistol || pistolUnseen) &&
+					!IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) <
 					TotalCriticalChance(playerData, variantIndex) + engineerCriticalBonus)
 				{
@@ -4885,14 +4896,16 @@ class TuinRPGHandler : EventHandler
 			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
-			if (wasCritical && attackData && (attackData.PlayerClass == 5 || leadSpitterCritical) && e.Thing.Health > 0)
+			bool rogueKnifeDamage = attackData && attackData.PlayerClass == 5 &&
+				e.DamageType == 'TuinRogueKnife';
+			if (attackData && e.Thing.Health > 0 &&
+				((wasCritical && (attackData.PlayerClass == 5 || leadSpitterCritical)) || rogueKnifeDamage))
 			{
 				int bleedTriggerDamage = totalDamage;
-				let bleedWeapon = players[attacker].ReadyWeapon;
-				if (attackData.PlayerClass == 5 && bleedWeapon &&
-					bleedWeapon.GetClassName() == 'TuinRogueKnife')
-					bleedTriggerDamage *= 2;
-				ApplyRogueBleed(attacker, victimData, bleedTriggerDamage);
+				if (rogueKnifeDamage)
+					bleedTriggerDamage *= rogueAmbushAttack ? 4 : 2;
+				ApplyRogueBleed(attacker, victimData, bleedTriggerDamage,
+					rogueKnifeDamage, rogueKnifeDamage && rogueAmbushAttack);
 			}
 			// Accumulate fractional leech instead of rounding every small hit down
 			// to zero. This makes bullets, pellets, and special weapons leech just

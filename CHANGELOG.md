@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.81
+
+- The Rogue Silenced Pistol can now critical-hit only while its target is unaware of that Rogue (including a Shadow Veil ambush); it cannot roll ordinary criticals once the monster is fighting that player.
+- Every Rogue Knife strike now applies Bleed, including ordinary visible attacks. Knife Bleed stacks and refreshes up to its cap, deals double the triggering hit normally, and quadruple on a stealth ambush with a higher 36% health ceiling.
+
 ## 0.6.80
 
 - Fixed grenades inheriting the Rogue Silenced Pistol's once-per-target opening critical merely because the pistol was equipped.
