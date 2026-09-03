@@ -6119,9 +6119,28 @@ class TuinRPGHandler : EventHandler
 		}
 		if (!MonsterLevelsSynchronized)
 		{
-			PrioritizeInitialHeavyRarities();
-			SynchronizeLivingMonsterLevels();
-			MonsterLevelsSynchronized = true;
+			// A fresh map can tick once before the player pawn and its persistent RPG
+			// token are ready. Do not consume the one-shot rarity pass at level 1 in
+			// that gap; retry after catch-up or carried progression becomes visible.
+			bool playerProgressReady;
+			for (int progressPlayer = 0; progressPlayer < TUIN_MAX_PLAYERS; progressPlayer++)
+			{
+				if (playerInGame[progressPlayer] && players[progressPlayer].mo &&
+					GetPlayerData(players[progressPlayer].mo))
+				{
+					playerProgressReady = true;
+					break;
+				}
+			}
+			// Map actors can finish reporting WorldThingSpawned over the opening
+			// ticks. Ten tics keeps the pass before meaningful play while ensuring
+			// the complete dormant and active roster has RPG data.
+			if (playerProgressReady && level.Time >= 10)
+			{
+				PrioritizeInitialHeavyRarities();
+				SynchronizeLivingMonsterLevels();
+				MonsterLevelsSynchronized = true;
+			}
 		}
 		if (level.Time <= 1 || (level.Time % 105) == 0)
 		{

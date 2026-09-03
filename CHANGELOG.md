@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.07
+
+- Fixed fresh late-map starts sometimes consuming the level-15 heavy-rarity redistribution before the player pawn, catch-up level, and full monster roster were ready.
+- The one-time spawn redistribution now waits ten tics for deterministic initialization. Verified on a fresh MAP17 at catch-up level 18: Rare-or-higher rolls moved from fodder to the available Hell Knight/high-threat pool.
+- The Hell Director uses the same fully initialized roster after this pass, preventing its level-15 heavy preference from beginning against an incomplete candidate set.
+
 ## 0.7.06
 
 - Reworked Giant Slayer into direct health-bar damage: its three ranks add 0.5%, 1%, or 1.5% of scaled maximum health against 2,500+ HP enemies. A half-second per-player target window groups shotgun pellets, BFG tracers, and rapid fire, while secondary damage-over-time effects cannot trigger it independently.
