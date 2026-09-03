@@ -1,3 +1,8 @@
 tuin/rogue/knifeswing DSSWING
 tuin/rogue/knifehit DSNIFIRE
 tuin/rogue/silenced DSSIPISF
+tuin/rogue/bowdraw CROSDRAW
+tuin/rogue/bowfire CRSBFIRE
+tuin/rogue/bowhit CRSBHIT
+tuin/rogue/bowpull CRSBRELD
+tuin/rogue/boltloop CRSBSEE

@@ -1523,6 +1523,7 @@ class TuinRPGHandler : EventHandler
 			pawn.TakeInventory('PerkPistol', 0x7FFFFFFF);
 			pawn.GiveInventory('TuinRogueKnife', 1);
 			pawn.GiveInventory('TuinRogueSilencedPistol', 1);
+			pawn.GiveInventory('TuinRogueBow', 1);
 			if (pawn.player)
 				pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
 			EnsureRogueCatchupChoice(playerNumber);
@@ -1846,7 +1847,16 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static bool IsRogueOnlyWeaponType(class<Weapon> weaponType)
 	{
-		return weaponType == 'TuinRogueKnife' || weaponType == 'TuinRogueSilencedPistol';
+		return weaponType == 'TuinRogueKnife' || weaponType == 'TuinRogueSilencedPistol' ||
+			weaponType == 'TuinRogueBow';
+	}
+
+	class<Weapon> RandomRogueWeaponType()
+	{
+		int choice = Random[TuinRPGLoot](0, 2);
+		if (choice == 0) return 'TuinRogueKnife';
+		if (choice == 1) return 'TuinRogueSilencedPistol';
+		return 'TuinRogueBow';
 	}
 
 	clearscope static string GodlyWeaponTitle(int variantID)
@@ -1906,7 +1916,8 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!weapon) return false;
 		name weaponName = weapon.GetClassName();
-		return weaponName == 'TuinRogueKnife' || weaponName == 'TuinRogueSilencedPistol';
+		return weaponName == 'TuinRogueKnife' || weaponName == 'TuinRogueSilencedPistol' ||
+			weaponName == 'TuinRogueBow';
 	}
 
 	clearscope static double TotalCriticalChance(TuinPlayerData data, int variantIndex = -1,
@@ -2281,8 +2292,7 @@ class TuinRPGHandler : EventHandler
 			if (!replacement) replacement = drop;
 		}
 		if (!replacement) return;
-		replacement.WeaponType = Random[TuinRPGLoot](0, 1) == 0 ?
-			'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+		replacement.WeaponType = RandomRogueWeaponType();
 		replacement.DisplayName = WeaponVariantName(replacement.WeaponType,
 			replacement.AffixFlags, replacement.Quality, replacement.VariantID);
 		replacement.ConfigureVisuals();
@@ -2315,14 +2325,14 @@ class TuinRPGHandler : EventHandler
 		{
 			candidates.Push('TuinRogueKnife');
 			candidates.Push('TuinRogueSilencedPistol');
+			candidates.Push('TuinRogueBow');
 		}
 
 		Array<class<Weapon> > selected;
 		int firstRandomChoice = 0;
 		if (playerData && playerData.PlayerClass == 5)
 		{
-			class<Weapon> rogueChoice = Random[TuinRPGLoot](0, 1) == 0 ?
-				'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+			class<Weapon> rogueChoice = RandomRogueWeaponType();
 			selected.Push(rogueChoice);
 			double angle = pawn.Angle - 30.0;
 			Vector3 position = (pawn.Pos.x + cos(angle) * 80.0,
@@ -2478,6 +2488,20 @@ class TuinRPGHandler : EventHandler
 		let essence = TuinLifeEssencePickup(Actor.Spawn('TuinLifeEssencePickup',
 			dropPosition, NO_REPLACE));
 		if (essence) essence.bDROPPED = true;
+	}
+
+	void TryDropRogueBolts(Actor corpse, int playerNumber, TuinMonsterData monsterData)
+	{
+		if (!corpse || !monsterData || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS ||
+			!playerInGame[playerNumber] || !players[playerNumber].mo) return;
+		Actor pawn = players[playerNumber].mo;
+		let playerData = GetPlayerData(pawn);
+		if (!playerData || playerData.PlayerClass != 5 || !pawn.FindInventory('TuinRogueBow')) return;
+		let ammo = Ammo(pawn.FindInventory('TuinRogueBoltAmmo'));
+		if (ammo && ammo.Amount >= ammo.MaxAmount) return;
+		double chance = min(20.0, 7.0 + monsterData.MonsterRarity * 2.0);
+		if (FRandom[TuinRogueBoltDrop](0.0, 100.0) >= chance) return;
+		Actor.Spawn('TuinRogueBoltAmmo', (corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 8.0), NO_REPLACE);
 	}
 
 	void SynchronizeLifeEssenceOverhealth(Actor pawn, TuinPlayerData data, bool drainHealth)
@@ -3091,8 +3115,7 @@ class TuinRPGHandler : EventHandler
 		// The drop remains a shared world object, so multiplayer pickup rules
 		// still let another Rogue claim it without a non-Rogue consuming it.
 		if (playerData && playerData.PlayerClass == 5 && Random[TuinRPGLoot](0, 1) == 0)
-			weaponType = Random[TuinRPGLoot](0, 1) == 0 ?
-				'TuinRogueKnife' : 'TuinRogueSilencedPistol';
+			weaponType = RandomRogueWeaponType();
 		else
 			weaponType = PickOwnedWeapon(players[playerNumber].mo);
 		if (!weaponType) return;
@@ -3769,6 +3792,7 @@ class TuinRPGHandler : EventHandler
 		if (data.Owner && (data.Owner is 'Cyberdemon' || data.Owner is 'SpiderMastermind'))
 			result.AppendFormat("%sBFG RESIST 75%%", result.Length() ? "  |  " : "");
 		if (data.BleedPulsesRemaining > 0) result.AppendFormat("%sBLEEDING", result.Length() ? "  |  " : "");
+		if (data.RoguePoisonPulsesRemaining > 0) result.AppendFormat("%sVENOMED", result.Length() ? "  |  " : "");
 		return result;
 	}
 
@@ -4473,6 +4497,9 @@ class TuinRPGHandler : EventHandler
 			data.BurnPulsesRemaining = 0;
 			data.BurnPlayerNumber = -1;
 			data.BurnDamageRemaining = 0;
+			data.RoguePoisonPulsesRemaining = 0;
+			data.RoguePoisonPlayerNumber = -1;
+			data.RoguePoisonDamageRemaining = 0;
 			if (e.Thing.Health > 0 && e.Thing.Health < data.ScaledMaxHealth) e.Thing.A_SetHealth(data.ScaledMaxHealth);
 		}
 		else InitializeMonster(e.Thing);
@@ -4569,6 +4596,22 @@ class TuinRPGHandler : EventHandler
 		if (data.BurnPulsesRemaining <= 0) data.BurnNextTime = level.Time + 35;
 		data.BurnPulsesRemaining = 4;
 		data.BurnPlayerNumber = playerNumber;
+		data.LastPlayerNumber = playerNumber;
+	}
+
+	void ApplyRoguePoison(int playerNumber, TuinMonsterData data, int triggeringDamage)
+	{
+		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
+		double capPercent = data.MonsterRarity >= 6 ?
+			(IsIconicEpisodeBoss(data.Owner) ? 0.04 : 0.08) : 0.15;
+		int healthCap = max(1, int(max(1, data.ScaledMaxHealth) * capPercent + 0.5));
+		int addedDamage = max(1, int(triggeringDamage * 0.50 + 0.5));
+		data.RoguePoisonDamageRemaining = min(healthCap,
+			data.RoguePoisonDamageRemaining + addedDamage);
+		if (data.RoguePoisonPulsesRemaining <= 0) data.RoguePoisonNextTime = level.Time + 35;
+		data.RoguePoisonPulsesRemaining = 6;
+		data.RoguePoisonPlayerNumber = playerNumber;
 		data.LastPlayerNumber = playerNumber;
 	}
 
@@ -4694,6 +4737,39 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
+	void UpdateMonsterRoguePoison()
+	{
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				let data = GetMonsterData(victim);
+				if (!data || data.RoguePoisonPulsesRemaining <= 0 || victim.Health <= 0 ||
+					level.Time < data.RoguePoisonNextTime) continue;
+				int attacker = data.RoguePoisonPlayerNumber;
+				Actor source = attacker >= 0 && attacker < TUIN_MAX_PLAYERS && playerInGame[attacker] ?
+					players[attacker].mo : null;
+				int requestedDamage = max(1, (data.RoguePoisonDamageRemaining +
+					data.RoguePoisonPulsesRemaining - 1) / data.RoguePoisonPulsesRemaining);
+				data.RoguePoisonDamageRemaining = max(0, data.RoguePoisonDamageRemaining - requestedDamage);
+				int healthBefore = victim.Health;
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(source, source, requestedDamage, 'TuinRoguePoison', DMG_FORCED);
+				ApplyingBonusDamage = false;
+				int damageDone = min(healthBefore, max(0, healthBefore - victim.Health));
+				if (damageDone > 0) SpawnDamageNumber(attacker, victim, damageDone, false, false, 4);
+				data.RoguePoisonPulsesRemaining--;
+				data.RoguePoisonNextTime += 35;
+				if (data.RoguePoisonPulsesRemaining <= 0 || data.RoguePoisonDamageRemaining <= 0)
+				{
+					data.RoguePoisonPulsesRemaining = 0;
+					data.RoguePoisonPlayerNumber = -1;
+					data.RoguePoisonDamageRemaining = 0;
+				}
+			}
+		}
+	}
+
 	override void WorldThingDamaged(WorldEvent e)
 	{
 		if (!CVInt('tuin_enabled', 1) || !e.Thing || e.Damage <= 0) return;
@@ -4810,11 +4886,11 @@ class TuinRPGHandler : EventHandler
 					let readyWeapon = players[attacker].ReadyWeapon;
 					bool melee = IsRogueMeleeWeapon(readyWeapon);
 					bool knifeAmbush = e.DamageType == 'TuinRogueKnife';
-					double ambushMultiplier = knifeAmbush ? (playerData.PerkCapstone ? 15.0 : 10.0) :
+					double ambushMultiplier = knifeAmbush ? (playerData.PerkCapstone ? 16.0 : 11.0) :
 						melee ? 1.0 : (playerData.PerkCapstone ? 6.0 : 4.0);
 					if (victimData.MonsterRarity >= 6 && IsIconicEpisodeBoss(e.Thing))
 						ambushMultiplier = min(ambushMultiplier, knifeAmbush ?
-							(playerData.PerkCapstone ? 7.0 : 5.0) :
+							(playerData.PerkCapstone ? 8.0 : 5.5) :
 							melee ? 1.0 : (playerData.PerkCapstone ? 3.0 : 2.0));
 					multiplier *= ambushMultiplier;
 					wasCritical = ambushMultiplier > 1.0;
@@ -4906,8 +4982,14 @@ class TuinRPGHandler : EventHandler
 					RocketHitWasDirect(e.Inflictor, e.Thing));
 			else if (IsPlayerPlasmaDamage(e.Inflictor))
 				ApplyPlasmaArc(attacker, e.Thing, e.DamageSource, e.Inflictor, totalDamage);
+			if (e.DamageType == 'TuinRogueBolt')
+				ApplyRoguePoison(attacker, victimData, totalDamage);
 			let attackData = EnsurePlayerData(attacker);
-			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack)
+			Weapon chargeWeapon = players[attacker].ReadyWeapon;
+			bool weaponChargeDamage = chargeWeapon && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+				e.DamageType != 'TuinBleed' && e.DamageType != 'TuinRocketBurn' &&
+				e.DamageType != 'TuinPlasmaArc' && e.DamageType != 'TuinRoguePoison';
+			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack && weaponChargeDamage)
 				AddRogueDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 1 && !attackData.TankOverdriveActive)
 				AddTankDamageCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
@@ -5108,6 +5190,7 @@ class TuinRPGHandler : EventHandler
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
 			TryDropWeapon(e.Thing, data, killer);
+			TryDropRogueBolts(e.Thing, killer, data);
 		}
 		SpawnCoinReward(e.Thing, data);
 		TryDropExtraLife(e.Thing, data);
@@ -5496,6 +5579,7 @@ class TuinRPGHandler : EventHandler
 		{
 			UpdateMonsterBleeds();
 			UpdateMonsterBurns();
+			UpdateMonsterRoguePoison();
 		}
 		if (EpisodeTravelTics > 0)
 		{
@@ -5689,7 +5773,7 @@ class TuinRPGHandler : EventHandler
 			else if (rogueData.RogueVeilCharge >= 100)
 				ActivateRogueVeil(e.Player, pawn, rogueData);
 			else
-				SetLootNotification(e.Player, String.Format("SHADOW CHARGE: %d%% - DEAL DAMAGE",
+				SetLootNotification(e.Player, String.Format("SHADOW CHARGE: %d%% - USE WEAPONS",
 					rogueData.RogueVeilCharge), 0);
 			return;
 		}
@@ -6084,6 +6168,7 @@ class TuinRPGHandler : EventHandler
 				DamageNumberElement[i] == 1 ? Font.CR_ORANGE :
 				DamageNumberElement[i] == 2 ? Font.CR_CYAN :
 				DamageNumberElement[i] == 3 ? Font.CR_RED :
+				DamageNumberElement[i] == 4 ? Font.CR_GREEN :
 				(DamageNumberCritical[i] ? Font.CR_GOLD : Font.CR_WHITE);
 			Screen.DrawText(font, numberColor, x, y, number,
 				DTA_ScaleX, scale, DTA_ScaleY, scale, DTA_Alpha, fade);
@@ -6283,7 +6368,7 @@ class TuinRPGHandler : EventHandler
 		}
 		else if (data.RogueVeilCharge < 100)
 		{
-			status = String.Format("SHADOW CHARGE  %d%%  -  DEAL DAMAGE", data.RogueVeilCharge);
+			status = String.Format("SHADOW CHARGE  %d%%  -  USE WEAPONS", data.RogueVeilCharge);
 			statusColor = Font.CR_GOLD;
 		}
 		else

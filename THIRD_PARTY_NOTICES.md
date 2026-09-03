@@ -5,3 +5,5 @@ TuinRPG includes the ProjectSIDE weapons/effects compatibility edition supplied 
 The original ProjectSIDE contributor list is preserved in [`src/third_party/ProjectSIDE/Credits.txt`](src/third_party/ProjectSIDE/Credits.txt). The compatibility edition's scope, behavior and attribution statement are preserved in [`src/third_party/ProjectSIDE/README.txt`](src/third_party/ProjectSIDE/README.txt).
 
 The compatibility assembly does not claim ownership of third-party ProjectSIDE, Doom Deluxe, Brutal Doom or contributor-created resources. Their names and source notes remain attached for attribution and provenance.
+
+The Rogue Venom Bow adapts the supplied Doom Deluxe crossbow animation and audio. Detailed source credits are retained under `src/third_party/DoomDeluxeCrossbow/`.

@@ -71,6 +71,28 @@ Sprite TRKNA0, 1059, 607
 	Patch "graphics/TuinRogueKnifePickup.png", 0, 0
 }
 
+// Rogue Venom Bow and its compact bolt bundle, supplied specifically for TuinRPG.
+Sprite TRBWA0, 1254, 1254
+{
+	Offset 627, 1050
+	XScale 16
+	YScale 16
+	Patch "graphics/TuinRogueBowPickup.png", 0, 0
+}
+
+Sprite TBLTA0, 506, 569
+{
+	Offset 253, 569
+	Patch "graphics/TuinRogueBoltPickup.png", 0, 0
+}
+
+Graphic TBLTICON, 506, 569
+{
+	XScale 12
+	YScale 12
+	Patch "graphics/TuinRogueBoltPickup.png", 0, 0
+}
+
 // Replace Doom's ESC-menu title with the complete TuinRPG artwork. At roughly
 // 70x59 menu units it is centered above the stock menu choices.
 Graphic M_DOOM, 1115, 941

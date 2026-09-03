@@ -145,3 +145,142 @@ class TuinRogueSilencedPuff : BulletPuff
 {
 	Default { DamageType "TuinRogueSilenced"; }
 }
+
+class TuinRogueBoltAmmo : Ammo
+{
+	int RejectMessageTime[MAXPLAYERS];
+
+	override bool TryPickup(in out Actor toucher)
+	{
+		if (!toucher || !toucher.player) return false;
+		let data = TuinPlayerData(toucher.FindInventory('TuinPlayerData'));
+		if (!data || data.PlayerClass != 5)
+		{
+			int playerNumber = toucher.PlayerNumber();
+			if (playerNumber >= 0 && playerNumber < MAXPLAYERS && level.Time >= RejectMessageTime[playerNumber])
+			{
+				RejectMessageTime[playerNumber] = level.Time + 35;
+				toucher.A_Print("ROGUE CLASS ONLY");
+				toucher.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
+			}
+			return false;
+		}
+		return Super.TryPickup(toucher);
+	}
+
+	Default
+	{
+		Inventory.Amount 6;
+		Inventory.MaxAmount 60;
+		Inventory.PickupMessage "Picked up venom bolts.";
+		Inventory.PickupSound "misc/ammo_pkup";
+		Inventory.Icon "TBLTICON";
+		Ammo.BackpackAmount 6;
+		Ammo.BackpackMaxAmount 120;
+		Scale 0.032;
+		+FLOATBOB
+		+RELATIVETOFLOOR
+		+FORCEXYBILLBOARD
+	}
+
+	States
+	{
+	Spawn:
+		TBLT A -1 Bright;
+		Stop;
+	}
+}
+
+class TuinRogueBow : TuinRogueWeapon
+{
+	int LoadedShots;
+
+	Default
+	{
+		Tag "ROGUE VENOM BOW";
+		Inventory.PickupMessage "Picked up the Rogue Venom Bow.";
+		Inventory.PickupSound "misc/w_pkup";
+		Inventory.Icon "TRBWA0";
+		Weapon.SlotNumber 3;
+		Weapon.SelectionOrder 1850;
+		Weapon.AmmoType1 "TuinRogueBoltAmmo";
+		Weapon.AmmoUse1 1;
+		Weapon.AmmoGive1 12;
+		Weapon.UpSound "tuin/rogue/bowdraw";
+		+WEAPON.NOAUTOFIRE
+		+WEAPON.NOALERT
+	}
+
+	States
+	{
+	Spawn:
+		TRBW A -1 Bright;
+		Stop;
+	Ready:
+		RBOW ABC 2 A_WeaponReady;
+		Loop;
+	Select:
+		RBOW A 1 A_Raise;
+		Loop;
+	Deselect:
+		RBOW A 1 A_Lower;
+		Loop;
+	Fire:
+		RBOW D 2 Bright;
+		RBOW E 1 Bright
+		{
+			A_PlaySound("tuin/rogue/bowfire", CHAN_WEAPON, 0.85);
+			A_FireProjectile("TuinRogueVenomBolt");
+			invoker.LoadedShots++;
+			A_GunFlash();
+		}
+		RBOW FG 2;
+		TNT1 A 0 A_JumpIf(invoker.LoadedShots >= 3, "Reload");
+		Goto Ready;
+	Reload:
+		RBOW H 2;
+		RBOW IJK 2;
+		RBOW L 1;
+		RBOW MNOPQRS 2;
+		RBOW T 1 A_PlaySound("tuin/rogue/bowpull", CHAN_WEAPON, 0.75);
+		RBOW U 1;
+		RBOW V 2;
+		RBOW WX 1;
+		RBOW Y 2;
+		RBOW Z 4;
+		RBL2 ABCDE 2;
+		TNT1 A 0 { invoker.LoadedShots = 0; }
+		Goto Ready;
+	Flash:
+		TNT1 A 2 Bright A_Light1;
+		TNT1 A 2 A_Light0;
+		Stop;
+	}
+}
+
+class TuinRogueVenomBolt : Actor
+{
+	Default
+	{
+		Radius 5;
+		Height 5;
+		Speed 72;
+		DamageFunction 45;
+		DamageType "TuinRogueBolt";
+		DeathSound "tuin/rogue/bowhit";
+		SeeSound "tuin/rogue/boltloop";
+		Projectile;
+		+BRIGHT
+		+FORCEXYBILLBOARD
+	}
+
+	States
+	{
+	Spawn:
+		RBOL A 1 Bright;
+		Loop;
+	Death:
+		RBOL BCD 3 Bright;
+		Stop;
+	}
+}

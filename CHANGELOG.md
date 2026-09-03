@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.89
+
+- Reduced the Rogue's incoming-damage penalty from 40% to 10%; the existing 20% maximum-health and 50% final ammo-capacity penalties remain.
+- Shadow Charge now grows only from direct weapon damage. Grenades, secondary elemental effects, Bleed and other damage-over-time sources no longer recharge Shadow Veil.
+- Slightly strengthened the Rogue Knife's Shadow Veil strike from x10/x15 to x11/x16, with iconic finale-boss limits raised from x5/x7 to x5.5/x8.
+- Added the Rogue-exclusive Venom Bow to weapon slot 3, adapted from the supplied Doom Deluxe slot-9 crossbow. It carries a three-shot magazine, has no alt-fire, and uses dedicated venom bolts.
+- Venom bolts add stackable six-second poison equal to 50% of each hit, capped at 15% of normal monster health, 8% of RPG boss health, and 4% of iconic finale-boss health. Poison damage appears in green.
+- Added the supplied bow and compact bolt-bundle pickup art. Rogues who own the bow can receive six-bolt drops from kills, with better odds from rarer monsters; non-Rogues cannot consume Rogue weapons or bolt pickups.
+
 ## 0.6.88
 
 - Increased the Rogue Knife's base reach by 25%, from 64 to 80 units. Each Rogue Class Training rank now adds another 20% knife reach and 25% knife attack speed.

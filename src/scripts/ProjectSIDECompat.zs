@@ -476,7 +476,8 @@ class PSCompatWeaponHandler : EventHandler
 			currentWeaponName == 'PerkFist' ||
 			currentWeaponName == 'Fist' || currentWeaponName == 'Z86Chainsaw' ||
 			currentWeaponName == 'Chainsaw' ||
-			currentWeaponName == 'TuinRogueSilencedPistol';
+			currentWeaponName == 'TuinRogueSilencedPistol' ||
+			currentWeaponName == 'TuinRogueBow';
 
 		if (hideMeleeWeapon)
 		{
@@ -595,6 +596,8 @@ class PSCompatWeaponHandler : EventHandler
 				playerPawn.GiveInventory("TuinRogueKnife", 1);
 			if (!playerPawn.FindInventory("TuinRogueSilencedPistol"))
 				playerPawn.GiveInventory("TuinRogueSilencedPistol", 1);
+			if (!playerPawn.FindInventory("TuinRogueBow"))
+				playerPawn.GiveInventory("TuinRogueBow", 1);
 			return;
 		}
 

@@ -178,7 +178,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		double criticalChance = TuinRPGHandler.TotalCriticalChance(data, variantIndex, activeWeapon);
 		double bonusXPChance = (1.0 - exp(log(0.97) * max(0, data.Luck))) * 100.0;
 		double classProtection = data.PlayerClass == 1 ? 0.50 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
-			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.40 : 1.0;
+			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.10 : 1.0;
 		double perkProtection = 1.0 - data.PerkIronSkin * 0.03;
 		int totalDamageReduction = int((1.0 - (1.0 - min(75, data.Endurance) * 0.01) * classProtection * perkProtection) * 100.0 + 0.5);
 		string weaponName = "STANDARD WEAPON";
@@ -416,11 +416,11 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		else if (mLabel ~== "ROGUE")
 		{
 			role = "AMBUSHER";
-			bonuses = "+5% CRITICAL CHANCE | CRITICAL HITS CAUSE BLEEDING";
-			tradeoff = "-20% MAX HP | +40% DAMAGE TAKEN | -50% MAX AMMO";
+			bonuses = "+5% ROGUE WEAPON CRIT | BLEED + VENOM";
+			tradeoff = "-20% MAX HP | +10% DAMAGE TAKEN | -50% MAX AMMO";
 			ability = "V: SHADOW VEIL - ATTACK FROM STEALTH TO AMBUSH";
 			training = "ROGUE WEAPON +2% CRIT | KNIFE +25% SPEED / +20% REACH";
-			ultimate = "AMBUSH: X6 RANGED DAMAGE / X15 KNIFE DAMAGE";
+			ultimate = "AMBUSH: X6 RANGED DAMAGE / X16 KNIFE DAMAGE";
 		}
 		else
 		{
