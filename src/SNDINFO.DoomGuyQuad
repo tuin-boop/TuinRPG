@@ -1,6 +1,6 @@
-tuin/doomguy/quadprimary DSSGOB
-tuin/doomguy/quaddouble  DSQUDBL
-tuin/doomguy/quadopen    DSQSOPN
-tuin/doomguy/quadload    DSQSLL
-tuin/doomguy/quadclose   DSQSCLS
-tuin/doomguy/quadpickup  DSGETSS
+tuin/doomguy/quadprimary PBQSFIR
+$random tuin/doomguy/quaddouble { PBQSD0 PBQSD2 PBQSD3 }
+tuin/doomguy/quadopen    PBQSOPN
+tuin/doomguy/quadload    PBQSIN
+tuin/doomguy/quadclose   PBQSCLS
+tuin/doomguy/quadpickup  PBQSPKU

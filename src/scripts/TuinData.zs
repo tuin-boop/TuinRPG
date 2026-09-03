@@ -609,6 +609,7 @@ class TuinPlayerData : Inventory
 	int DoomBloodPunchFistRaiseTics;
 	int DoomBloodPunchAttackTics;
 	double DoomBloodPunchWeaponStartY;
+	bool DoomQuadInitialized;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
 	double ClassAmmoRemainder[32];

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.00
+- Replaced the Doom Guy quad shotgun audio with Project Brutality's quieter dedicated set: its four-barrel blast, randomized two-barrel blasts, and matching pickup/open/load/close sounds.
+- Tightened level-15 Hell Director promotion priority to Baron-or-stronger first, then Hell Knight-or-stronger, with Cacodemons and lower monsters used only when the complete preferred pool is empty.
+
+- Rebuilt the Doom Guy Quad Shotgun around a persistent four-shell chamber. Secondary fire now consumes one two-barrel pair at a time, reloads after the second shot, and continues firing across the reload while the right button remains held.
+- Shortened the Quad Shotgun's firing/recovery animations by approximately 25% and its break-open reload by approximately 40%.
+- Replaced the Quad Shotgun's plain wall puff with TuinRPG's `XtremeSGPuff`, matching the impact particles and decals used by the other integrated shotguns.
+
 ## 0.6.99
 
 - Changed the level-15 Hell Director preference from Cacodemon strength (400 base HP) to Hell Knight strength (500 base HP). It scans the complete living roster and promotes Cacodemons, Demons, Imps or other lighter monsters only when no eligible Hell Knight-or-stronger candidate exists.

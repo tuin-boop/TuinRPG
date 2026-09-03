@@ -1718,6 +1718,8 @@ class TuinRPGHandler : EventHandler
 			data.DoomBloodPunchFistRaiseTics = 0;
 			data.DoomBloodPunchAttackTics = 0;
 			pawn.GiveInventory('TuinDoomGuyQuadShotgun', 1);
+			pawn.GiveInventory('TuinDoomGuyQuadLoaded', 4);
+			data.DoomQuadInitialized = true;
 			if (pawn.player)
 				pawn.player.PendingWeapon = Weapon(pawn.FindInventory('TuinDoomGuyQuadShotgun'));
 		}
@@ -4304,8 +4306,10 @@ class TuinRPGHandler : EventHandler
 
 		Actor candidate;
 		Actor heavyCandidate;
+		Actor baronCandidate;
 		int candidateCount = 0;
 		int heavyCandidateCount = 0;
+		int baronCandidateCount = 0;
 		bool preferHeavy = HighestActivePlayerLevel() >= 15;
 		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
 		Actor monster;
@@ -4322,10 +4326,19 @@ class TuinRPGHandler : EventHandler
 			{
 				heavyCandidateCount++;
 				if (Random[TuinRPGDirector](1, heavyCandidateCount) == 1) heavyCandidate = monster;
+				// Keep the random choice within each tier, but do not let a large
+				// population of Hell Knights statistically bury Barons and heavier foes.
+				if (data.OriginalMaxHealth >= 1000)
+				{
+					baronCandidateCount++;
+					if (Random[TuinRPGDirector](1, baronCandidateCount) == 1) baronCandidate = monster;
+				}
 			}
 		}
-		// Fodder is legal only when the entire eligible heavy pool is empty.
-		if (heavyCandidate) candidate = heavyCandidate;
+		// Priority is Baron-or-higher, then Hell Knight-or-higher, then the
+		// unrestricted Cacodemon/fodder fallback when the preferred pool is empty.
+		if (baronCandidate) candidate = baronCandidate;
+		else if (heavyCandidate) candidate = heavyCandidate;
 		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);
 	}
 
@@ -5814,9 +5827,13 @@ class TuinRPGHandler : EventHandler
 			let playerData = EnsurePlayerData(i);
 			// Existing Doom Guy saves predate the class weapon. Grant it once when
 			// their persistent class data reaches a live pawn.
-			if (playerData && playerData.PlayerClass == 4 && players[i].mo &&
-				!players[i].mo.FindInventory('TuinDoomGuyQuadShotgun'))
-				players[i].mo.GiveInventory('TuinDoomGuyQuadShotgun', 1);
+			if (playerData && playerData.PlayerClass == 4 && players[i].mo && !playerData.DoomQuadInitialized)
+			{
+				if (!players[i].mo.FindInventory('TuinDoomGuyQuadShotgun'))
+					players[i].mo.GiveInventory('TuinDoomGuyQuadShotgun', 1);
+				players[i].mo.GiveInventory('TuinDoomGuyQuadLoaded', 4);
+				playerData.DoomQuadInitialized = true;
+			}
 			if (playerData && playerData.LifeRevivePending) UpdateLifeRevive(i, players[i].mo, playerData);
 			if (playerData && playerData.LifeGraceTics > 0) playerData.LifeGraceTics--;
 			if (playerData && playerData.LifeReviveFadeTics > 0) playerData.LifeReviveFadeTics--;
