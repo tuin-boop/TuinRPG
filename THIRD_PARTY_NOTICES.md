@@ -11,3 +11,5 @@ The Rogue Venom Bow adapts the supplied Doom Deluxe crossbow animation and audio
 The Heavy Radio Support presentation adapts the radio animation and selected audio from the user-supplied JohnnyDoomFINAL.pk3. Its provenance note is retained under `src/third_party/JohnnyDoomRadio/`; the summoned marines themselves use UZDoom's native ScriptedMarine implementation and standard Doom player sprites.
 
 The Heavy support marine's close-follow, lateral movement and teleport catch-up behavior was adapted from `NNR_JohnMarine` in the user-supplied `FriendJohn (1).pk3`. FriendJohn credits the original mod to Neenerwiener and its updated John Romero sprites to tuin. No FriendJohn binary assets are included.
+
+The class and perk UI includes `TINYBABY.lmp` from the user-supplied Doom Delta v3.1.0 archive with the user's confirmed reuse permission. Doom Delta credits the Tiny font to Jimmy; the menu presentation and original archive are credited to the Doom Delta team.

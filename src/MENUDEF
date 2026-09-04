@@ -266,11 +266,12 @@ OptionMenu "TuinRPGClassChoice"
 OptionMenu "TuinRPGPerkHub"
 {
 	Title "CLASS AND PERKS"
-	Submenu "Choose permanent class", "TuinRPGClassChoice"
-	Submenu "Spend later perk points", "TuinRPGPerks"
+	StaticText "YOUR STARTING CLASS IS PERMANENT", 1
+	Submenu "SPEND PERK POINTS", "TuinRPGPerks"
 	StaticText " "
 	StaticText "Milestones award 23 total perk points by level 30", 1
 	StaticText "All ranked perks have 3 ranks", 1
+	Class "TuinRPGPerkMenu"
 }
 
 OptionMenu "TuinRPGPerks"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.17
+
+- Reworked class selection into a top-to-bottom six-class roster with an immediate default selection, a deep-blue interface, white text, blue focus frames, and Doom Delta's `TINYBABY` font for compact class information.
+- Removed the class-selection link from the perk hub after class choice; permanent classes can no longer return to the selection screen through normal UI navigation.
+- Added explicit Tiny font attribution to Jimmy and Doom Delta under the user's confirmed reuse permission.
+- Added class-specific blue, green, red, orange, purple, and gold accents to the class roster and details. Perk screens now use white primary text, blue headings and navigation, gold selection emphasis, and a compact class/level/perk-point status strip.
+
 ## 0.7.16
 
 - Added an automatic opening class-selection flow for unclassed players. The class browser uses left/right navigation, a temporary John portrait, Doom-style display type, complete class details, a permanent-choice lock, and transitions directly into the perk hub after selection. Starting class choice is now free so earned perk points remain available for builds; existing classed saves receive their previously spent point back once.

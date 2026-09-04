@@ -49,7 +49,7 @@ All bindings can be changed under **Customize Controls > Tuin RPG**.
 
 ## Classes and perks
 
-Five-level milestones award increasing perk-point bundles: 1 at level 5, 3 at level 10, 4 at level 15, and 5 each at levels 20, 25, and 30. This supplies exactly 23 points by level 30, enough for a class choice and every perk available to that build. The first point permanently selects a class:
+Every new character begins with a free permanent class choice. Five-level milestones then award increasing perk-point bundles: 1 at level 5, 3 at level 10, 4 at level 15, and 5 each at levels 20, 25, and 30. This supplies exactly 23 upgrade points by level 30, enough for every perk available to that build:
 
 | Class | Core role |
 | --- | --- |
