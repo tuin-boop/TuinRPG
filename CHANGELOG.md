@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.19
+
+- Enlarged Doom Delta's narrow Tiny UI font by roughly 45%-60% across class labels, class details, navigation hints, and perk status information.
+- Reflowed class details into stacked heading/value groups and made the roster/detail split relative to the menu panel, improving readability and preventing layout drift across resolutions.
+
 ## 0.7.18
 
 - Fixed the v0.7.17 startup failure caused by attempting to modify UZDoom's read-only global option-menu color settings. The blue panels, vertical class roster, class accents, Tiny font, permanent class navigation lock, and perk status strip remain intact. Perk explanatory text is now recolored safely per item, including class-specific colored rows and blue section headings.
