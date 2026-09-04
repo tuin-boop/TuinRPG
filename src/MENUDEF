@@ -15,7 +15,7 @@ OptionValue "TuinDifficultyModes"
 OptionValue "TuinMenuTimeModes"
 {
 	0, "Pause game"
-	1, "Slow motion (10%)"
+	1, "Pause game (legacy slow-motion setting)"
 	2, "Do not pause"
 }
 

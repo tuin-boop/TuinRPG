@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.23
+
+- Added post-class-selection onboarding to the perk hub: it now explains why a new character has no perk points, provides a large clickable Begin Mission button, identifies Escape as the exit key, and reminds players that K reopens the RPG screen with rebinding available under Tuin RPG controls. The onboarding hub now removes the obsolete class picker from its Back stack, so Escape correctly begins play instead of returning to an already-completed permanent choice.
+- Removed unsafe runtime writes to UZDoom's protected `i_timescale` CVar from shortcut-opened RPG menus. Menu Time now offers stable Pause Game and Do Not Pause behavior, while old slow-motion profiles safely fall back to Pause Game instead of aborting the VM.
+- Made the highlighted next Class Training rank card directly clickable and gave it explicit buy/no-points text, matching the interaction implied by the card-based presentation.
+
 ## 0.7.22
 
 - Added the supplied cyan Engineer class card, completing the class-specific artwork set and replacing Engineer's temporary John portrait in both the roster and large preview.

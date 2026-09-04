@@ -109,26 +109,16 @@ class TuinRPGCharacterMenuLegacy : OptionMenu
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale)
-			{
-				OldTimeScale = timescale.GetFloat();
-				timescale.SetFloat(0.10);
-				ChangedTimeScale = true;
-			}
-			menuactive = Menu.OnNoPause;
+			// UZDoom 4.14 forbids setting i_timescale when a menu is opened by
+			// a shortcut. Preserve old profiles safely by treating mode 1 as pause.
+			menuactive = Menu.On;
 		}
 		else if (behavior == 2) menuactive = Menu.OnNoPause;
 	}
 
 	void RestoreTimeScale()
 	{
-		if (ChangedTimeScale)
-		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale) timescale.SetFloat(OldTimeScale);
-			ChangedTimeScale = false;
-		}
+		ChangedTimeScale = false;
 	}
 
 	override bool MenuEvent(int mkey, bool fromcontroller)
@@ -269,7 +259,7 @@ class TuinRPGMenuTimeItem : OptionMenuItemCommand
 	override bool Activate()
 	{
 		let mode = CVar.FindCVar('tuin_menu_time_mode');
-		if (mode) mode.SetInt((mode.GetInt() + 1) % 3);
+		if (mode) mode.SetInt(mode.GetInt() == 2 ? 0 : 2);
 		Menu.MenuSound("menu/change");
 		return true;
 	}
@@ -348,23 +338,13 @@ class TuinRPGCharacterMenu : OptionMenu
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale)
-			{
-				OldTimeScale = timescale.GetFloat();
-				timescale.SetFloat(0.10);
-				ChangedTimeScale = true;
-			}
-			menuactive = Menu.OnNoPause;
+			menuactive = Menu.On;
 		}
 		else if (behavior == 2) menuactive = Menu.OnNoPause;
 	}
 
 	void RestoreTimeScale()
 	{
-		if (!ChangedTimeScale) return;
-		let timescale = CVar.FindCVar('i_timescale');
-		if (timescale) timescale.SetFloat(OldTimeScale);
 		ChangedTimeScale = false;
 	}
 
@@ -470,7 +450,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.DrawText(font, data.UnspentSkillPoints > 0 ? Font.CR_GOLD : Font.CR_GRAY, panelX + 28, infoY + 90,
 			String.Format("PERK POINTS: %d", data.UnspentSkillPoints), DTA_ScaleX, 2.1, DTA_ScaleY, 2.1);
 		int timeMode = CVar.FindCVar('tuin_menu_time_mode').GetInt();
-		string timeName = timeMode == 0 ? "PAUSE GAME" : timeMode == 1 ? "SLOW MOTION 10%" : "DO NOT PAUSE";
+		string timeName = timeMode == 2 ? "DO NOT PAUSE" : "PAUSE GAME";
 		DrawNavCard(font, 0, panelX + 20, navStart, leftWidth - 34, navHeight, "CLASS AND PERKS", "OPEN BUILD DASHBOARD", Color(55, 153, 238), Font.CR_LIGHTBLUE);
 		DrawNavCard(font, 6, panelX + 20, navStart + navHeight + navGap, leftWidth - 34, navHeight, "ARSENAL", "INSPECT WEAPON VARIANTS", Color(178, 94, 237), Font.CR_PURPLE);
 		DrawNavCard(font, 7, panelX + 20, navStart + (navHeight + navGap) * 2, leftWidth - 34, navHeight, "MENU TIME", timeName, Color(233, 179, 45), Font.CR_GOLD);
@@ -552,23 +532,13 @@ class TuinRPGArsenalMenuLegacy : OptionMenu
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale)
-			{
-				OldTimeScale = timescale.GetFloat();
-				timescale.SetFloat(0.10);
-				ChangedTimeScale = true;
-			}
-			menuactive = Menu.OnNoPause;
+			menuactive = Menu.On;
 		}
 		else if (behavior == 2) menuactive = Menu.OnNoPause;
 	}
 
 	void RestoreTimeScale()
 	{
-		if (!ChangedTimeScale) return;
-		let timescale = CVar.FindCVar('i_timescale');
-		if (timescale) timescale.SetFloat(OldTimeScale);
 		ChangedTimeScale = false;
 	}
 
@@ -657,23 +627,13 @@ class TuinRPGArsenalMenu : OptionMenu
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale)
-			{
-				OldTimeScale = timescale.GetFloat();
-				timescale.SetFloat(0.10);
-				ChangedTimeScale = true;
-			}
-			menuactive = Menu.OnNoPause;
+			menuactive = Menu.On;
 		}
 		else if (behavior == 2) menuactive = Menu.OnNoPause;
 	}
 
 	void RestoreTimeScale()
 	{
-		if (!ChangedTimeScale) return;
-		let timescale = CVar.FindCVar('i_timescale');
-		if (timescale) timescale.SetFloat(OldTimeScale);
 		ChangedTimeScale = false;
 	}
 
@@ -1109,7 +1069,7 @@ class TuinRPGPerkHubItem : OptionMenuItemSubmenu
 		int cardX = panelX + leftWidth + 34;
 		int cardWidth = panelWidth - leftWidth - 58;
 		int cardGap = 12;
-		int cardHeight = clamp((panelHeight - 175 - cardGap * 3) / 4, 105, 145);
+		int cardHeight = clamp((panelHeight - 175 - cardGap * 3) / 4, 92, 145);
 		int cardY = panelY + 88 + itemIndex * (cardHeight + cardGap);
 		Font deltaFont = "TINYBABY";
 		Color accent = itemIndex == 0 ? Color(45, 151, 236) :
@@ -1160,9 +1120,15 @@ class TuinRPGPerkHubItem : OptionMenuItemSubmenu
 
 class TuinRPGPerkHubMenu : OptionMenu
 {
+	bool ClassOnboarding;
+
 	override void Init(Menu parent, OptionMenuDescriptor desc)
 	{
+		ClassOnboarding = parent != null && (parent is 'TuinRPGClassChoiceMenu');
 		Super.Init(parent, desc);
+		// Once a permanent class has been chosen, the class picker must never
+		// become the Back destination. Closing this onboarding hub starts play.
+		if (ClassOnboarding) mParentMenu = null;
 		for (int i = 0; i < mDesc.mItems.Size(); i++)
 		{
 			let item = mDesc.mItems[i];
@@ -1187,7 +1153,7 @@ class TuinRPGPerkHubMenu : OptionMenu
 		int cardX = panelX + leftWidth + 34;
 		int cardWidth = panelWidth - leftWidth - 58;
 		int cardGap = 12;
-		int cardHeight = clamp((panelHeight - 175 - cardGap * 3) / 4, 105, 145);
+		int cardHeight = clamp((panelHeight - 175 - cardGap * 3) / 4, 92, 145);
 		for (int i = 0; i < 4; i++)
 		{
 			int cardY = panelY + 88 + i * (cardHeight + cardGap);
@@ -1201,6 +1167,18 @@ class TuinRPGPerkHubMenu : OptionMenu
 				if (type == MOUSE_Release) return MenuEvent(MKEY_Enter, true);
 				return true;
 			}
+		}
+		int beginX = panelX + leftWidth + 34;
+		int beginY = panelY + panelHeight - 69;
+		int beginWidth = panelWidth - leftWidth - 58;
+		if (x >= beginX && x < beginX + beginWidth && y >= beginY && y < beginY + 45)
+		{
+			if (type == MOUSE_Release)
+			{
+				MenuSound("menu/choose");
+				Close();
+			}
+			return true;
 		}
 		return true;
 	}
@@ -1223,8 +1201,14 @@ class TuinRPGPerkHubMenu : OptionMenu
 			leftWidth - 32, panelHeight - 36);
 		Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + 28, panelY + 25,
 			"CLASS AND PERKS", DTA_ScaleX, 3.25, DTA_ScaleY, 3.25);
-		Screen.DrawText(deltaFont, Font.CR_LIGHTBLUE, panelX + leftWidth + 34, panelY + 30,
-			"CHOOSE AN UPGRADE PATH", DTA_ScaleX, 2.65, DTA_ScaleY, 2.65);
+		Screen.DrawText(deltaFont, ClassOnboarding ? Font.CR_GREEN : Font.CR_LIGHTBLUE,
+			panelX + leftWidth + 34, panelY + 24,
+			ClassOnboarding ? "CLASS CONFIRMED - YOU ARE READY" : "CHOOSE AN UPGRADE PATH",
+			DTA_ScaleX, 2.65, DTA_ScaleY, 2.65);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + leftWidth + 34, panelY + 52,
+			ClassOnboarding ? "PERK POINTS ARE EARNED AS YOU LEVEL. YOU CAN RETURN HERE ANYTIME." :
+			"SPEND PERK POINTS OR REVIEW YOUR CLASS PROGRESSION.",
+			DTA_ScaleX, 2.00, DTA_ScaleY, 2.00);
 
 		if (consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo)
 		{
@@ -1261,9 +1245,20 @@ class TuinRPGPerkHubMenu : OptionMenu
 					DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
 			}
 		}
-		Screen.DrawText(deltaFont, Font.CR_GRAY, panelX + 30, panelY + panelHeight - 27,
-			"23 PERK POINTS BY LEVEL 30 - RANKED PERKS HAVE 3 RANKS",
-			DTA_ScaleX, 2.10, DTA_ScaleY, 2.10);
+		Screen.DrawText(deltaFont, Font.CR_LIGHTBLUE, panelX + 30, panelY + panelHeight - 48,
+			"PRESS K: OPEN RPG SCREEN", DTA_ScaleX, 2.15, DTA_ScaleY, 2.15);
+		Screen.DrawText(deltaFont, Font.CR_GRAY, panelX + 30, panelY + panelHeight - 25,
+			"CLASS AND PERKS RETURNS HERE - REBIND UNDER TUIN RPG CONTROLS",
+			DTA_ScaleX, 1.55, DTA_ScaleY, 1.55);
+		int beginX = panelX + leftWidth + 34;
+		int beginY = panelY + panelHeight - 69;
+		int beginWidth = panelWidth - leftWidth - 58;
+		Screen.Dim(Color(39, 164, 91), 0.66, beginX, beginY, beginWidth, 45);
+		Screen.DrawLineFrame(Color(79, 226, 128), beginX, beginY, beginWidth, 45, 2);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, beginX + 25, beginY + 13,
+			ClassOnboarding ? "BEGIN MISSION - CLICK HERE OR PRESS ESC" :
+			"RETURN TO CHARACTER SCREEN - CLICK HERE OR PRESS ESC",
+			DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
 		Super.Drawer();
 	}
 }
@@ -1702,6 +1697,24 @@ class TuinRPGClassUpgradeMenuBase : OptionMenu
 		int buttonX = panelX + leftWidth + 34;
 		int buttonY = panelY + panelHeight - 92;
 		int buttonWidth = panelWidth - leftWidth - 58;
+		if (UpgradeMode == 0)
+		{
+			let data = consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo ?
+				TuinRPGHandler.GetPlayerData(players[consoleplayer].mo) : null;
+			int rank = data ? data.PerkClassMastery : 0;
+			int gap = 14;
+			int rankWidth = (buttonWidth - gap * 2) / 3;
+			for (int rankSlot = 0; rankSlot < 3; rankSlot++)
+			{
+				int rankX = buttonX + rankSlot * (rankWidth + gap);
+				if (x >= rankX && x < rankX + rankWidth && y >= panelY + 320 && y < panelY + 456)
+				{
+					if (type == MOUSE_Release && rankSlot == rank && rank < 3)
+						return MenuEvent(MKEY_Enter, true);
+					return true;
+				}
+			}
+		}
 		if (x >= buttonX && x < buttonX + buttonWidth && y >= buttonY && y < buttonY + 48)
 		{
 			if (type == MOUSE_Release) return MenuEvent(MKEY_Enter, true);
@@ -1850,7 +1863,8 @@ class TuinRPGClassUpgradeMenuBase : OptionMenu
 					rx + 22, panelY + 342, String.Format("RANK %d", rankSlot + 1),
 					DTA_ScaleX, 2.55, DTA_ScaleY, 2.55);
 				Screen.DrawText(font, owned ? Font.CR_GREEN : next ? Font.CR_GOLD : Font.CR_GRAY,
-					rx + 22, panelY + 389, owned ? "UNLOCKED" : next ? "NEXT UPGRADE" : "LOCKED",
+					rx + 22, panelY + 389, owned ? "UNLOCKED" : next ?
+					(points > 0 ? "CLICK OR ENTER TO BUY" : "NEED 1 PERK POINT") : "LOCKED",
 					DTA_ScaleX, 2.15, DTA_ScaleY, 2.15);
 			}
 		}
@@ -1993,23 +2007,13 @@ class TuinRPGJohnShopMenu : OptionMenu
 		int behavior = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		if (behavior == 1)
 		{
-			let timescale = CVar.FindCVar('i_timescale');
-			if (timescale)
-			{
-				OldTimeScale = timescale.GetFloat();
-				timescale.SetFloat(0.10);
-				ChangedTimeScale = true;
-			}
-			menuactive = Menu.OnNoPause;
+			menuactive = Menu.On;
 		}
 		else if (behavior == 2) menuactive = Menu.OnNoPause;
 	}
 
 	void RestoreTimeScale()
 	{
-		if (!ChangedTimeScale) return;
-		let timescale = CVar.FindCVar('i_timescale');
-		if (timescale) timescale.SetFloat(OldTimeScale);
 		ChangedTimeScale = false;
 	}
 
