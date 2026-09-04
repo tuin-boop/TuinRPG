@@ -232,19 +232,16 @@ OptionMenu "TuinRPGAffixOptions"
 
 OptionMenu "TuinRPGCharacter"
 {
-	Title "TUIN RPG"
-	Position -80
+	Title ""
+	Position 82
 	Submenu "CLASS AND PERKS", "TuinRPGPerkHub"
-	StaticText "Choose a class for free; perk points buy upgrades", 1
-	StaticText " "
-	Command "VITALITY +  (+5 maximum HP)", "netevent tuin_spend_vitality"
-	Command "STRENGTH +  (+2% damage; Heavy +5 maximum HP)", "netevent tuin_spend_strength"
-	Command "LUCK +  (+0.5% critical chance and bonus XP)", "netevent tuin_spend_luck"
-	Command "AGILITY +  (+2% firing speed)", "netevent tuin_spend_agility"
-	Command "ENDURANCE +  (-1% damage taken)", "netevent tuin_spend_endurance"
-	StaticText " "
-	Submenu "ARSENAL - weapon variants", "TuinRPGArsenal"
-	Option "Menu time behavior", "tuin_menu_time_mode", "TuinMenuTimeModes"
+	Command "VITALITY", "netevent tuin_spend_vitality"
+	Command "STRENGTH", "netevent tuin_spend_strength"
+	Command "LUCK", "netevent tuin_spend_luck"
+	Command "AGILITY", "netevent tuin_spend_agility"
+	Command "ENDURANCE", "netevent tuin_spend_endurance"
+	Submenu "ARSENAL", "TuinRPGArsenal"
+	Command "MENU TIME", ""
 	Class "TuinRPGCharacterMenu"
 }
 
@@ -263,13 +260,25 @@ OptionMenu "TuinRPGClassChoice"
 
 OptionMenu "TuinRPGPerkHub"
 {
-	Title "CLASS AND PERKS"
-	StaticText "YOUR STARTING CLASS IS PERMANENT", 1
-	Submenu "SPEND PERK POINTS", "TuinRPGPerks"
-	StaticText " "
-	StaticText "Milestones award 23 total perk points by level 30", 1
-	StaticText "All ranked perks have 3 ranks", 1
-	Class "TuinRPGPerkMenu"
+	Title ""
+	Position 82
+	Submenu "GENERAL PERKS", "TuinRPGGeneralPerks"
+	Submenu "CLASS TRAINING", "TuinRPGClassTraining"
+	Submenu "CLASS ULTIMATE", "TuinRPGClassCapstone"
+	Submenu "JOHN'S FIELD MANUAL", "TuinRPGHelp"
+	Class "TuinRPGPerkHubMenu"
+}
+
+OptionMenu "TuinRPGHelp"
+{
+	Title ""
+	Position 82
+	Command "OVERVIEW", ""
+	Command "PROGRESSION", ""
+	Command "CLASSES AND PERKS", ""
+	Command "LOOT AND ENEMIES", ""
+	Command "MULTIPLAYER", ""
+	Class "TuinRPGHelpMenu"
 }
 
 OptionMenu "TuinRPGPerks"
@@ -286,65 +295,36 @@ OptionMenu "TuinRPGPerks"
 
 OptionMenu "TuinRPGGeneralPerks"
 {
-	Title "GENERAL PERKS"
-	Position 64
-	StaticText "AVAILABLE TO EVERY CLASS", 1
-	StaticText "1 POINT PER RANK   |   3 RANKS MAX", 1
-	StaticText " "
+	Title ""
+	Position 82
 	Command "VITAL CORE: +10 MAXIMUM HEALTH", "netevent tuin_buy_perk 1"
 	Command "IRON SKIN: 3% LESS DAMAGE TAKEN", "netevent tuin_buy_perk 4"
 	Command "KILLER INSTINCT: +2% CRITICAL CHANCE", "netevent tuin_buy_perk 3"
 	Command "BLOOD DRINKER: LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
 	Command "SCAVENGER: +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
-	StaticText " "
-	StaticText "LEVEL 20 PERK", 1
 	Command "GIANT SLAYER: +0.5% / +1% / +1.5% TARGET HP", "netevent tuin_buy_perk 8"
-	Class "TuinRPGPerkMenu"
+	Class "TuinRPGGeneralPerkMenu"
 }
 
 OptionMenu "TuinRPGClassTraining"
 {
-	Title "CLASS TRAINING"
-	Position 54
-	StaticText "REQUIRES A CHOSEN CLASS", 1
-	StaticText "1 POINT PER RANK   |   3 RANKS MAX", 1
-	StaticText "ONLY YOUR CHOSEN CLASS RECEIVES ITS LISTED BONUS", 1
-	StaticText " "
-	StaticText "HEAVY: +3% RESISTANCE + 10% LESS RADIO DAMAGE NEEDED", 1
-	StaticText "HEALER: +1 HEALTH PER HEALING PULSE", 1
-	StaticText "EXECUTIONER: JUDGMENT CHARGE +10% / +20% / +30%", 1
-	StaticText "DOOM GUY: BLOOD PUNCH CHARGE +10% / +20% / +30%", 1
-	StaticText "ROGUE: +2% WEAPON CRIT | KNIFE +25% SPEED / +20% REACH", 1
-	StaticText "ENGINEER: +10% TURRET DAMAGE + FABRICATION / RANK", 1
-	StaticText " "
+	Title ""
+	Position 82
 	Command "BUY ONE CLASS TRAINING RANK", "netevent tuin_buy_perk 6"
-	Class "TuinRPGPerkMenu"
+	Class "TuinRPGClassTrainingMenu"
 }
 
 OptionMenu "TuinRPGClassCapstone"
 {
-	Title "CLASS ULTIMATE"
-	Position 54
-	StaticText "THE FINAL PERK FOR YOUR CHOSEN CLASS", 1
-	StaticText "COST: 1 PERK POINT", 1
-	StaticText "REQUIRES LEVEL 20 + CLASS TRAINING RANK 2", 1
-	StaticText " "
-	StaticText "HEAVY: LAST STAND BELOW 30% HEALTH", 1
-	StaticText "HEALER: DOUBLE ALL CLASS HEALING", 1
-	StaticText "EXECUTIONER - NO APPEALS: STRONGER 12-SEC MARK + 25% REFUND", 1
-	StaticText "DOOM GUY: +45% BLOOD PUNCH CHARGE | HEALS 30% DAMAGE", 1
-	StaticText "ROGUE: AMBUSH DEALS X6 RANGED / X16 KNIFE DAMAGE", 1
-	StaticText "ENGINEER - TWIN SENTRIES: OWN AND DEPLOY TWO TURRETS", 1
-	StaticText " "
+	Title ""
+	Position 82
 	Command "UNLOCK YOUR CLASS ULTIMATE", "netevent tuin_buy_perk 7"
-	Class "TuinRPGPerkMenu"
+	Class "TuinRPGClassUltimateMenu"
 }
 
 OptionMenu "TuinRPGArsenal"
 {
-	Title "TUIN RPG ARSENAL"
-	StaticText "UP/DOWN: inspect collected weapons", 1
-	StaticText "Picking up a replacement drops the old variant", 1
+	Title ""
 	Class "TuinRPGArsenalMenu"
 }
 

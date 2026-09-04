@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.22
+
+- Added the supplied cyan Engineer class card, completing the class-specific artwork set and replacing Engineer's temporary John portrait in both the roster and large preview.
+- Suppressed UZDoom's leftover stock option cursor, which appeared as a detached arrow above the custom class panel.
+- Rebuilt the Class and Perks hub as a responsive dashboard with the chosen class card, live level/point/training/ultimate status, and three large mouse-aware upgrade-path cards with clear progression and lock states.
+- Rebuilt General Perks as a responsive two-column card grid with live three-rank indicators, perk descriptions, purchase states, Giant Slayer's level-20 lock, keyboard navigation, and full-card mouse controls.
+- Added John's Field Manual to the perk hub: five clickable, color-coded guide sections with John's portrait and detailed pages for the core loop, progression and catch-up, classes and perks, weapon rarity and upgraded enemies, controls, rewards, and per-player multiplayer behavior.
+- Rebuilt the Character screen as a unified responsive dashboard with class artwork, live level and point totals, mouse-aware navigation, five large attribute upgrade cards, menu-time controls, and organized player/weapon/combined combat statistics.
+- Rebuilt Arsenal inspection with a scrollable quality-colored weapon list, item level and gear-score comparison, detailed affix breakdown, active-state feedback, full mouse selection, and an explicit Enter/click equip action.
+- Rebuilt Class Training and Class Ultimate as focused class dashboards with portrait art, live rank and requirement tracking, benefit cards, and clear purchase states.
+
 ## 0.7.21
 
 - Rebuilt the class screen around a taller responsive panel with substantially larger portraits, roomier cards, and more readable detail text.
