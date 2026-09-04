@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.11
+
+- Added the supplied `gaussnew.wav` as the Heavy Minigun explosive tracer's dedicated firing sound and `explode1.wav` as its dedicated impact sound. These aliases affect only the Minigun alt-fire and do not replace shared grenade, mine, volatile-enemy, or primary-fire audio.
+
 ## 0.7.10
 
 - Halved the Heavy Minigun alt-fire explosion again. Its 24-unit splash radius and flame, smoke, flare and shock-ring visuals are now 25% of the normal grenade explosion size, while center damage remains unchanged.

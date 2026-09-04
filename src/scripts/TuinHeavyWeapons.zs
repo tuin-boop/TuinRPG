@@ -92,7 +92,7 @@ class TuinMinigunExplosiveRound : FastProjectile
 	Death:
 		TNT1 A 0 Bright
 		{
-			A_StartSound("psgrenade/explode", CHAN_BODY, CHANF_OVERLAP, 0.35);
+			A_StartSound("tuin/minigun/altexplode", CHAN_BODY, CHANF_OVERLAP, 1.0);
 			A_Explode(20, 24);
 			A_SpawnItemEx("TuinMinigunExplosionFX", 0, 0, 0,
 				Flags: SXF_NOCHECKPOSITION);
