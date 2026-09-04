@@ -545,22 +545,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		Screen.DrawText(deltaFont, Font.CR_WHITE, width / 2 - 170, panelY + panelHeight - 37,
 			"UP / DOWN OR LEFT / RIGHT: BROWSE     ENTER: CHOOSE",
 			DTA_ScaleX, 1.55, DTA_ScaleY, 1.55);
-		int oldTitle = OptionMenuSettings.mTitleColor;
-		int oldFont = OptionMenuSettings.mFontColor;
-		int oldMore = OptionMenuSettings.mFontColorMore;
-		int oldHeader = OptionMenuSettings.mFontColorHeader;
-		int oldSelection = OptionMenuSettings.mFontColorSelection;
-		OptionMenuSettings.mTitleColor = Font.CR_WHITE;
-		OptionMenuSettings.mFontColor = Font.CR_WHITE;
-		OptionMenuSettings.mFontColorMore = Font.CR_LIGHTBLUE;
-		OptionMenuSettings.mFontColorHeader = Font.CR_LIGHTBLUE;
-		OptionMenuSettings.mFontColorSelection = Font.CR_WHITE;
 		Super.Drawer();
-		OptionMenuSettings.mTitleColor = oldTitle;
-		OptionMenuSettings.mFontColor = oldFont;
-		OptionMenuSettings.mFontColorMore = oldMore;
-		OptionMenuSettings.mFontColorHeader = oldHeader;
-		OptionMenuSettings.mFontColorSelection = oldSelection;
 	}
 }
 
@@ -571,7 +556,24 @@ class TuinRPGPerkMenu : OptionMenu
 		Super.Init(parent, desc);
 		for (int i = 0; i < mDesc.mItems.Size(); i++)
 		{
-			if (mDesc.mItems[i].Selectable()) mDesc.mItems[i].mCentered = true;
+			let item = mDesc.mItems[i];
+			if (item.Selectable()) item.mCentered = true;
+			else if (item.mLabel.Length() > 0 && item.mLabel != " ")
+			{
+				string label = item.mLabel;
+				int textColor = Font.CR_WHITE;
+				if (label.IndexOf("HEAVY:") == 0) textColor = Font.CR_LIGHTBLUE;
+				else if (label.IndexOf("HEALER:") == 0) textColor = Font.CR_GREEN;
+				else if (label.IndexOf("EXECUTIONER") == 0) textColor = Font.CR_RED;
+				else if (label.IndexOf("DOOM GUY:") == 0) textColor = Font.CR_ORANGE;
+				else if (label.IndexOf("ROGUE:") == 0) textColor = Font.CR_PURPLE;
+				else if (label.IndexOf("ENGINEER") == 0) textColor = Font.CR_GOLD;
+				else if (label.IndexOf("SELECT") == 0 || label.IndexOf("REQUIRES") == 0 ||
+					label.IndexOf("COST:") == 0 || label.IndexOf("AVAILABLE") == 0 ||
+					label.IndexOf("YOUR STARTING") == 0 || label.IndexOf("MILESTONES") == 0)
+					textColor = Font.CR_LIGHTBLUE;
+				mDesc.mItems[i] = new ('OptionMenuItemStaticText').InitDirect(label, textColor);
+			}
 		}
 		mDesc.CalcIndent();
 	}
@@ -588,22 +590,7 @@ class TuinRPGPerkMenu : OptionMenu
 		Screen.DrawLineFrame(Color(36, 128, 210), panelX, panelY, panelWidth, panelHeight, 2);
 		Screen.Dim(Color(6, 21, 43), 0.72, panelX + 12, panelY + 12,
 			panelWidth - 24, panelHeight - 24);
-		int oldTitle = OptionMenuSettings.mTitleColor;
-		int oldFont = OptionMenuSettings.mFontColor;
-		int oldMore = OptionMenuSettings.mFontColorMore;
-		int oldHeader = OptionMenuSettings.mFontColorHeader;
-		int oldSelection = OptionMenuSettings.mFontColorSelection;
-		OptionMenuSettings.mTitleColor = Font.CR_WHITE;
-		OptionMenuSettings.mFontColor = Font.CR_WHITE;
-		OptionMenuSettings.mFontColorMore = Font.CR_LIGHTBLUE;
-		OptionMenuSettings.mFontColorHeader = Font.CR_LIGHTBLUE;
-		OptionMenuSettings.mFontColorSelection = Font.CR_GOLD;
 		Super.Drawer();
-		OptionMenuSettings.mTitleColor = oldTitle;
-		OptionMenuSettings.mFontColor = oldFont;
-		OptionMenuSettings.mFontColorMore = oldMore;
-		OptionMenuSettings.mFontColorHeader = oldHeader;
-		OptionMenuSettings.mFontColorSelection = oldSelection;
 		if (consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo)
 		{
 			let data = TuinRPGHandler.GetPlayerData(players[consoleplayer].mo);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.18
+
+- Fixed the v0.7.17 startup failure caused by attempting to modify UZDoom's read-only global option-menu color settings. The blue panels, vertical class roster, class accents, Tiny font, permanent class navigation lock, and perk status strip remain intact. Perk explanatory text is now recolored safely per item, including class-specific colored rows and blue section headings.
+
 ## 0.7.17
 
 - Reworked class selection into a top-to-bottom six-class roster with an immediate default selection, a deep-blue interface, white text, blue focus frames, and Doom Delta's `TINYBABY` font for compact class information.
