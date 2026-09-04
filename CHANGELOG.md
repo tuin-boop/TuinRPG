@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.14
+
+- Dropped RPG weapons now make small, damped hops toward a nearby visible player within 224 units, helping loot escape crates, railings, and shallow ledges without behaving like fully magnetic coins. Multiplayer catch-up choices prefer the player they were created for.
+- Fixed primary Heavy Minigun fire falling through into `AltFire` when the trigger was released, which caused one unintended explosive round at the end of a normal burst.
+
 ## 0.7.13
 
 - Fixed Heavy Minigun alt-fire consuming no ammunition. It now uses the weapon engine's secondary `Clip` ammo path and reliably spends three bullets per tracer while still removing three rounds from its internal belt.

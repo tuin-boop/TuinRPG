@@ -11,6 +11,7 @@ class TuinWeaponDrop : Actor
 	int ExecutionPercent;
 	int ProsperityPercent;
 	int Age;
+	int NudgeCooldown;
 	string DisplayName;
 	bool CatchupReward;
 	int CatchupPlayerNumber;
@@ -73,7 +74,61 @@ class TuinWeaponDrop : Actor
 		Age++;
 		let lifetimeCV = CVar.FindCVar('tuin_weapon_drop_lifetime');
 		int lifetime = clamp(lifetimeCV ? lifetimeCV.GetInt() : 90, 15, 600) * 35;
-		if (Age >= lifetime) Destroy();
+		if (Age >= lifetime)
+		{
+			Destroy();
+			return;
+		}
+		// Let each impulse die away quickly; loot should hop off awkward geometry,
+		// not behave like a continuously homing coin.
+		Vel.X *= 0.82;
+		Vel.Y *= 0.82;
+
+		if (NudgeCooldown > 0)
+		{
+			NudgeCooldown--;
+			return;
+		}
+
+		Actor nearestPlayer;
+		double nearestDistance = 224.0;
+		// Catch-up choices stay loyal to the player they were spawned for.
+		if (CatchupReward && CatchupPlayerNumber >= 0 && CatchupPlayerNumber < MAXPLAYERS &&
+			playerInGame[CatchupPlayerNumber] && players[CatchupPlayerNumber].mo &&
+			players[CatchupPlayerNumber].mo.Health > 0)
+		{
+			Actor intendedPlayer = players[CatchupPlayerNumber].mo;
+			double intendedDistance = Distance2D(intendedPlayer);
+			if (intendedDistance < nearestDistance && CheckSight(intendedPlayer, SF_IGNOREWATERBOUNDARY))
+			{
+				nearestDistance = intendedDistance;
+				nearestPlayer = intendedPlayer;
+			}
+		}
+		else
+		{
+			for (int playerNumber = 0; playerNumber < MAXPLAYERS; playerNumber++)
+			{
+				if (!playerInGame[playerNumber] || !players[playerNumber].mo ||
+					players[playerNumber].mo.Health <= 0) continue;
+				Actor candidate = players[playerNumber].mo;
+				double distance = Distance2D(candidate);
+				if (distance >= nearestDistance || !CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+				nearestDistance = distance;
+				nearestPlayer = candidate;
+			}
+		}
+
+		if (!nearestPlayer || nearestDistance < 28.0) return;
+		double deltaX = nearestPlayer.Pos.X - Pos.X;
+		double deltaY = nearestPlayer.Pos.Y - Pos.Y;
+		double distance = max(1.0, sqrt(deltaX * deltaX + deltaY * deltaY));
+		double nudgeSpeed = distance < 96.0 ? 1.8 : 1.25;
+		Vel.X = deltaX / distance * nudgeSpeed;
+		Vel.Y = deltaY / distance * nudgeSpeed;
+		// A modest hop frees loot resting on crates, railings, and shallow ledges.
+		if (abs(Vel.Z) < 0.1 && Pos.Z <= FloorZ + 2.0) Vel.Z = 1.75;
+		NudgeCooldown = 14;
 	}
 
 	Default
