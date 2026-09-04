@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.13
+
+- Fixed Heavy Minigun alt-fire consuming no ammunition. It now uses the weapon engine's secondary `Clip` ammo path and reliably spends three bullets per tracer while still removing three rounds from its internal belt.
+- Split explosive tracer damage into a fixed 10-damage direct impact plus a 10-damage, 24-unit blast. The struck monster receives 20 combined damage while close splash targets receive at most 50% of that total.
+- Explosive tracer direct and splash hits now ignite affected monsters with the existing four-second incendiary burn used by explosive weapon damage.
+
 ## 0.7.12
 
 - Increased the Heavy Minigun's sustained explosive alt-fire rate by approximately 50%, reducing its repeat cycle from 11 tics to 7. Initial spin-up, damage, blast size, and the three-bullet cost per shot are unchanged.

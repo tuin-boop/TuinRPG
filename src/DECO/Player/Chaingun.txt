@@ -410,6 +410,8 @@ ACTOR TuinMinigun : Z86Chaingun
 {
 	Tag "MINIGUN"
 	Inventory.PickupMessage "You got the Minigun!"
+	Weapon.AmmoType2 "Clip"
+	Weapon.AmmoUse2 3
 	+INVENTORY.UNDROPPABLE
 	States
 	{
@@ -486,8 +488,7 @@ ACTOR TuinMinigun : Z86Chaingun
 		{
 			A_PlaySound("tuin/minigun/altfire", CHAN_WEAPON);
 			A_GunFlash("Flash");
-			A_FireCustomMissile("TuinMinigunExplosiveRound", 0, 0, 0, 0);
-			A_TakeInventory("Clip", 3);
+			A_FireCustomMissile("TuinMinigunExplosiveRound", 0, 1, 0, 0);
 			A_TakeInventory("TuinMinigunRounds", 3);
 		}
 		VLCN BCD 2

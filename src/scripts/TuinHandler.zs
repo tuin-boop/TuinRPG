@@ -2164,6 +2164,12 @@ class TuinRPGHandler : EventHandler
 		return projectileName.IndexOf("rocket") >= 0;
 	}
 
+	clearscope static bool IsMinigunExplosiveDamage(Actor inflictor, Name damageType)
+	{
+		if (inflictor && inflictor.GetClassName() == 'TuinMinigunExplosiveRound') return true;
+		return damageType == 'TuinMinigunExplosive';
+	}
+
 	clearscope static bool IsPlayerPlasmaDamage(Actor inflictor)
 	{
 		return inflictor && inflictor is 'PlasmaBall';
@@ -5392,6 +5398,8 @@ class TuinRPGHandler : EventHandler
 			if (IsPlayerRocketDamage(e.Inflictor, e.DamageType))
 				ApplyRocketBurn(attacker, victimData, totalDamage,
 					RocketHitWasDirect(e.Inflictor, e.Thing));
+			else if (IsMinigunExplosiveDamage(e.Inflictor, e.DamageType))
+				ApplyRocketBurn(attacker, victimData, totalDamage, false);
 			else if (IsPlayerPlasmaDamage(e.Inflictor))
 				ApplyPlasmaArc(attacker, e.Thing, e.DamageSource, e.Inflictor, totalDamage);
 			if (e.DamageType == 'TuinRogueBolt')

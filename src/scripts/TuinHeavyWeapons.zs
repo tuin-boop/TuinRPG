@@ -66,7 +66,7 @@ class TuinMinigunExplosiveRound : FastProjectile
 		Radius 2;
 		Height 2;
 		Speed 150;
-		Damage 1;
+		DamageFunction 10;
 		DamageType "TuinMinigunExplosive";
 		Obituary "%o was shredded by an explosive Minigun round.";
 		RenderStyle "Add";
@@ -93,7 +93,7 @@ class TuinMinigunExplosiveRound : FastProjectile
 		TNT1 A 0 Bright
 		{
 			A_StartSound("tuin/minigun/altexplode", CHAN_BODY, CHANF_OVERLAP, 1.0);
-			A_Explode(20, 24);
+			A_Explode(10, 24);
 			A_SpawnItemEx("TuinMinigunExplosionFX", 0, 0, 0,
 				Flags: SXF_NOCHECKPOSITION);
 		}
