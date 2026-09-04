@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.12
+
+- Increased the Heavy Minigun's sustained explosive alt-fire rate by approximately 50%, reducing its repeat cycle from 11 tics to 7. Initial spin-up, damage, blast size, and the three-bullet cost per shot are unchanged.
+
 ## 0.7.11
 
 - Added the supplied `gaussnew.wav` as the Heavy Minigun explosive tracer's dedicated firing sound and `explode1.wav` as its dedicated impact sound. These aliases affect only the Minigun alt-fire and do not replace shared grenade, mine, volatile-enemy, or primary-fire audio.
