@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.15
+
+- Removed upward force from the dropped-weapon nudge after it could be reapplied while a weapon was airborne and make loot climb toward the player. Drops now nudge only horizontally, participate in normal sector physics, and use stronger gravity to fall promptly after clearing crates or ledges while remaining non-solid.
+
 ## 0.7.14
 
 - Dropped RPG weapons now make small, damped hops toward a nearby visible player within 224 units, helping loot escape crates, railings, and shallow ledges without behaving like fully magnetic coins. Multiplayer catch-up choices prefer the player they were created for.

@@ -126,8 +126,8 @@ class TuinWeaponDrop : Actor
 		double nudgeSpeed = distance < 96.0 ? 1.8 : 1.25;
 		Vel.X = deltaX / distance * nudgeSpeed;
 		Vel.Y = deltaY / distance * nudgeSpeed;
-		// A modest hop frees loot resting on crates, railings, and shallow ledges.
-		if (abs(Vel.Z) < 0.1 && Pos.Z <= FloorZ + 2.0) Vel.Z = 1.75;
+		// Horizontal movement carries loot over an edge; gravity handles the fall.
+		// Never add upward velocity here, or repeated nudges can make a drop climb.
 		NudgeCooldown = 14;
 	}
 
@@ -135,9 +135,8 @@ class TuinWeaponDrop : Actor
 	{
 		Radius 12;
 		Height 16;
-		Gravity 0.35;
+		Gravity 0.8;
 		+NOBLOCKMAP
-		+NOINTERACTION
 		+RELATIVETOFLOOR
 		+FORCEXYBILLBOARD
 	}
