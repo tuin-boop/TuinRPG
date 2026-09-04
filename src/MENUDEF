@@ -250,10 +250,8 @@ OptionMenu "TuinRPGCharacter"
 
 OptionMenu "TuinRPGClassChoice"
 {
-	Title "CHOOSE YOUR CLASS"
+	Title ""
 	Position 82
-	StaticText "FREE STARTING CHOICE   |   YOUR CHOICE IS PERMANENT", 1
-	StaticText " "
 	Command "HEAVY", "netevent tuin_choose_class 1"
 	Command "HEALER", "netevent tuin_choose_class 2"
 	Command "EXECUTIONER", "netevent tuin_choose_class 3"

@@ -440,14 +440,24 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			mLabel ~== "EXECUTIONER" ? 2 : mLabel ~== "DOOM GUY" ? 3 :
 			mLabel ~== "ROGUE" ? 4 : 5;
 		int width = Screen.GetWidth();
+		int height = Screen.GetHeight();
 		int panelWidth = min(width - 72, 1660);
+		int panelHeight = min(height - 72, 800);
 		int panelX = (width - panelWidth) / 2;
-		int rosterWidth = clamp(int(panelWidth * 0.30), 235, 360);
-		int cardSize = 60;
+		int panelY = (height - panelHeight) / 2;
+		int rosterWidth = clamp(int(panelWidth * 0.20), 290, 340);
+		int rowStep = max(66, (panelHeight - 136) / 6);
+		int cardSize = clamp(rowStep - 10, 64, 82);
 		int cardX = panelX + 22;
-		int cardY = 108 + classIndex * 66;
+		int cardY = panelY + 70 + classIndex * rowStep;
 		int cardWidth = rosterWidth - 34;
-		TextureID portrait = TexMan.CheckForTexture("graphics/TuinJohnPortrait.png", TexMan.Type_Any);
+		string portraitName = classIndex == 0 ? "graphics/TuinClassHeavy.png" :
+			classIndex == 1 ? "graphics/TuinClassMedic.png" :
+			classIndex == 2 ? "graphics/TuinClassExecutioner.png" :
+			classIndex == 3 ? "graphics/TuinClassDoomGuy.png" :
+			classIndex == 4 ? "graphics/TuinClassRogue.png" :
+			"graphics/TuinJohnPortrait.png";
+		TextureID portrait = TexMan.CheckForTexture(portraitName, TexMan.Type_Any);
 		Font deltaFont = "TINYBABY";
 		Color classColor = classIndex == 0 ? Color(55, 150, 255) :
 			classIndex == 1 ? Color(74, 210, 105) : classIndex == 2 ? Color(238, 58, 48) :
@@ -465,33 +475,51 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		Screen.DrawLineFrame(selected ? classColor : Color(22, 62, 102),
 			cardX - 5, cardY - 5, cardWidth, cardSize + 10, selected ? 3 : 1);
 		Screen.DrawText(deltaFont, selected ? classTextColor : Font.CR_DARKGRAY,
-			cardX + 74, cardY + 20, mLabel, DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
+			cardX + cardSize + 18, cardY + cardSize / 2 - 8, mLabel,
+			DTA_ScaleX, 2.65, DTA_ScaleY, 2.65);
 		if (!selected) return center;
-		int detailX = panelX + rosterWidth + 28;
-		Screen.DrawText(BigFont, Font.CR_WHITE, detailX, 122, mLabel,
-			DTA_ScaleX, 1.15, DTA_ScaleY, 1.15);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 162, role,
-			DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 204, "CORE BONUSES",
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, 225, bonuses,
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 259, "TRADEOFF",
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, 280, tradeoff,
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 314, "CLASS ABILITY",
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, 335, ability,
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 369, "CLASS TRAINING",
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, 390, training,
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, classTextColor, detailX, 424, "CLASS ULTIMATE",
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, 445, ultimate,
-			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
+		int artSize = clamp(min(panelHeight - 190, int(panelWidth * 0.23)), 260, 390);
+		int artX = panelX + rosterWidth + 24;
+		int artY = panelY + 76;
+		if (portrait.IsValid())
+			Screen.DrawTexture(portrait, false, artX, artY,
+				DTA_DestWidth, artSize, DTA_DestHeight, artSize);
+		Screen.DrawLineFrame(classColor, artX - 3, artY - 3, artSize + 6, artSize + 6, 3);
+		int detailX = artX + artSize + 30;
+		int detailTop = panelY + 74;
+		int groupTop = panelY + 160;
+		int groupStep = max(61, (panelHeight - 225) / 5);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, detailTop, mLabel,
+			DTA_ScaleX, 3.50, DTA_ScaleY, 3.50);
+		Screen.DrawText(deltaFont, classTextColor, detailX, detailTop + 39, role,
+			DTA_ScaleX, 2.70, DTA_ScaleY, 2.70);
+		Screen.DrawText(deltaFont, classTextColor, detailX, groupTop, "CORE BONUSES",
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, groupTop + 26, bonuses,
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, classTextColor, detailX, groupTop + groupStep, "TRADEOFF",
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, groupTop + groupStep + 26, tradeoff,
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, classTextColor, detailX, groupTop + groupStep * 2, "CLASS ABILITY",
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, groupTop + groupStep * 2 + 26, ability,
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, classTextColor, detailX, groupTop + groupStep * 3, "CLASS TRAINING",
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, groupTop + groupStep * 3 + 26, training,
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, classTextColor, detailX, groupTop + groupStep * 4, "CLASS ULTIMATE",
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX, groupTop + groupStep * 4 + 26, ultimate,
+			DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		int chooseY = panelY + panelHeight - 69;
+		int chooseWidth = panelX + panelWidth - 22 - detailX;
+		Screen.Dim(classColor, 0.38, detailX, chooseY, chooseWidth, 35);
+		Screen.DrawLineFrame(classColor, detailX, chooseY, chooseWidth, 35, 2);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, detailX + 16, chooseY + 9,
+			"PRESS ENTER OR CLICK TO CHOOSE " .. mLabel,
+			DTA_ScaleX, 2.50, DTA_ScaleY, 2.50);
 		return detailX - 16 * CleanXfac_1;
 	}
 }
@@ -514,7 +542,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 			else continue;
 			mDesc.mItems[i] = new ('TuinRPGClassChoiceItem').Init(item.mLabel, command);
 		}
-		mDesc.mSelectedItem = 2;
+		mDesc.mSelectedItem = 0;
 		mDesc.CalcIndent();
 	}
 
@@ -531,25 +559,61 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		return Super.MenuEvent(mkey, fromcontroller);
 	}
 
+	override bool MouseEvent(int type, int x, int y)
+	{
+		int width = Screen.GetWidth();
+		int height = Screen.GetHeight();
+		int panelWidth = min(width - 72, 1660);
+		int panelHeight = min(height - 72, 800);
+		int panelX = (width - panelWidth) / 2;
+		int panelY = (height - panelHeight) / 2;
+		int rosterWidth = clamp(int(panelWidth * 0.20), 290, 340);
+		int rowStep = max(66, (panelHeight - 136) / 6);
+		int cardSize = clamp(rowStep - 10, 64, 82);
+		int cardX = panelX + 17;
+		int cardWidth = rosterWidth - 34;
+
+		for (int i = 0; i < 6; i++)
+		{
+			int cardY = panelY + 65 + i * rowStep;
+			if (x >= cardX && x < cardX + cardWidth &&
+				y >= cardY && y < cardY + cardSize + 10)
+			{
+				if (mDesc.mSelectedItem != i)
+				{
+					mDesc.mSelectedItem = i;
+					MenuSound("menu/cursor");
+				}
+				if (type == MOUSE_Release) return MenuEvent(MKEY_Enter, true);
+				return true;
+			}
+		}
+		return true;
+	}
+
 	override void Drawer()
 	{
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
 		int panelWidth = min(width - 72, 1660);
-		int panelHeight = min(height - 72, 500);
+		int panelHeight = min(height - 72, 800);
 		int panelX = (width - panelWidth) / 2;
-		int rosterWidth = clamp(int(panelWidth * 0.30), 235, 360);
-		int panelY = 36;
+		int rosterWidth = clamp(int(panelWidth * 0.20), 290, 340);
+		int panelY = (height - panelHeight) / 2;
 		Screen.Dim(Color(3, 13, 31), 0.97, panelX, panelY, panelWidth, panelHeight);
 		Screen.DrawLineFrame(Color(1, 5, 13), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(36, 128, 210), panelX + 7, panelY + 7,
 			panelWidth - 14, panelHeight - 14, 2);
-		Screen.Dim(Color(36, 128, 210), 0.72, panelX + rosterWidth, panelY + 76, 2, panelHeight - 96);
+		Screen.Dim(Color(36, 128, 210), 0.72, panelX + rosterWidth, panelY + 58, 2, panelHeight - 78);
 		Font deltaFont = "TINYBABY";
-		Screen.DrawText(BigFont, Font.CR_WHITE, panelX + 55, panelY + 58, "SELECT A CLASS");
-		Screen.DrawText(deltaFont, Font.CR_WHITE, width / 2 - 170, panelY + panelHeight - 24,
-			"UP / DOWN OR LEFT / RIGHT: BROWSE     ENTER: CHOOSE",
-			DTA_ScaleX, 2.10, DTA_ScaleY, 2.10);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + 22, panelY + 24, "SELECT A CLASS",
+			DTA_ScaleX, 2.85, DTA_ScaleY, 2.85);
+		Screen.DrawText(deltaFont, Font.CR_LIGHTBLUE, panelX + rosterWidth + 34, panelY + 24,
+			"FREE STARTING CHOICE - YOUR CLASS IS PERMANENT",
+			DTA_ScaleX, 2.65, DTA_ScaleY, 2.65);
+		Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + 22, panelY + panelHeight - 27,
+			"KEYS OR MOUSE: BROWSE",
+			DTA_ScaleX, 2.40, DTA_ScaleY, 2.40);
 		Super.Drawer();
 	}
 }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.21
+
+- Rebuilt the class screen around a taller responsive panel with substantially larger portraits, roomier cards, and more readable detail text.
+- Removed the clashing inherited orange menu heading and replaced all class-screen headings with the credited Doom Delta font in a consistent white-and-blue treatment.
+- Rebalanced vertical spacing so the roster, detail groups, and controls use the full panel instead of bunching into its upper-left corner.
+- Added card-aligned mouse hit zones plus a large class-colored confirmation bar, making both browsing and choosing a class explicit.
+- Added the supplied Heavy, Medic, Executioner, Doom Guy, and Rogue artwork as class-specific roster thumbnails and large selected-class showcase cards; Engineer retains the temporary John portrait.
+
 ## 0.7.20
 
 - Enlarged the class-selection portraits and cards while retaining all six choices on one screen.
