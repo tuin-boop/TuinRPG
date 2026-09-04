@@ -2050,6 +2050,11 @@ class TuinRPGHandler : EventHandler
 		return weaponType == 'TuinDoomGuyQuadShotgun';
 	}
 
+	clearscope static bool IsHeavyOnlyWeaponType(class<Weapon> weaponType)
+	{
+		return weaponType == (class<Weapon>)(FindClass('TuinMinigun', 'Weapon'));
+	}
+
 	class<Weapon> RandomRogueWeaponType()
 	{
 		int choice = Random[TuinRPGLoot](0, 2);
@@ -2438,16 +2443,10 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!weaponType) return null;
 		class<Weapon> shotgunType = (class<Weapon>)(Actor.GetReplacement('Shotgun'));
-		class<Weapon> chaingunType = (class<Weapon>)(Actor.GetReplacement('Chaingun'));
 		if ((weaponType == 'Shotgun' || weaponType == shotgunType) &&
 			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_riot_shotgun_chance', 8.0), 0.0, 100.0))
 		{
 			weaponType = (class<Weapon>)(FindClass('TuinRiotShotgun', 'Weapon'));
-		}
-		else if ((weaponType == 'Chaingun' || weaponType == chaingunType) &&
-			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_minigun_chance', 8.0), 0.0, 100.0))
-		{
-			weaponType = (class<Weapon>)(FindClass('TuinMinigun', 'Weapon'));
 		}
 		let lootDrop = TuinWeaponDrop(Actor.Spawn('TuinWeaponDrop', position, NO_REPLACE));
 		if (!lootDrop) return null;
@@ -3294,7 +3293,6 @@ class TuinRPGHandler : EventHandler
 		SetServerInt('tuin_weapon_drops_enabled', 1);
 		SetServerFloat('tuin_weapon_drop_chance', 1.50);
 		SetServerFloat('tuin_riot_shotgun_chance', 8.0);
-		SetServerFloat('tuin_minigun_chance', 8.0);
 		SetServerInt('tuin_weapon_drop_lifetime', 90);
 		SetServerFloat('tuin_weapon_inspect_distance', 256.0);
 		SetServerFloat('tuin_weapon_near_inspect_distance', 80.0);
@@ -5914,6 +5912,12 @@ class TuinRPGHandler : EventHandler
 			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			return;
 		}
+		if (IsHeavyOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 1)
+		{
+			SetLootNotification(playerNumber, "HEAVY CLASS ONLY", 0);
+			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
+			return;
+		}
 		bool needsWeapon = !pawn.FindInventory(lootDrop.WeaponType);
 		int existing = data.FindEquippedVariant(lootDrop.WeaponType);
 		bool replaced = existing >= 0;
@@ -7211,9 +7215,12 @@ class TuinRPGHandler : EventHandler
 				(!playerData || playerData.PlayerClass != 5);
 			bool doomGuyRestricted = IsDoomGuyOnlyWeaponType(viewedDrop.WeaponType) &&
 				(!playerData || playerData.PlayerClass != 4);
-			bool classRestricted = rogueRestricted || doomGuyRestricted;
+			bool heavyRestricted = IsHeavyOnlyWeaponType(viewedDrop.WeaponType) &&
+				(!playerData || playerData.PlayerClass != 1);
+			bool classRestricted = rogueRestricted || doomGuyRestricted || heavyRestricted;
 			string prompt = rogueRestricted ? "ROGUE CLASS ONLY" :
-				doomGuyRestricted ? "DOOM GUY CLASS ONLY" : closeEnough ?
+				doomGuyRestricted ? "DOOM GUY CLASS ONLY" :
+				heavyRestricted ? "HEAVY CLASS ONLY" : closeEnough ?
 				(equippedIndex >= 0 ? "PRESS USE [E] TO SWAP - OLD WEAPON DROPS" : "PRESS USE [E] TO EQUIP") :
 				"MOVE CLOSER TO INSPECT AND EQUIP";
 			Screen.DrawText(font, classRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,

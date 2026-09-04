@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.09
+
+- Made the Minigun a Heavy-exclusive signature weapon. Ordinary Chaingun loot can no longer convert into one, the weapon cannot be discarded as a native pickup, and shared multiplayer variant drops reject non-Heavy players without consuming the item.
+- Added a slower automatic Minigun alt-fire that launches compact grenade-style explosive rounds. Each shot consumes three bullets and three rounds from the internal belt, with readable spin-up, recoil recovery, and splash damage. Both the blast radius and visual effect are 50% of the normal grenade explosion size.
+
 ## 0.7.08
 
 - Moved John's combat-tip portrait and dialogue panel to the upper HUD, immediately left of the minimap and aligned with its top edge. The placement follows custom minimap position and size settings and remains clamped on-screen at smaller resolutions.

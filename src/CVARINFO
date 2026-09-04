@@ -49,7 +49,6 @@ server int tuin_signature_attack_windup = 20;
 server bool tuin_weapon_drops_enabled = true;
 server float tuin_weapon_drop_chance = 1.50;
 server float tuin_riot_shotgun_chance = 8.0;
-server float tuin_minigun_chance = 8.0;
 server int tuin_weapon_drop_lifetime = 90;
 server float tuin_weapon_inspect_distance = 256.0;
 server float tuin_weapon_near_inspect_distance = 80.0;
