@@ -15,38 +15,38 @@ class TuinMinigunExplosionFX : Actor
 		for (int i = 0; i < 3; i++)
 		{
 			Actor flame = Actor.Spawn("PSBrutalGrenadeFlame",
-				Pos + (Random[TuinMinigunFX](-9, 9), Random[TuinMinigunFX](-9, 9),
-				Random[TuinMinigunFX](2, 17)), NO_REPLACE);
+				Pos + (Random[TuinMinigunFX](-5, 5), Random[TuinMinigunFX](-5, 5),
+				Random[TuinMinigunFX](1, 9)), NO_REPLACE);
 			if (flame)
 			{
-				flame.Scale *= 0.5;
-				flame.Vel = (FRandom[TuinMinigunFX](-0.75, 0.75),
-					FRandom[TuinMinigunFX](-0.75, 0.75), FRandom[TuinMinigunFX](0.25, 1.25));
+				flame.Scale *= 0.25;
+				flame.Vel = (FRandom[TuinMinigunFX](-0.375, 0.375),
+					FRandom[TuinMinigunFX](-0.375, 0.375), FRandom[TuinMinigunFX](0.125, 0.625));
 			}
 		}
 		for (int j = 0; j < 3; j++)
 		{
 			Actor smoke = Actor.Spawn("PSBrutalGrenadeSmoke",
-				Pos + (Random[TuinMinigunFX](-11, 11), Random[TuinMinigunFX](-11, 11),
-				Random[TuinMinigunFX](4, 19)), NO_REPLACE);
+				Pos + (Random[TuinMinigunFX](-6, 6), Random[TuinMinigunFX](-6, 6),
+				Random[TuinMinigunFX](2, 10)), NO_REPLACE);
 			if (smoke)
 			{
-				smoke.Scale *= 0.5;
-				smoke.Vel = (FRandom[TuinMinigunFX](-0.6, 0.6),
-					FRandom[TuinMinigunFX](-0.6, 0.6), FRandom[TuinMinigunFX](0.3, 1.1));
+				smoke.Scale *= 0.25;
+				smoke.Vel = (FRandom[TuinMinigunFX](-0.3, 0.3),
+					FRandom[TuinMinigunFX](-0.3, 0.3), FRandom[TuinMinigunFX](0.15, 0.55));
 			}
 		}
 		Actor column = Actor.Spawn("PSBrutalGrenadeSmokeColumn", Pos, NO_REPLACE);
-		if (column) column.Scale *= 0.5;
+		if (column) column.Scale *= 0.25;
 		Actor flare = Actor.Spawn("PSBrutalGrenadeFlare", Pos, NO_REPLACE);
-		if (flare) flare.Scale *= 0.5;
+		if (flare) flare.Scale *= 0.25;
 		for (int k = 0; k < 32; k++)
 		{
 			double ringAngle = k * 11.25;
-			A_SpawnParticle("FFB040", SPF_FULLBRIGHT, 18, 2.5, ringAngle,
-				Cos(ringAngle) * 3.0, Sin(ringAngle) * 3.0, 4,
-				Cos(ringAngle) * 4.0, Sin(ringAngle) * 4.0, 0,
-				0, 0, 0, 0.45, -1, 0.25);
+			A_SpawnParticle("FFB040", SPF_FULLBRIGHT, 14, 1.25, ringAngle,
+				Cos(ringAngle) * 1.5, Sin(ringAngle) * 1.5, 2,
+				Cos(ringAngle) * 2.0, Sin(ringAngle) * 2.0, 0,
+				0, 0, 0, 0.225, -1, 0.25);
 		}
 	}
 
@@ -63,28 +63,37 @@ class TuinMinigunExplosiveRound : FastProjectile
 {
 	Default
 	{
-		Radius 3;
-		Height 3;
-		Speed 60;
+		Radius 2;
+		Height 2;
+		Speed 150;
 		Damage 1;
 		DamageType "TuinMinigunExplosive";
 		Obituary "%o was shredded by an explosive Minigun round.";
 		RenderStyle "Add";
-		Alpha 0.9;
-		Scale 0.20;
+		Alpha 0.96;
 		+FORCEXYBILLBOARD
+		+BRIGHT
+		+NOEXTREMEDEATH
+	}
+
+	override void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		A_AttachLight('TuinMinigunExplosiveTracerGlow', DynamicLight.PointLight,
+			Color(255, 138, 28), 18, 18,
+			DynamicLight.LF_ATTENUATE | DynamicLight.LF_DONTLIGHTSELF);
 	}
 
 	States
 	{
 	Spawn:
-		MISL A 1 Bright;
+		TRAC A 1 Bright;
 		Loop;
 	Death:
 		TNT1 A 0 Bright
 		{
-			A_StartSound("psgrenade/explode", CHAN_BODY, CHANF_OVERLAP, 0.65);
-			A_Explode(20, 48);
+			A_StartSound("psgrenade/explode", CHAN_BODY, CHANF_OVERLAP, 0.35);
+			A_Explode(20, 24);
 			A_SpawnItemEx("TuinMinigunExplosionFX", 0, 0, 0,
 				Flags: SXF_NOCHECKPOSITION);
 		}

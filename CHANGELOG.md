@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.10
+
+- Halved the Heavy Minigun alt-fire explosion again. Its 24-unit splash radius and flame, smoke, flare and shock-ring visuals are now 25% of the normal grenade explosion size, while center damage remains unchanged.
+- Reworked the alt-fire projectile into a fast bright ballistic tracer with a small orange glow instead of a scaled rocket. Firing now uses the Minigun shot sound, while the small impact explosion is quieter pending further sound tuning.
+
 ## 0.7.09
 
 - Made the Minigun a Heavy-exclusive signature weapon. Ordinary Chaingun loot can no longer convert into one, the weapon cannot be discarded as a native pickup, and shared multiplayer variant drops reject non-Heavy players without consuming the item.
