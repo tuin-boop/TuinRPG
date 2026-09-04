@@ -436,28 +436,42 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		}
 
 		int center = Screen.GetWidth() / 2;
-		int classX = center - 650;
-		int detailX = center - 250;
-		int valueX = center + 20;
-		if (mLabel ~== "HEAVY")
-			drawText(classX, y - 28, Font.CR_GOLD, "SELECT A CLASS");
-		drawText(classX, y, selected ? Font.CR_RED : Font.CR_WHITE,
-			selected ? String.Format("> %s", mLabel) : String.Format("  %s", mLabel));
-		if (selected)
-		{
-			drawText(detailX, 132, Font.CR_RED, String.Format("%s  //  %s", mLabel, role));
-			drawText(detailX, 178, Font.CR_WHITE, "CORE BONUSES");
-			drawText(valueX, 178, Font.CR_GOLD, bonuses);
-			drawText(detailX, 218, Font.CR_WHITE, "TRADEOFF");
-			drawText(valueX, 218, Font.CR_GOLD, tradeoff);
-			drawText(detailX, 258, Font.CR_WHITE, "CLASS ABILITY");
-			drawText(valueX, 258, Font.CR_GOLD, ability);
-			drawText(detailX, 298, Font.CR_WHITE, "CLASS TRAINING");
-			drawText(valueX, 298, Font.CR_GOLD, training);
-			drawText(detailX, 338, Font.CR_WHITE, "CLASS ULTIMATE");
-			drawText(valueX, 338, Font.CR_GOLD, ultimate);
-		}
-		return classX - 16 * CleanXfac_1;
+		int classIndex = mLabel ~== "HEAVY" ? 0 : mLabel ~== "HEALER" ? 1 :
+			mLabel ~== "EXECUTIONER" ? 2 : mLabel ~== "DOOM GUY" ? 3 :
+			mLabel ~== "ROGUE" ? 4 : 5;
+		int cardSize = 82;
+		int cardX = center - 565 + (classIndex % 3) * 102;
+		int cardY = 136 + (classIndex / 3) * 122;
+		TextureID portrait = TexMan.CheckForTexture("graphics/TuinJohnPortrait.png", TexMan.Type_Any);
+		Screen.Dim(Color(7, 7, 7), 0.94, cardX - 5, cardY - 5, cardSize + 10, cardSize + 27);
+		if (portrait.IsValid())
+			Screen.DrawTexture(portrait, false, cardX, cardY,
+				DTA_DestWidth, cardSize, DTA_DestHeight, cardSize,
+				DTA_Alpha, selected ? 1.0 : 0.48);
+		Screen.DrawLineFrame(selected ? Color(224, 52, 24) : Color(105, 72, 24),
+			cardX - 5, cardY - 5, cardSize + 10, cardSize + 27, selected ? 3 : 1);
+		Screen.DrawText(NewSmallFont, selected ? Font.CR_GOLD : Font.CR_DARKGRAY,
+			cardX, cardY + cardSize + 3, mLabel, DTA_ScaleX, 0.82, DTA_ScaleY, 0.82);
+		if (!selected) return center;
+		int detailX = center - 150;
+		int valueX = center + 120;
+		Screen.DrawText(BigFont, Font.CR_GOLD, detailX, 122, mLabel,
+			DTA_ScaleX, 1.15, DTA_ScaleY, 1.15);
+		Screen.DrawText(NewSmallFont, Font.CR_RED, detailX, 160, "<  PREVIOUS     NEXT  >",
+			DTA_ScaleX, 1.20, DTA_ScaleY, 1.20);
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, detailX, 181, role,
+			DTA_ScaleX, 1.20, DTA_ScaleY, 1.20);
+		Screen.DrawText(NewSmallFont, Font.CR_WHITE, detailX, 218, "CORE BONUSES");
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, valueX, 218, bonuses);
+		Screen.DrawText(NewSmallFont, Font.CR_WHITE, detailX, 258, "TRADEOFF");
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, valueX, 258, tradeoff);
+		Screen.DrawText(NewSmallFont, Font.CR_WHITE, detailX, 298, "CLASS ABILITY");
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, valueX, 298, ability);
+		Screen.DrawText(NewSmallFont, Font.CR_WHITE, detailX, 338, "CLASS TRAINING");
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, valueX, 338, training);
+		Screen.DrawText(NewSmallFont, Font.CR_WHITE, detailX, 378, "CLASS ULTIMATE");
+		Screen.DrawText(NewSmallFont, Font.CR_GOLD, valueX, 378, ultimate);
+		return detailX - 16 * CleanXfac_1;
 	}
 }
 
@@ -482,6 +496,19 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		mDesc.CalcIndent();
 	}
 
+	override bool MenuEvent(int mkey, bool fromcontroller)
+	{
+		if (mkey == MKEY_Left) return Super.MenuEvent(MKEY_Up, fromcontroller);
+		if (mkey == MKEY_Right) return Super.MenuEvent(MKEY_Down, fromcontroller);
+		if (mkey == MKEY_Back)
+		{
+			let data = consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo ?
+				TuinRPGHandler.GetPlayerData(players[consoleplayer].mo) : null;
+			if (!data || data.PlayerClass == 0) return true;
+		}
+		return Super.MenuEvent(mkey, fromcontroller);
+	}
+
 	override void Drawer()
 	{
 		int width = Screen.GetWidth();
@@ -494,7 +521,12 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		Screen.DrawLineFrame(Color(0, 0, 0), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(170, 116, 26), panelX + 7, panelY + 7,
 			panelWidth - 14, panelHeight - 14, 2);
-		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 330, panelY + 94, 2, panelHeight - 118);
+		Screen.Dim(Color(170, 116, 26), 0.72, width / 2 - 180, panelY + 94, 2, panelHeight - 118);
+		Font font = SmallFont;
+		Screen.DrawText(BigFont, Font.CR_GOLD, panelX + 60, panelY + 72, "SELECT A CLASS");
+		Screen.DrawText(font, Font.CR_WHITE, width / 2 - 150, panelY + panelHeight - 44,
+			"LEFT / RIGHT: BROWSE     ENTER: CHOOSE     THEN BUILD YOUR PERKS",
+			DTA_ScaleX, 1.5, DTA_ScaleY, 1.5);
 		Super.Drawer();
 	}
 }

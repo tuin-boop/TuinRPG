@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.16
+
+- Added an automatic opening class-selection flow for unclassed players. The class browser uses left/right navigation, a temporary John portrait, Doom-style display type, complete class details, a permanent-choice lock, and transitions directly into the perk hub after selection. Starting class choice is now free so earned perk points remain available for builds; existing classed saves receive their previously spent point back once.
+- Increased the Heavy Minigun explosive alt-fire cadence by approximately 25% through alternating five- and six-tic firing cycles.
+- Increased explosive Minigun tracer burn damage from 16% to 20% of the triggering hit while retaining its four-second duration.
+
 ## 0.7.15
 
 - Removed upward force from the dropped-weapon nudge after it could be reapplied while a weapon was airborne and make loot climb toward the player. Drops now nudge only horizontally, participate in normal sector physics, and use stronger gravity to fall promptly after clearing crates or ledges while remaining non-solid.

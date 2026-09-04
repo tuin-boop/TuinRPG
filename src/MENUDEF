@@ -235,7 +235,7 @@ OptionMenu "TuinRPGCharacter"
 	Title "TUIN RPG"
 	Position -80
 	Submenu "CLASS AND PERKS", "TuinRPGPerkHub"
-	StaticText "First point chooses a class; later points buy perks", 1
+	StaticText "Choose a class for free; perk points buy upgrades", 1
 	StaticText " "
 	Command "VITALITY +  (+5 maximum HP)", "netevent tuin_spend_vitality"
 	Command "STRENGTH +  (+2% damage; Heavy +5 maximum HP)", "netevent tuin_spend_strength"
@@ -252,7 +252,7 @@ OptionMenu "TuinRPGClassChoice"
 {
 	Title "CHOOSE YOUR CLASS"
 	Position 82
-	StaticText "COST: 1 PERK POINT   |   YOUR CHOICE IS PERMANENT", 1
+	StaticText "FREE STARTING CHOICE   |   YOUR CHOICE IS PERMANENT", 1
 	StaticText " "
 	Command "HEAVY", "netevent tuin_choose_class 1"
 	Command "HEALER", "netevent tuin_choose_class 2"

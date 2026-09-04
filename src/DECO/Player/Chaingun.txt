@@ -492,8 +492,28 @@ ACTOR TuinMinigun : Z86Chaingun
 			A_FireCustomMissile("TuinMinigunExplosiveRound", 0, 1, 0, 0);
 			A_TakeInventory("TuinMinigunRounds", 3);
 		}
-		VLCN BCD 2
+		// Alternating five- and six-tic cycles average close to 25% faster
+		// than the previous seven-tic explosive cadence.
+		VLCN BC 1
+		VLCN D 2
+		TNT1 A 0 A_ReFire("AltHoldSlow")
+		Goto WindDown
+	AltHoldSlow:
+		TNT1 A 0 A_JumpIfInventory("TuinMinigunRounds", 3, +2)
+		Goto Reload
+		TNT1 A 0 A_JumpIfInventory("Clip", 3, +2)
+		Goto AltEmptyWindDown
+		VLCN A 1 Bright
+		{
+			A_PlaySound("tuin/minigun/altfire", CHAN_WEAPON);
+			A_GunFlash("Flash");
+			A_FireCustomMissile("TuinMinigunExplosiveRound", 0, 1, 0, 0);
+			A_TakeInventory("TuinMinigunRounds", 3);
+		}
+		VLCN BC 1
+		VLCN D 3
 		TNT1 A 0 A_ReFire("AltHold")
+		Goto WindDown
 	WindDown:
 		TNT1 A 0 A_PlaySound("tuin/minigun/stop", CHAN_AUTO)
 		VLCN ABCD 2

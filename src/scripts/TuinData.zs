@@ -538,6 +538,7 @@ class TuinPlayerData : Inventory
 	int LifeEssenceDecayClock;
 	Actor LifeEssenceHealthOwner;
 	int PlayerClass;
+	bool FreeClassChoiceRefunded;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;
 	int EngineerTurretCooldownTics;

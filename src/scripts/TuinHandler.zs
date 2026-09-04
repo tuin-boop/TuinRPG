@@ -10,6 +10,7 @@ class TuinRPGHandler : EventHandler
 	int PreviousLoadedCampaignMap;
 	int CurrentLoadedCampaignMap;
 	bool CatchupHandled[TUIN_MAX_PLAYERS];
+	bool InitialClassMenuRequested[TUIN_MAX_PLAYERS];
 	bool ApplyingBonusDamage;
 	int NextLootID;
 	bool FinaleBossPromoted;
@@ -1679,14 +1680,8 @@ class TuinRPGHandler : EventHandler
 			SetLootNotification(playerNumber, String.Format("CLASS ALREADY CHOSEN: %s", PlayerClassName(data.PlayerClass)), 0);
 			return;
 		}
-		if (data.UnspentSkillPoints <= 0)
-		{
-			pawn.A_Log("You need one perk point to choose a class. Perk points are awarded at five-level milestones.");
-			SetLootNotification(playerNumber, "ONE PERK POINT REQUIRED - EARNED AT LEVEL MILESTONES", 0);
-			return;
-		}
-		data.UnspentSkillPoints--;
 		data.PlayerClass = chosenClass;
+		data.FreeClassChoiceRefunded = true;
 		if (chosenClass == 5)
 		{
 			data.RogueChargeInitialized = true;
@@ -1763,6 +1758,7 @@ class TuinRPGHandler : EventHandler
 		string className = PlayerClassName(chosenClass);
 		pawn.A_Log(String.Format("CLASS CHOSEN: %s. This choice is permanent.", className));
 		SetLootNotification(playerNumber, String.Format("CLASS CHOSEN: %s", className), 4);
+		EventHandler.SendInterfaceEvent(playerNumber, "tuin_open_perk_hub");
 	}
 
 	void BuyPerk(int playerNumber, int perk)
@@ -4768,7 +4764,11 @@ class TuinRPGHandler : EventHandler
 			DirectorDamageTaken[i] = 0;
 			DirectorTrailValid[i] = false;
 		}
-		for (int i = 0; i < TUIN_MAX_PLAYERS; i++) CatchupHandled[i] = false;
+		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+		{
+			CatchupHandled[i] = false;
+			InitialClassMenuRequested[i] = false;
+		}
 		MigrateBalanceDefaults();
 		MigrateRarityDefaults();
 		MigrateWeaponDropDefaults();
@@ -4782,6 +4782,8 @@ class TuinRPGHandler : EventHandler
 
 	override void WorldLoaded(WorldEvent e)
 	{
+		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
+			InitialClassMenuRequested[playerNumber] = false;
 		if (!e.IsSaveGame)
 		{
 			FinaleBossPromoted = false;
@@ -4800,7 +4802,10 @@ class TuinRPGHandler : EventHandler
 			PreviousLoadedCampaignMap = CurrentLoadedCampaignMap;
 			CurrentLoadedCampaignMap = level.LevelNum;
 			if (CurrentLoadedCampaignMap <= 0) CurrentLoadedCampaignMap = max(1, MapsVisited + 1);
-			for (int i = 0; i < TUIN_MAX_PLAYERS; i++) CatchupHandled[i] = false;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+			{
+				CatchupHandled[i] = false;
+			}
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 			{
 				if (!playerInGame[i] || !players[i].mo) continue;
@@ -4964,6 +4969,18 @@ class TuinRPGHandler : EventHandler
 			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
 		double percent = directImpact ? 0.32 : 0.16;
 		int addedDamage = max(1, int(triggeringDamage * percent + 0.5));
+		data.BurnDamageRemaining = min(2000000000, data.BurnDamageRemaining + addedDamage);
+		if (data.BurnPulsesRemaining <= 0) data.BurnNextTime = level.Time + 35;
+		data.BurnPulsesRemaining = 4;
+		data.BurnPlayerNumber = playerNumber;
+		data.LastPlayerNumber = playerNumber;
+	}
+
+	void ApplyMinigunBurn(int playerNumber, TuinMonsterData data, int triggeringDamage)
+	{
+		if (!data || !data.Owner || data.Owner.Health <= 0 || playerNumber < 0 ||
+			playerNumber >= TUIN_MAX_PLAYERS || triggeringDamage <= 0) return;
+		int addedDamage = max(1, int(triggeringDamage * 0.20 + 0.5));
 		data.BurnDamageRemaining = min(2000000000, data.BurnDamageRemaining + addedDamage);
 		if (data.BurnPulsesRemaining <= 0) data.BurnNextTime = level.Time + 35;
 		data.BurnPulsesRemaining = 4;
@@ -5399,7 +5416,7 @@ class TuinRPGHandler : EventHandler
 				ApplyRocketBurn(attacker, victimData, totalDamage,
 					RocketHitWasDirect(e.Inflictor, e.Thing));
 			else if (IsMinigunExplosiveDamage(e.Inflictor, e.DamageType))
-				ApplyRocketBurn(attacker, victimData, totalDamage, false);
+				ApplyMinigunBurn(attacker, victimData, totalDamage);
 			else if (IsPlayerPlasmaDamage(e.Inflictor))
 				ApplyPlasmaArc(attacker, e.Thing, e.DamageSource, e.Inflictor, totalDamage);
 			if (e.DamageType == 'TuinRogueBolt')
@@ -6060,6 +6077,18 @@ class TuinRPGHandler : EventHandler
 			// its persistent inventory token has transferred from the previous map.
 			ApplyLateStartCatchup(i);
 			let playerData = EnsurePlayerData(i);
+			if (playerData && playerData.PlayerClass != 0 && !playerData.FreeClassChoiceRefunded)
+			{
+				playerData.FreeClassChoiceRefunded = true;
+				playerData.UnspentSkillPoints++;
+				SetLootNotification(i, "FREE CLASS CHOICE: 1 PERK POINT REFUNDED", 4);
+			}
+			if (playerData && playerData.PlayerClass == 0 && players[i].mo &&
+				level.Time >= 10 && !InitialClassMenuRequested[i])
+			{
+				InitialClassMenuRequested[i] = true;
+				EventHandler.SendInterfaceEvent(i, "tuin_open_class_choice");
+			}
 			// Existing Doom Guy saves predate the class weapon. Grant it once when
 			// their persistent class data reaches a live pawn.
 			if (playerData && playerData.PlayerClass == 4 && players[i].mo && !playerData.DoomQuadInitialized)
@@ -6571,6 +6600,10 @@ class TuinRPGHandler : EventHandler
 			Menu.SetMenu('TuinRPGJohnShop');
 		else if (e.Name ~== "tuin_open_john_finale_shop")
 			Menu.SetMenu('TuinRPGFinaleJohnShop');
+		else if (e.Name ~== "tuin_open_class_choice")
+			Menu.SetMenu('TuinRPGClassChoice');
+		else if (e.Name ~== "tuin_open_perk_hub")
+			Menu.SetMenu('TuinRPGPerkHub');
 	}
 
 	clearscope static bool, Vector2 ProjectOverheadPoint(Vector3 worldPosition, Vector3 viewPosition,
