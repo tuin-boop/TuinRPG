@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.20
+
+- Enlarged the class-selection portraits and cards while retaining all six choices on one screen.
+
 ## 0.7.19
 
 - Enlarged Doom Delta's narrow Tiny UI font by roughly 45%-60% across class labels, class details, navigation hints, and perk status information.

@@ -443,9 +443,9 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		int panelWidth = min(width - 72, 1660);
 		int panelX = (width - panelWidth) / 2;
 		int rosterWidth = clamp(int(panelWidth * 0.30), 235, 360);
-		int cardSize = 52;
+		int cardSize = 60;
 		int cardX = panelX + 22;
-		int cardY = 116 + classIndex * 61;
+		int cardY = 108 + classIndex * 66;
 		int cardWidth = rosterWidth - 34;
 		TextureID portrait = TexMan.CheckForTexture("graphics/TuinJohnPortrait.png", TexMan.Type_Any);
 		Font deltaFont = "TINYBABY";
@@ -465,7 +465,7 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 		Screen.DrawLineFrame(selected ? classColor : Color(22, 62, 102),
 			cardX - 5, cardY - 5, cardWidth, cardSize + 10, selected ? 3 : 1);
 		Screen.DrawText(deltaFont, selected ? classTextColor : Font.CR_DARKGRAY,
-			cardX + 66, cardY + 16, mLabel, DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
+			cardX + 74, cardY + 20, mLabel, DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
 		if (!selected) return center;
 		int detailX = panelX + rosterWidth + 28;
 		Screen.DrawText(BigFont, Font.CR_WHITE, detailX, 122, mLabel,
@@ -547,7 +547,7 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		Screen.Dim(Color(36, 128, 210), 0.72, panelX + rosterWidth, panelY + 76, 2, panelHeight - 96);
 		Font deltaFont = "TINYBABY";
 		Screen.DrawText(BigFont, Font.CR_WHITE, panelX + 55, panelY + 58, "SELECT A CLASS");
-		Screen.DrawText(deltaFont, Font.CR_WHITE, width / 2 - 170, panelY + panelHeight - 37,
+		Screen.DrawText(deltaFont, Font.CR_WHITE, width / 2 - 170, panelY + panelHeight - 24,
 			"UP / DOWN OR LEFT / RIGHT: BROWSE     ENTER: CHOOSE",
 			DTA_ScaleX, 2.10, DTA_ScaleY, 2.10);
 		Super.Drawer();
