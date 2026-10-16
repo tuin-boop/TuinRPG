@@ -386,8 +386,9 @@ class TuinCombatHUD : DoomStatusBar
                 BonusText(title,color,x-trail*s*(1-ease),trail*s*.4,scale,
                     alpha*(.025+epic*.02)*(1-age/duration));
         }
-        TuinWeaponTraits.FluidText(font,color,x,0,title,scale,Screen.GetWidth()*.58,
-            quality==6,true,quality==5,quality,alpha);
+        // HUD announcements need the original dark glyph outlines. The menu
+        // color-overlay renderer washes out SmallFont's internal letter detail.
+        AnimatedTitle(title,color,x,0,scale,max(0.,1-age/.9)*epic,alpha);
         if(tier>=4 && age<.55)
             BonusText(title,Font.CR_WHITE,x,0,scale,alpha*(1-age/.55)*.35);
         double subScale=min(.95*s,Screen.GetWidth()*.58/max(1,font.StringWidth(detail)));

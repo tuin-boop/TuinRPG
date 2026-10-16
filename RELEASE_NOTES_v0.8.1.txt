@@ -1,0 +1,10 @@
+TuinRPG v0.8.1 - Readable loot announcements
+
+Restores crisp, shadowed lettering for weapon-drop announcements while keeping
+their tilted animation and rarity-scaled effects. Fixes the washed-out Godly title.
+
+README and Quick Guide now describe the current classless main edition rather
+than the old class-based gameplay. Download TuinRPG.pk3 and load only one edition.
+
+All older releases, including the legacy class package in v0.8.0, remain available.
+Back up saves before updating. Tested with UZDoom 5.0.3.

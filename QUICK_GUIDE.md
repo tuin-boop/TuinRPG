@@ -1,4 +1,4 @@
-# TuinRPG v0.8.0 — Quick Guide
+# TuinRPG v0.8.1 — Quick Guide
 
 The current edition is classless. There is no class selection, class ability key,
 or bundled quick-grenade system.
