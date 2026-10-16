@@ -1,0 +1,40 @@
+version "4.10"
+class TuinRarityBossRegression : EventHandler
+{
+    Actor Boss;
+    ui bool Reported;
+    override void WorldTick()
+    {
+        if (!players[0].mo) return;
+        let h=TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
+        if (!h) return;
+        if (level.Time==35)
+        {
+            Boss=Actor.Spawn('Cyberdemon',players[0].mo.Pos+(128,0,0));
+            if (Boss) Boss.bDORMANT=true;
+        }
+        if (Boss && level.Time>36)
+        {
+            h.LastHitTarget[0]=Boss;
+            h.LastHitTargetTics[0]=70;
+            h.UpdateTarget(0);
+            if(level.Time==70) Boss.Health=max(1,Boss.Health/2);
+        }
+    }
+    override void RenderOverlay(RenderEvent e)
+    {
+        if(level.Time<80) return;
+        let h=TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
+        if(!h) return;
+        h.DrawBossTarget(e,0,Screen.GetWidth(),Screen.GetHeight());
+        for(int q=2;q<=6;q++) TuinWeaponTraits.FluidText("TINYBABY",
+            TuinRPGHandler.WeaponQualityFontColor(q),20,200+q*30,
+            TuinRPGHandler.WeaponQualityName(q),2,400,false,true,false,q);
+        if(!Reported)
+        {
+            Reported=true;
+            Console.Printf("RARITY BOSS %s: rendered five rarity profiles and boss health/resistance panel",
+                h.TargetIsBoss[0] && h.TargetMaxHealth[0]>0 ? "PASS" : "FAIL");
+        }
+    }
+}

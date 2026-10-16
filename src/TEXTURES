@@ -4,6 +4,28 @@ Sprite TCINA0, 1254, 1254
 	Patch "graphics/TuinCoin.png", 0, 0
 }
 
+// Matching front-facing chest frames; both sit on the same bottom baseline.
+Sprite TBCSA0, 128, 128
+{
+	Offset 64, 126
+	Patch "graphics/TuinBossChestClosed.png", 0, 0
+}
+
+Sprite TBCOA0, 128, 128
+{
+	Offset 64, 126
+	Patch "graphics/TuinBossChestOpen.png", 0, 0
+}
+
+// Software-renderer fallback for the Minecraft model's animated lid frames.
+Sprite TBCOB0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOC0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOD0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOE0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOF0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOG0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+Sprite TBCOH0, 128, 128 { Offset 64, 126 Patch "graphics/TuinBossChestOpen.png", 0, 0 }
+
 // Rare extra-life pickup generated specifically for TuinRPG.
 Sprite TLIFA0, 1012, 937
 {
@@ -17,9 +39,11 @@ Graphic TUINHELP, 1672, 941
 	Patch "graphics/TuinF1Help.png", 0, 0
 }
 
-Sprite JOHNA0, 37, 56
+Sprite JOHNA0, 148, 224
 {
-	Offset 18, 56
+	XScale 4.0
+	YScale 4.0
+	Offset 74, 224
 	Patch "graphics/TuinJohnSprite.png", 0, 0
 }
 
@@ -29,6 +53,14 @@ Sprite EXSKA0, 1230, 1278
 {
 	Offset 615, 1278
 	Patch "graphics/TuinExecutionerSkull.png", 0, 0
+}
+
+// Doom Guy's lighter white Fatality prompt, deliberately distinct from the
+// Executioner's severe red Death Sentence emblem.
+Sprite DFATA0, 1254, 1254
+{
+	Offset 627, 1254
+	Patch "graphics/TuinDoomFatalitySkull.png", 0, 0
 }
 
 // Small floating warning marker for Volatile monsters.

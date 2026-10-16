@@ -1,0 +1,18 @@
+TuinRPG v0.8.0 - Main edition
+
+The former No Classes edition is now the main TuinRPG release.
+Download TuinRPG.pk3 and load it after your weapon mod. Load only one TuinRPG package.
+
+Highlights:
+- Weapon-mod-compatible RPG progression, weapon traits and permanent weapon perks.
+- Hell's Gambit: random maps, one life, three Mythic-or-better starting weapons and high scores.
+- Blue animated menus, weapon inspection, single-page quick arsenal and combat notifications.
+- Consistent rarity effects, with Godly retaining the strongest presentation.
+- Improved boss health bars, damage trails and resistance labels; duplicate trait overlay fixed.
+- Three-second hold-to-pick-up weapons and expanded loot/director systems.
+- Unused packaged assets removed while retaining source assets and compatibility classes.
+
+TuinRPG_LegacyClasses.pk3 preserves the previous local class-based build.
+All previous GitHub releases and tags remain unchanged.
+Back up saves before updating. Cross-edition save compatibility is not guaranteed.
+Tested using UZDoom 5.0.3; recent boss-bar compilation and rendering regression passed.

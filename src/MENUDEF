@@ -21,10 +21,16 @@ OptionValue "TuinMenuTimeModes"
 
 OptionValue "TuinHealthBarModes"
 {
-	0, "Classic targeted bar"
+	0, "Classic last-hit bar"
 	1, "Overhead monster bars"
-	2, "Both styles"
+	2, "Last-hit and overhead"
 	3, "Off"
+}
+
+OptionValue "TuinBossChestStyles"
+{
+	0, "Pixel sprite (default)"
+	1, "Animated Minecraft model"
 }
 
 AddOptionMenu "OptionsMenu"
@@ -70,7 +76,8 @@ OptionMenu "TuinRPGOptions"
 	Slider "Elite chance (%)", "tuin_rarity_elite_chance", 0.0, 100.0, 0.5, 1
 	Slider "Legendary chance (%)", "tuin_rarity_legendary_chance", 0.0, 100.0, 0.5, 1
 	Slider "Mythic chance (%)", "tuin_rarity_mythic_chance", 0.0, 100.0, 0.5, 1
-	Option "Rare+ monster glows", "tuin_rarity_glow_enabled", "OnOff"
+	Option "Rare+ ambient lighting", "tuin_rarity_glow_enabled", "OnOff"
+	Option "Rare+ colored particle auras", "tuin_rarity_aura_enabled", "OnOff"
 	Slider "Rare glow radius", "tuin_rare_glow_radius", 16, 128, 8
 	Slider "Elite glow radius", "tuin_elite_glow_radius", 20, 192, 8
 	Slider "Legendary glow radius", "tuin_legendary_glow_radius", 24, 256, 8
@@ -106,7 +113,8 @@ OptionMenu "TuinRPGOptions"
 	Option "Show monster rarity", "tuin_healthbar_show_rarity", "OnOff"
 	Option "Show monster affixes", "tuin_healthbar_show_affixes", "OnOff"
 	Slider "HUD size", "tuin_hud_scale", 1.0, 3.0, 0.25, 2
-	Slider "Health bar distance", "tuin_healthbar_distance", 128, 8192, 128
+	Option "Modern HUD (No Classes)", "tuin_modern_hud", "OnOff"
+	Option "Animated combat bonuses", "tuin_combat_bonus_hud", "OnOff"
 	Slider "Health bar width", "tuin_healthbar_width", 160, 720, 20
 	Slider "Overhead-bar distance", "tuin_overhead_healthbar_distance", 256, 4096, 128
 	Slider "Maximum overhead bars", "tuin_overhead_healthbar_maximum", 1, 32, 1
@@ -191,6 +199,10 @@ OptionMenu "TuinRPGWeaponLootOptions"
 	StaticText "Press Q to open; Q/click/Enter equips", 1
 	StaticText "Escape or right-click cancels", 1
 	Option "Weapon variant drops", "tuin_weapon_drops_enabled", "OnOff"
+	Option "Legacy of Rust discoveries (No Classes)", "tuin_rust_discovery", "OnOff"
+	Option "Red Boss chest appearance", "tuin_boss_chest_style", "TuinBossChestStyles"
+	StaticText "Applies to newly dropped chests", 1
+	Command "Testing: spawn Boss chest", "netevent tuin_test_boss_chest"
 	Slider "Base drop chance (%)", "tuin_weapon_drop_chance", 0.0, 10.0, 0.25, 2
 	Slider "Shotgun becomes Riot Shotgun (%)", "tuin_riot_shotgun_chance", 0.0, 25.0, 1.0, 0
 	Slider "Drop lifetime (seconds)", "tuin_weapon_drop_lifetime", 15, 600, 15
@@ -303,7 +315,25 @@ OptionMenu "TuinRPGGeneralPerks"
 	Command "BLOOD DRINKER: LEECH 1% OF DAMAGE", "netevent tuin_buy_perk 5"
 	Command "SCAVENGER: +10% AMMUNITION GAINED", "netevent tuin_buy_perk 2"
 	Command "GIANT SLAYER: +0.5% / +1% / +1.5% TARGET HP", "netevent tuin_buy_perk 8"
+	Command "ARMOR PENETRATION: IGNORE 15% ARMOR PER RANK", "netevent tuin_buy_perk 9"
 	Class "TuinRPGGeneralPerkMenu"
+}
+
+OptionMenu "TuinRPGWeaponPerks"
+{
+	Title ""
+	Position 82
+	Command "PISTOL", "netevent tuin_buy_weapon_perk 1"
+	Command "FIST", "netevent tuin_buy_weapon_perk 2"
+	Command "SHOTGUN", "netevent tuin_buy_weapon_perk 3"
+	Command "SUPER SHOTGUN", "netevent tuin_buy_weapon_perk 4"
+	Command "CHAINGUN", "netevent tuin_buy_weapon_perk 5"
+	Command "PLASMA", "netevent tuin_buy_weapon_perk 6"
+	Command "BFG", "netevent tuin_buy_weapon_perk 7"
+	Command "ROCKET LAUNCHER", "netevent tuin_buy_weapon_perk 8"
+	Command "INCINERATOR", "netevent tuin_buy_weapon_perk 9"
+	Command "CALAMITY BLADE", "netevent tuin_buy_weapon_perk 10"
+	Class "TuinRPGWeaponPerkMenu"
 }
 
 OptionMenu "TuinRPGClassTraining"

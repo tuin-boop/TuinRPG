@@ -134,7 +134,7 @@ class TuinEngineerTurret : Actor
 		double multiplier = (1.0 + TrainingRank * 0.10) * (1.0 + WeaponPowerPercent * 0.01);
 		bullet.FixedDamage = max(1, int(levelDamage * multiplier + 0.5));
 		ShotsRemaining--;
-		A_PlaySound("tuin/engineer/fire", CHAN_WEAPON, 0.43);
+		A_PlaySound("tuin/engineer/fire", CHAN_WEAPON, 0.30);
 		SetState(FindState('Fire'), true);
 	}
 
@@ -158,7 +158,7 @@ class TuinEngineerTurret : Actor
 		if (--FireClock <= 0)
 		{
 			FireTracer();
-			FireClock = max(4, int(7.0 / (1.0 + WeaponHastePercent * 0.01) + 0.5));
+			FireClock = max(3, int(5.0 / (1.0 + WeaponHastePercent * 0.01) + 0.5));
 		}
 	}
 

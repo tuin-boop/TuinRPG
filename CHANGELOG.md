@@ -1,5 +1,61 @@
 # Changelog
 
+## Unreleased
+
+- No Classes: Rust discoveries, saved chest rewards and pickups respect the loaded weapon replacement (including FluidWeapons). Existing native Rust weapon rolls migrate without rerolling or adding fuel; held weapons switch safely to their animated counterpart. Verified all five FluidWeapons Calamity charge stages with Overcharge.
+
+- No Classes: optional native Legacy of Rust discoveries, including not-yet-owned Incinerators from Legendary/Mythic weapon rolls and boss chests, and rare Calamity Blades from chests. Resource-gated, with starting fuel and follow-up fuel drops. Added Wildfire (+25% fuel cost, limited spreading burn) and Overcharge (+50% damage/wave width, 30% longer charge) permanent weapon perks, with a ten-card menu. No commercial assets bundled.
+
+- No Classes: normal shotgun perk now has a 15% damage penalty and a refreshing 50%-damage three-second area burn; all same-tic pellets contribute. Passive bonus cards now only show owned traits and say "Always active."
+
+- Added no-classes loot traits Second Wind, Momentum (+2% per kill, +50% cap), Prospector's (up to +20% relative ordinary-loot rarity) and conservative Quartermaster ammo regeneration. Passive cards prioritize active traits and show Second Wind cooldown; Arsenal shows current Momentum. Existing saved trait rolls are preserved.
+
+- Enlarged the main character dashboard and its text, grouped progression and passive bonuses on the left, and separated combat totals from player/weapon sources. Pickup inspection now uses TinyBaby throughout, including the animated Godly title. Guard's grants real HUD armor up to its rarity-scaled 10–50 floor instead of a hidden reserve; stronger existing armor remains intact and protection is not applied twice.
+
+- No-classes: removed automatic rocket fire damage (Hellfire critical burns now require the perk); preserved the shotgun fire specialization. Enlarged Arsenal and perk panels. Added independent, FluidWeapons-inspired per-character motion/glow for Godly titles and trait names, with steady stat values and width-fitting text.
+
+- No-classes: Scavenger's no longer rolls on ammo-less weapons; saved invalid rolls are repaired. Added Hellfire Rockets: 30% lower damage, 25% total critical chance, and independent five-second burns for 50% of each critical hit's total damage. Rocket projectiles retain the perk after switching weapons. Renamed Universal Build to Doom Marine.
+
+- Added twelve no-classes-only weapon loot traits: Guard's, Medic's, Hunter's, Survivor's, Executioner's, Vampire's, Scavenger's, Duelist's, Last Stand, Fortune's, Avenger's and Bulwark's. Rare/Epic loot has one, Legendary/Mythic two, and Godly three, with rarity-scaled strengths. Passive duplicates use the strongest owned selected variant; combat traits follow the attacking weapon, including projectile snapshots. Existing saved gear receives stable traits once, and Survivor's single shared charge persists through saving and weapon swaps until the next map. Arsenal and ground inspection show animated colored trait names, scope and exact effects; the Character screen shows passive status.
+
+- Fixed a no-classes runtime crash when weapon-perk detection reached an unrecognized weapon such as the rocket launcher. Ammo fallback detection now resolves the ammo class name safely and handles weapons without ammunition.
+
+- Added permanent weapon perks exclusively to `TuinRPG_NoClasses.pk3`. That edition now awards one weapon-perk point every five levels, for six points by level 30 and seven mutually permanent choices: a double-damage half-speed Pistol; Berserk-plus-50% Fists that cost 5% health per hit; an area-burning Shotgun with 30% lower direct damage; an armor-ignoring piercing Super Shotgun with 25% lower direct damage; a triple-damage/triple-consumption Chaingun with triple ammunition capacity; guided Plasma projectiles; and a four-times-faster BFG dealing one-quarter damage. The classless Character dashboard gains a Weapon Perks section, live point total, active specialization, and weapon-perk combat breakdown. The normal class-based package does not expose or apply this system.
+
+- Added `TuinRPG_NoClasses.pk3`, a separate weapon-mod compatibility build produced by `build-noclasses.ps1`. It suppresses class selection, bonuses, penalties, abilities, training, ultimates and automatic class-weapon grants while keeping the broader RPG, monster, loot, minimap, boss and shop systems. Universal perks remain purchasable without a class and receive a 21-point completion schedule. Existing class saves are parked and restored when returning to the normal build. Its packaging pass also removes ProjectSIDE's player-weapon, projectile, puff and weapon-sound replacements plus the quick-grenade/loadout handler, ensuring the external weapon mod retains its own fist, chainsaw, arsenal, effects and audio. Class-only menus, controls, testing entries and John combat remarks are excluded or replaced by universal-build guidance.
+
+- Added the three-rank Armor Penetration universal perk. Each rank bypasses 15% of the damage reduction granted by the Armored monster affix, and the level-30 milestone now supplies the three extra points needed to complete it. Existing level-30 saves receive those points once.
+- Godly weapon names now cycle through rainbow colors in inventory displays. The held weapon and inventory panels remain visually clean, while the existing atmospheric Godly light stays active.
+- Life Essence overhealth decay can no longer reduce health below 100; collecting another essence still refreshes the accelerating decay timer.
+- Reworded John's boss warning to describe the boss as tough rather than expensive.
+
+- Added Doom Guy Fatalities as an original, mod-compatible interpretation of Project Brutality's execution concept. A hostile at 10% RPG-scaled health enters a 15-second execution state with a compact bobbing white skull and restrained red energy effect. The stunned target is protected from companions, monsters, damage-over-time, and accidental lethal player damage; if ignored, it recovers and cannot immediately re-enter the state. The skull is deliberately the only prompt, with no extra Fatality text on the HUD. Within the 224-unit execution range, `V` performs a short locked-camera rush, first-person fist finisher, bloody forced kill, screen pulse, impact shake, and 10%-maximum-health reward. A successful execution starts a 180-second cooldown, reduced by five seconds for each subsequent non-Fatality kill. When no target qualifies, the same key retains its existing Blood Punch behavior. No Project Brutality execution code, sprites, or monster replacements are copied.
+
+- Added an optional animated 3D Minecraft chest for Red Boss rewards. The supplied Sketchfab GLB's lid motion is preserved as MD3 vertex animation; the front-facing pixel sprite remains the default. Select the style under Weapon Loot options. Attribution is packaged with the model.
+
+- Red Boss-tier monsters now leave a glowing, interactable front-facing sprite chest instead of dropping their rolled weapon immediately. Press Use to open it; the matching open sprite appears, a gold burst plays, and the original rolled reward rises out after a short delay. Nearby corpses are pushed away so they do not cover the chest.
+
+- Added optional rarity-colored particle auras to living Rare, Elite, Legendary, Mythic and Boss monsters. A restrained rotating ring at the monster's feet and sparse rising motes become richer at the upper tiers without replacing the monster sprite or voxel. The particle aura and the atmospheric rarity lighting remain independently switchable and can be used together.
+
+- Changed both the classic top monster bar and the panel beneath the minimap from crosshair targeting to the player's most recently damaged monster. The last-hit display persists for five seconds, refreshes on continued damage, changes immediately on a new direct target, and ignores autonomous Engineer sentry and secondary damage-over-time ticks.
+- Reworked Life Essence overhealth into accelerating decay: it starts at one point per second, then rises to 2, 4, 8, and 16 points per second in five-second stages. Collecting another orb adds its health and refreshes the full pool to the gentle opening stage.
+- Increased the Engineer sentry's firing rate by about 40% and reduced its firing-sound volume by a further 30%.
+- Replaced John's world sprite with the supplied armed full-body artwork and removed its purple background.
+- Slowed Rogue's silenced three-shot ability slightly and synchronized a visible pistol firing animation to every bullet.
+- Silenced Burst now guarantees a critical hit on all three shots.
+- Replaced Chain Assassination's standard teleport fog with quick charcoal-and-violet smoke bursts at each departure and arrival.
+
+## 0.7.24
+
+- Strengthened Rogue's ranged progression: native Rogue weapons now gain +5% critical chance per Class Training rank instead of +2%, Rogue's maximum-ammo penalty is reduced from 50% to 30%, and the Silenced Pistol's fixed shot damage is raised from 8 to 10. Its guaranteed unaware-target opener remains, while subsequent shots can now roll ordinary Rogue criticals instead of being excluded from the normal critical system.
+- Added the Rogue's Chain Assassination secondary ability. Every direct Rogue Knife kill stores one strike, up to nine; pressing the Secondary Class Ability key (`B` by default) rapidly teleports the Rogue beside that many nearest visible monsters within 1,024 units, strikes each with a guaranteed knife critical, and returns the Rogue to the exact starting position and facing direction afterward. Knife-kill detection follows the actual knife impact rather than relying only on the death event's reported damage type. Targets are never repeated, unsafe teleport positions are skipped, an activation with no reachable target preserves all charges, and kills made by the chain cannot immediately recharge it.
+- Reinforced Rogue's high-risk identity after adding Chain Assassination: maximum health is reduced by 30% instead of 20%, and incoming damage is increased by 15% instead of 10%. The 30% maximum-ammo penalty remains unchanged so the nerf targets survivability rather than making the ranged weapons less enjoyable.
+- Doubled weapon-switch speed for every class, while Rogue switches at roughly five times stock speed for near-instant swaps. The accelerator is constrained to lowering and raising states so it cannot spill into firing or reload timing.
+- Added Rogue's third class ability on `C`: while the Rogue Knife is equipped, it briefly displays the Silenced Pistol, fires a rapid three-shot burst, and returns to the knife. It has a ten-second cooldown, costs three bullets, and inherits the pistol's critical, Bleed, and equipped-variant behavior; trying it with another weapon gives a clear warning. Rogue's HUD shows its live cooldown.
+- Updated all six class-ability HUD panels to use the newer UI font at a larger, more readable scale, with target-panel spacing adjusted for the taller status displays.
+- Changed Rogue's Silenced Burst to a hold-and-release attack: holding `C` raises and holds the pistol with a dedicated precision crosshair, while releasing `C` fires the burst and returns to the knife. The ten-second cooldown now begins on release. Minimap completion counters and the attached level, XP, currency, point, and life readouts now use the same newer font as the class panels.
+- Added a short input guard when the automatic starting class menu opens, preventing a movement or navigation key held during map startup from immediately scrolling the class list.
+
 ## 0.7.23
 
 - Added post-class-selection onboarding to the perk hub: it now explains why a new character has no perk points, provides a large clickable Begin Mission button, identifies Escape as the exit key, and reminds players that K reopens the RPG screen with rebinding available under Tuin RPG controls. The onboarding hub now removes the obsolete class picker from its Back stack, so Escape correctly begins play instead of returning to an already-completed permanent choice.

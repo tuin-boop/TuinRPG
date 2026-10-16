@@ -14,7 +14,7 @@ class TuinRogueWeapon : Weapon
 			if (playerNumber >= 0 && playerNumber < MAXPLAYERS && level.Time >= RejectMessageTime[playerNumber])
 			{
 				RejectMessageTime[playerNumber] = level.Time + 35;
-				toucher.A_Print("ROGUE CLASS ONLY");
+				toucher.A_Print(TuinRPGHandler.ClassesEnabled() ? "ROGUE CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD");
 				toucher.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			}
 			return false;
@@ -120,19 +120,49 @@ class TuinRogueSilencedPistol : TuinRogueWeapon
 	Deselect:
 		SIPI A 1 A_Lower;
 		Loop;
+	BurstHold:
+		SIPI A -1;
+		Stop;
+	BurstOverlay:
+		SIPI A -1;
+		Stop;
+	BurstShot:
+		SIPI BCDE 1;
+		SIPI A -1;
+		Stop;
 	Fire:
 		SIPI A 1;
 		SIPI B 2;
 		SIPI C 2
 		{
 			A_PlaySound("tuin/rogue/silenced", CHAN_WEAPON, 0.8);
-			A_FireBullets(0, 0, 1, 8, "TuinRogueSilencedPuff");
+			A_FireBullets(0, 0, 1, 10, "TuinRogueSilencedPuff");
 		}
 		SIPI DEFGHI 1;
 		SIPI F 2;
 		SIPI B 1 A_ReFire;
 		SIPI A 1;
 		Goto ReadyLoop;
+	}
+}
+
+// Dark, fast-fading smoke used by Chain Assassination.  It deliberately uses
+// the mod's existing animated smoke art, recolored to charcoal with a faint
+// violet edge so it remains readable in Doom's darkest rooms.
+class TuinRogueShadowSmoke : PSBrutalGrenadeSmoke
+{
+	Default
+	{
+		Scale 1.15;
+		Alpha 0.62;
+		Translation "0:255=[3,3,5]:[44,35,55]";
+	}
+
+	States
+	{
+	Spawn:
+		SM9K ABCDEFGHIJKLMNOP 1 A_FadeOut(0.035);
+		Stop;
 	}
 }
 
@@ -160,7 +190,7 @@ class TuinRogueBoltAmmo : Ammo
 			if (playerNumber >= 0 && playerNumber < MAXPLAYERS && level.Time >= RejectMessageTime[playerNumber])
 			{
 				RejectMessageTime[playerNumber] = level.Time + 35;
-				toucher.A_Print("ROGUE CLASS ONLY");
+				toucher.A_Print(TuinRPGHandler.ClassesEnabled() ? "ROGUE CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD");
 				toucher.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			}
 			return false;

@@ -1,0 +1,3 @@
+$random tuin/chest/open { tuin/chest/open1 tuin/chest/open2 }
+tuin/chest/open1 SOUNDS/CHEST/CHTOPN1
+tuin/chest/open2 SOUNDS/CHEST/CHTOPN2

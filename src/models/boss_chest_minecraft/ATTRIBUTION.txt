@@ -1,0 +1,10 @@
+Minecraft Chest by Blender3D, sourced from Sketchfab:
+https://sketchfab.com/3d-models/minecraft-chest-83c5b03288e9416fbe65616e45de2918
+
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+
+The user supplied the Sketchfab GLB. For TuinRPG, its skinned opening
+animation was converted to an MD3 vertex animation, resized, reoriented,
+and its embedded base-color texture extracted as chest.png. The original
+Minecraft Chest work is by Blender3D; TuinRPG is not endorsed by its creator.

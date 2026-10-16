@@ -8,3 +8,30 @@ Model TuinEngineerTracer
 	DontCullBackfaces
 	FrameIndex TRAC A 0 0
 }
+
+// Sketchfab Minecraft Chest (Blender3D, CC-BY-4.0), with its skinned lid
+// animation baked to genuine MD3 vertex frames for UZDoom.
+Model TuinBossRewardChestMinecraft
+{
+	Path "models/boss_chest_minecraft"
+	Model 0 "chest.md3"
+	Skin 0 "chest.png"
+	DontCullBackfaces
+	FrameIndex TBCS A 0 0
+}
+
+Model TuinBossRewardChestMinecraftOpenVisual
+{
+	Path "models/boss_chest_minecraft"
+	Model 0 "chest.md3"
+	Skin 0 "chest.png"
+	DontCullBackfaces
+	FrameIndex TBCO A 0 0
+	FrameIndex TBCO B 0 1
+	FrameIndex TBCO C 0 2
+	FrameIndex TBCO D 0 3
+	FrameIndex TBCO E 0 4
+	FrameIndex TBCO F 0 5
+	FrameIndex TBCO G 0 6
+	FrameIndex TBCO H 0 7
+}

@@ -1,21 +1,339 @@
 class TuinRPGHandler : EventHandler
 {
+    TuinLocatorHandler Locator;
+    TuinRun Run;
+    void EnsureRun() { if(!Run && !ClassesEnabled()) Run=new('TuinRun'); }
+    int FullHealthCheckTime;
+    bool FullHealthCheckDone;
+    Actor FullHealthReinforcement;
+    void ScheduleFullHealthCheck()
+    {
+        if(ClassesEnabled() || FullHealthCheckDone || FullHealthCheckTime>0) return;
+        // Old saves already past the window do not receive a late surprise.
+        if(level.time>=20*60*35) { FullHealthCheckDone=true; return; }
+        FullHealthCheckTime=Random[TuinHealthDirector](max(5*60*35,level.time+1),20*60*35);
+    }
+    clearscope static bool AtFullHealth(Actor pawn)
+    { return pawn && pawn.Health>0 && pawn.Health>=max(1,pawn.GetMaxHealth(true)); }
+    bool SpawnFullHealthReinforcement(int pnum,int rarity)
+    {
+        Actor pawn=players[pnum].mo;
+        if(!pawn || pawn.Health<=0 || FullHealthReinforcement) return false;
+        rarity=clamp(rarity,2,5);
+        class<Actor> kind=rarity>=4?'Revenant':rarity==3?'Demon':'DoomImp';
+        double baseAngle=Random[TuinHealthDirector](0,359);
+        for(int attempt=0;attempt<32;attempt++)
+        {
+            double angle=baseAngle+(attempt%16)*22.5;
+            double radius=attempt<16?384:640;
+            Vector3 pos=(pawn.Pos.X+cos(angle)*radius,pawn.Pos.Y+sin(angle)*radius,pawn.Pos.Z);
+            Actor monster=Actor.Spawn(kind,pos,ALLOW_REPLACE);
+            if(!monster) continue;
+            monster.ClearCounters();
+            monster.SetOrigin((monster.Pos.X,monster.Pos.Y,monster.FloorZ),false);
+            bool safe=monster.TestMobjLocation() && !monster.bFRIENDLY &&
+                abs(monster.Pos.Z-pawn.Pos.Z)<128 && pawn.CheckSight(monster);
+            for(int p=0;p<TUIN_MAX_PLAYERS;p++)
+                if(playerInGame[p] && players[p].mo && players[p].mo.Distance3D(monster)<256) safe=false;
+            if(safe)
+            {
+                if(!GetMonsterData(monster)) InitializeMonster(monster);
+                let data=GetMonsterData(monster);
+                if(data)
+                {
+                    ApplyOrdinaryMonsterScale(monster,data,RollMonsterLevel(rarity),rarity,true);
+                    FullHealthReinforcement=monster;
+                    monster.bDORMANT=false;monster.bAMBUSH=false;monster.Target=pawn;
+                    if(monster.SeeState) monster.SetState(monster.SeeState);
+                    Actor.Spawn('TeleportFog',monster.Pos,ALLOW_REPLACE);
+                    PromotionBannerStart=0;PromotionBannerStart=NextBannerSlot();
+                    PromotionBannerTitle="TOO HEALTHY FOR HELL";
+                    PromotionBannerDetail=RarityName(rarity).." REINFORCEMENT - "..data.GeneratedName.MakeUpper();
+                    return true;
+                }
+            }
+            monster.Destroy();
+        }
+        return false;
+    }
+    void UpdateFullHealthDirector()
+    {
+        if(ClassesEnabled()) return;
+        ScheduleFullHealthCheck();
+        if(FullHealthCheckDone || level.time<FullHealthCheckTime) return;
+        // Exactly one check, including low-health and blocked-spawn outcomes.
+        FullHealthCheckDone=true;
+        if(!CVInt('tuin_director_enabled',1) || !CVInt('tuin_rarity_enabled',1)) return;
+        for(int p=0;p<TUIN_MAX_PLAYERS;p++)
+            if(playerInGame[p] && AtFullHealth(players[p].mo))
+            {
+                SpawnFullHealthReinforcement(p,PressureRarity(Random[TuinHealthDirector](0,99)));
+                return;
+            }
+    }
+    static bool AmmoPressureThreshold(int bullets,int rockets,int cells,int fuel,int shells,bool chaingunPerk)
+    {
+        return bullets>=(chaingunPerk?800:300) && rockets>=75 &&
+            cells>600 && fuel>300 && shells>100;
+    }
+    bool HasAmmoSurplus(Actor pawn)
+    {
+        if(!pawn) return false;
+        int bullets=0,rockets=0,cells=0,fuel=0,shells=0;
+        // Count inventory pools once, not once per weapon sharing that ammo.
+        // A missing pool stays zero: ALL five conditions must be satisfied.
+        for(Inventory item=pawn.Inv;item;item=item.Inv)
+        {
+            if(item is 'Clip') bullets+=max(0,item.Amount);
+            else if(item is 'RocketAmmo') rockets+=max(0,item.Amount);
+            else if(item is 'Cell') cells+=max(0,item.Amount);
+            else if(item is 'ID24Fuel') fuel+=max(0,item.Amount);
+            else if(item is 'Shell') shells+=max(0,item.Amount);
+        }
+        return AmmoPressureThreshold(bullets,rockets,cells,fuel,shells,HasWeaponPerk(GetPlayerData(pawn),5));
+    }
+    bool PromoteAmmoPressureMonster()
+    {
+        Actor candidate;
+        int best=-1,choices=0;
+        let it=ThinkerIterator.Create('Actor');
+        Actor monster;
+        while((monster=Actor(it.Next())))
+        {
+            let data=GetMonsterData(monster);
+            if(!IsHeavyRarityEligible(monster,data) || data.MonsterRarity>=5) continue;
+            int priority=SpawnRarityPriority(monster,data);
+            if(priority<1) continue;
+            if(priority>best) { best=priority;choices=1;candidate=monster; }
+            else if(priority==best && Random[TuinRPGDirector](1,++choices)==1) candidate=monster;
+        }
+        if(!candidate || !UpgradeDirectorMonster(candidate,5)) return false;
+        let data=GetMonsterData(candidate);
+        data.AffixFlags=(data.AffixFlags & ~TuinMonsterData.AFFIX_REGENERATING) | TuinMonsterData.AFFIX_ARMORED;
+        PromotionBannerTitle="HELL ANSWERS YOUR ARSENAL";
+        PromotionBannerDetail=data.GeneratedName.MakeUpper().." / MYTHIC + ARMORED";
+        return true;
+    }
+    void UpdateAmmoPressureDirector()
+    {
+        if(ClassesEnabled() || !CVInt('tuin_director_enabled',1) || !CVInt('tuin_rarity_enabled',1)) return;
+        TuinPlayerData clockData;
+        for(int i=0;i<TUIN_MAX_PLAYERS;i++)
+            if(playerInGame[i] && players[i].mo && players[i].mo.Health>0)
+            { clockData=GetPlayerData(players[i].mo); if(clockData) break; }
+        if(!clockData) return;
+        if(clockData.AmmoPressureCheckRemaining<=0) clockData.AmmoPressureCheckRemaining=35*600;
+        clockData.AmmoPressureCheckRemaining--;
+        // Keep one shared check cadence, carried by player inventory across maps.
+        for(int i=0;i<TUIN_MAX_PLAYERS;i++)
+            if(playerInGame[i] && players[i].mo)
+            {
+                let d=GetPlayerData(players[i].mo);
+                if(d && d!=clockData) d.AmmoPressureCheckRemaining=clockData.AmmoPressureCheckRemaining;
+            }
+        if(clockData.AmmoPressureCheckRemaining>0) return;
+        clockData.AmmoPressureCheckRemaining=35*600;
+        for(int p=0;p<TUIN_MAX_PLAYERS;p++)
+            if(playerInGame[p] && players[p].mo && players[p].mo.Health>0 && HasAmmoSurplus(players[p].mo))
+            { PromoteAmmoPressureMonster(); return; }
+    }
+    void EnsureLocator()
+    {
+        if (ClassesEnabled() || Locator) return;
+        // Adopt the first locator release when loading its saves; older saves
+        // have no separate handler, so create state owned by this existing one.
+        Locator = TuinLocatorHandler(EventHandler.Find('TuinLocatorHandler'));
+        if (!Locator) { Locator = new('TuinLocatorHandler'); Locator.Category = -1; }
+        // Also covers unlocking settings on the title screen before a map starts.
+        let admin = CVar.FindCVar('tuin_admin_session');
+        if (!netgame && admin && admin.GetBool()) Locator.Unlocked = true;
+    }
 	const TUIN_MAX_PLAYERS = 8;
 	const TUIN_MAX_OVERHEAD_BARS = 32;
 	const TUIN_MAX_DAMAGE_NUMBERS = 64;
 	const TUIN_DAMAGE_NUMBER_LIFETIME = 42;
+	const TUIN_LAST_HIT_TARGET_TICS = 175;
 	const TUIN_MAX_TRACKED_GRENADES = 64;
 	int NextMonsterID;
+	int CompletionBannerStart[3];
+	bool CompletionAnnounced[3];
+	int CoinBannerStart[8], CoinBannerAmount[8];
+	bool BootstrappingCoinStack;
+	int PressureKills[8], PressureDamage[8], PressureStart[8];
+	int PressureNextTime;
+	Actor PressureReinforcement;
 	int MapsVisited;
 	int PreviousLoadedCampaignMap;
 	int CurrentLoadedCampaignMap;
 	bool CatchupHandled[TUIN_MAX_PLAYERS];
 	bool InitialClassMenuRequested[TUIN_MAX_PLAYERS];
 	bool ApplyingBonusDamage;
+	bool InspectWeapon[8];
+	bool ApplyingRogueChainStrike;
+	int RogueChainStrikePlayer;
+	bool ApplyingRoguePistolBurst;
+	int RoguePistolBurstPlayer;
+	bool RogueChainTestActive[TUIN_MAX_PLAYERS];
+	int RogueChainTestHits[TUIN_MAX_PLAYERS];
+	Actor RoguePistolBurstTestTarget[TUIN_MAX_PLAYERS];
+	int RoguePistolBurstTestHealth[TUIN_MAX_PLAYERS];
+	bool RoguePistolBurstTestPending[TUIN_MAX_PLAYERS];
+	int RoguePistolBurstTestReleaseTics[TUIN_MAX_PLAYERS];
 	int NextLootID;
 	bool FinaleBossPromoted;
 	Actor FinaleBoss;
 	TuinJohnShopNPC JohnMerchant;
+	// Absolute map-tic schedules; +1 distinguishes an event on tic zero.
+	int BossBannerStart;
+	int JohnBannerStart;
+	int BossArrivalBannerStart;
+	int PromotionBannerStart;
+	string PromotionBannerTitle, PromotionBannerDetail;
+	int HeavyBannerStart[TUIN_MAX_PLAYERS];
+	int WeaponBannerStart[TUIN_MAX_PLAYERS];
+	int WeaponBannerQuality[TUIN_MAX_PLAYERS];
+	string WeaponBannerDetail[TUIN_MAX_PLAYERS];
+	int PointBannerStart[TUIN_MAX_PLAYERS];
+	int PointBannerStats[TUIN_MAX_PLAYERS], PointBannerPerks[TUIN_MAX_PLAYERS], PointBannerWeapons[TUIN_MAX_PLAYERS];
+	int PoisonBannerStart[TUIN_MAX_PLAYERS], PoisonBannerTick[TUIN_MAX_PLAYERS], PoisonBannerDamage[TUIN_MAX_PLAYERS];
+	int KnownKeyMask[TUIN_MAX_PLAYERS], KeyBannerMask[TUIN_MAX_PLAYERS], KeyBannerStart[TUIN_MAX_PLAYERS];
+	bool KeySnapshotReady[TUIN_MAX_PLAYERS];
+	void UpdateKeyNotice(int playerNumber, Actor pawn)
+	{
+		if (ClassesEnabled() || !pawn) return;
+		int mask = 0;
+		for (int key = 0; key < 6; key++)
+			if (pawn.CheckKeys(key + 1, false, true)) mask |= 1 << key;
+		int added = mask & ~KnownKeyMask[playerNumber];
+		if (KeySnapshotReady[playerNumber] && added)
+		{
+			if (KeyBannerStart[playerNumber] <= 0 || level.Time >= KeyBannerStart[playerNumber] + 105)
+				KeyBannerMask[playerNumber] = 0;
+			KeyBannerMask[playerNumber] |= added;
+			KeyBannerStart[playerNumber] = level.Time + 1;
+		}
+		KnownKeyMask[playerNumber] = mask;
+		KeySnapshotReady[playerNumber] = true;
+	}
+	void AnnouncePoints(int playerNumber, int stats, int perks, int weapons)
+	{
+		if (ClassesEnabled() || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS ||
+			(stats <= 0 && perks <= 0 && weapons <= 0)) return;
+		if (PointBannerStart[playerNumber] <= 0 || level.Time >= PointBannerStart[playerNumber] + 140)
+		{
+			PointBannerStats[playerNumber] = 0;
+			PointBannerPerks[playerNumber] = 0;
+			PointBannerWeapons[playerNumber] = 0;
+		}
+		PointBannerStart[playerNumber] = level.Time + 1;
+		PointBannerStats[playerNumber] += max(0, stats);
+		PointBannerPerks[playerNumber] += max(0, perks);
+		PointBannerWeapons[playerNumber] += max(0, weapons);
+	}
+	void UpdatePointReminder(int playerNumber, TuinPlayerData data)
+	{
+		if (ClassesEnabled() || !data || playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
+		if (data.UnspentStatPoints <= 0 && data.UnspentSkillPoints <= 0 && data.UnspentWeaponPerkPoints <= 0)
+		{
+			PointBannerStart[playerNumber] = 0;
+			return;
+		}
+		if (!data.Owner || data.Owner.Health <= 0) return;
+		// Game-time cadence: pausing does not burn through the reminder interval.
+		if (PointBannerStart[playerNumber] <= 0 || level.Time + 1 - PointBannerStart[playerNumber] >= 30 * 35)
+		{
+			PointBannerStart[playerNumber] = level.Time + 1;
+			PointBannerStats[playerNumber] = max(0, data.UnspentStatPoints);
+			PointBannerPerks[playerNumber] = max(0, data.UnspentSkillPoints);
+			PointBannerWeapons[playerNumber] = max(0, data.UnspentWeaponPerkPoints);
+		}
+	}
+	void AnnounceWeaponDrop(TuinWeaponDrop drop)
+	{
+		if (ClassesEnabled() || !drop) return;
+		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+		{
+			Actor pawn = playerInGame[i] ? players[i].mo : null;
+			if (!pawn || pawn.Health <= 0 || pawn.Distance3D(drop) > 1536) continue;
+			int quality = clamp(drop.Quality, 1, 7);
+			// Keep nearby loot timely, but do not let a lesser drop erase a rare find.
+			int duration = 70 + min(6, WeaponBannerQuality[i]) * 12;
+			if (WeaponBannerStart[i] > 0 && level.Time < WeaponBannerStart[i] + duration &&
+				quality < WeaponBannerQuality[i]) continue;
+			WeaponBannerStart[i] = level.Time + 1;
+			WeaponBannerQuality[i] = quality;
+			WeaponBannerDetail[i] = WeaponBaseName(drop.WeaponType).MakeUpper() ..
+				String.Format(" - ITEM LEVEL %d", drop.ItemLevel);
+		}
+	}
+	int NextBannerSlot()
+	{
+		int start = level.Time + 1;
+		for(int c=0;c<3;c++) if(CompletionBannerStart[c]>0) start=max(start,CompletionBannerStart[c]+168);
+		for(int c=0;c<8;c++) if(CoinBannerStart[c]>0) start=max(start,CoinBannerStart[c]+168);
+		if (BossBannerStart > 0) start = max(start, BossBannerStart + 112);
+		if (JohnBannerStart > 0) start = max(start, JohnBannerStart + 112);
+		if (BossArrivalBannerStart > 0) start = max(start, BossArrivalBannerStart + 168);
+		if (PromotionBannerStart > 0) start = max(start, PromotionBannerStart + 168);
+		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+			if (HeavyBannerStart[i] > 0) start = max(start, HeavyBannerStart[i] + 168);
+		return start;
+	}
+	void UpdateCompletionMilestones()
+	{
+		if(ClassesEnabled() || level.Time<2) return;
+		bool completed[3];
+		completed[0]=level.total_monsters>0 && level.killed_monsters>=level.total_monsters;
+		completed[1]=level.total_items>0 && level.found_items>=level.total_items;
+		completed[2]=level.total_secrets>0 && level.found_secrets>=level.total_secrets;
+		for(int i=0;i<3;i++)
+			if(completed[i] && !CompletionAnnounced[i])
+			{
+				CompletionAnnounced[i]=true;
+				CompletionBannerStart[i]=NextBannerSlot();
+			}
+	}
+	void RecordCoinMilestone(Actor pawn, int collected)
+	{
+		if(ClassesEnabled() || BootstrappingCoinStack || !pawn || collected<=0) return;
+		int playerNumber=pawn.PlayerNumber();
+		if(playerNumber<0 || playerNumber>=8) return;
+		let data=GetPlayerData(pawn);
+		if(!data) return;
+		if(!data.MilestoneCoinsInitialized)
+		{
+			let coins=Inventory(pawn.FindInventory('TuinCoinPickup'));
+			data.MilestoneCoinsEarned=max(0,(coins?coins.Amount:0)-collected);
+			data.MilestoneCoinsInitialized=true;
+		}
+		int previous=data.MilestoneCoinsEarned/100;
+		data.MilestoneCoinsEarned+=collected;
+		if(data.MilestoneCoinsEarned/100>previous)
+		{
+			CoinBannerAmount[playerNumber]=data.MilestoneCoinsEarned/100*100;
+			// Coalesce a large coin shower rather than replaying a long popup backlog.
+			if(CoinBannerStart[playerNumber]<=0 || level.Time>=CoinBannerStart[playerNumber]+168)
+				CoinBannerStart[playerNumber]=NextBannerSlot();
+		}
+	}
+	void AnnounceHeavyMilestone(int playerNumber)
+	{
+		if (!ClassesEnabled() && playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS)
+			HeavyBannerStart[playerNumber] = NextBannerSlot();
+	}
+	void AnnounceMilestone(bool john)
+	{
+		if (ClassesEnabled()) return;
+		if (!john) BossArrivalBannerStart = 0;
+		int start = NextBannerSlot();
+		if (john) JohnBannerStart = start;
+		else
+		{
+			BossArrivalBannerStart = 0; // A quick kill supersedes the arrival challenge.
+			BossBannerStart = start;
+			if (JohnBannerStart > level.Time) JohnBannerStart = start + 112;
+		}
+	}
 	int EpisodeTravelTics;
 	bool EpisodeTravelShowsIntermission;
 	int AppliedDifficultyMode;
@@ -28,6 +346,11 @@ class TuinRPGHandler : EventHandler
 	int EpisodeTravelPlayer;
 	string EpisodeTravelDestination;
 	bool UseHeld[TUIN_MAX_PLAYERS];
+	const WEAPON_PICKUP_HOLD_TICS = 105;
+	int WeaponPickupHold[8];
+	bool WeaponPickupConsumed[8];
+	bool WeaponPickupInReach[8];
+	TuinWeaponDrop WeaponPickupTarget[8];
 	TuinWeaponDrop TargetWeaponDrop[TUIN_MAX_PLAYERS];
 	int WeaponDropTargetGrace[TUIN_MAX_PLAYERS];
 	string LootNotification[TUIN_MAX_PLAYERS];
@@ -43,12 +366,15 @@ class TuinRPGHandler : EventHandler
 	string TargetName[TUIN_MAX_PLAYERS];
 	string TargetAffixes[TUIN_MAX_PLAYERS];
 	bool TargetDeathSentence[TUIN_MAX_PLAYERS];
+	bool TargetIsBoss[TUIN_MAX_PLAYERS];
 	int TargetLevel[TUIN_MAX_PLAYERS];
 	int TargetRarity[TUIN_MAX_PLAYERS];
 	int TargetHealth[TUIN_MAX_PLAYERS];
 	int TargetMaxHealth[TUIN_MAX_PLAYERS];
 	double TargetPreviousDisplayHealth[TUIN_MAX_PLAYERS];
 	double TargetDisplayHealth[TUIN_MAX_PLAYERS];
+	Actor LastHitTarget[TUIN_MAX_PLAYERS];
+	int LastHitTargetTics[TUIN_MAX_PLAYERS];
 	int PopupXP[TUIN_MAX_PLAYERS];
 	int PopupTics[TUIN_MAX_PLAYERS];
 	int CriticalPopupTics[TUIN_MAX_PLAYERS];
@@ -75,6 +401,16 @@ class TuinRPGHandler : EventHandler
 	bool GodlyGlowApplied[TUIN_MAX_PLAYERS];
 	int GodlyGlowQuality[TUIN_MAX_PLAYERS];
 	double AgilityAccumulator[TUIN_MAX_PLAYERS];
+	double WeaponSwitchAccumulator[TUIN_MAX_PLAYERS];
+	State RustChargeState[TUIN_MAX_PLAYERS];
+	int WeaponPerkShotgunProcTime[TUIN_MAX_PLAYERS];
+	int WeaponPerkPierceProcTime[TUIN_MAX_PLAYERS];
+	class<Ammo> WeaponPerkTrackedAmmo[TUIN_MAX_PLAYERS];
+	int WeaponPerkTrackedAmmoAmount[TUIN_MAX_PLAYERS];
+	const TUIN_MAX_GUIDED_PROJECTILES = 128;
+	Actor WeaponPerkGuidedProjectile[TUIN_MAX_GUIDED_PROJECTILES];
+	int WeaponPerkGuidedOwner[TUIN_MAX_GUIDED_PROJECTILES];
+	int NextWeaponPerkGuidedProjectile;
 	int OverheadCount;
 	Actor OverheadActor[TUIN_MAX_OVERHEAD_BARS];
 	Vector3 OverheadPosition[TUIN_MAX_OVERHEAD_BARS];
@@ -109,8 +445,111 @@ class TuinRPGHandler : EventHandler
 		return cv ? cv.GetFloat() : fallback;
 	}
 
+	clearscope static bool ClassesEnabled()
+	{
+		// This actor class is injected only by build-noclasses.ps1. A class marker
+		// is deterministic and cannot be overridden by a persisted user CVAR.
+		return FindClass('TuinNoClassesBuildMarker', 'Actor') == null;
+	}
+
+	clearscope static int WeaponFamily(Weapon weapon)
+	{
+		if (!weapon) return 0;
+		if (weapon is 'ID24CalamityBlade') return 10;
+		if (weapon is 'ID24Incinerator') return 9;
+		string identity = String.Format("%s %s", weapon.GetClassName(),
+			weapon.GetTag(weapon.GetClassName())).MakeLower();
+		if (identity.IndexOf("bfg") >= 0) return 7;
+		if (identity.IndexOf("rocket") >= 0 || identity.IndexOf("missilelauncher") >= 0) return 8;
+		if (identity.IndexOf("plasma") >= 0) return 6;
+		if (identity.IndexOf("chaingun") >= 0 || identity.IndexOf("minigun") >= 0 ||
+			identity.IndexOf("gatling") >= 0) return 5;
+		if (identity.IndexOf("supershotgun") >= 0 || identity.IndexOf("super shotgun") >= 0 ||
+			identity.IndexOf("doublebarrel") >= 0 || identity.IndexOf("double barrel") >= 0) return 4;
+		if (identity.IndexOf("shotgun") >= 0) return 3;
+		if (identity.IndexOf("fist") >= 0 || identity.IndexOf("knuckle") >= 0 ||
+			identity.IndexOf("punch") >= 0 || weapon.bMELEEWEAPON) return 2;
+		if (identity.IndexOf("pistol") >= 0 || identity.IndexOf("handgun") >= 0 ||
+			identity.IndexOf("revolver") >= 0) return 1;
+
+		// AmmoType1 is a class reference, not a string accepted by %s. Resolve
+		// its defaults first; ammo-less custom weapons have no fallback family.
+		if (!weapon.AmmoType1) return 0;
+		readonly<Ammo> ammoDefault = GetDefaultByType(weapon.AmmoType1);
+		if (!ammoDefault) return 0;
+		string ammoName = String.Format("%s", ammoDefault.GetClassName()).MakeLower();
+		if (ammoName.IndexOf("rocket") >= 0) return 8;
+		if (ammoName.IndexOf("shell") >= 0) return weapon.AmmoUse1 >= 2 ? 4 : 3;
+		if (ammoName.IndexOf("cell") >= 0) return weapon.AmmoUse1 >= 20 ? 7 : 6;
+		if (ammoName.IndexOf("clip") >= 0 || ammoName.IndexOf("bullet") >= 0)
+			return weapon.SelectionOrder < 1000 ? 5 : 1;
+		return 0;
+	}
+
+	clearscope static bool HasWeaponPerk(TuinPlayerData data, int family)
+	{
+		return !ClassesEnabled() && data && family >= 1 && family <= 10 &&
+			(data.WeaponPerkFlags & (1 << (family - 1))) != 0;
+	}
+
+	clearscope static string WeaponPerkName(int family)
+	{
+		switch (family)
+		{
+		case 1: return "DEADEYE PISTOL";
+		case 2: return "BLOOD KNUCKLES";
+		case 3: return "INFERNO SHOTGUN";
+		case 4: return "PHASING SUPER SHOTGUN";
+		case 5: return "AMMO EATER CHAINGUN";
+		case 6: return "SEEKER PLASMA";
+		case 7: return "RAPID BFG";
+		case 8: return "HELLFIRE ROCKETS";
+		case 9: return "WILDFIRE INCINERATOR";
+		case 10: return "OVERCHARGE CALAMITY BLADE";
+		default: return "NO WEAPON PERK";
+		}
+	}
+
+	clearscope static string WeaponPerkSummary(int family)
+	{
+		switch (family)
+		{
+		case 1: return "+100% DAMAGE  |  HALF FIRE RATE";
+		case 2: return "BERSERK x1.5  |  LOSE 5% HEALTH PER HIT";
+		case 3: return "AREA BURN: 50% OVER 3S; REFRESHES  |  -15% DIRECT DAMAGE";
+		case 4: return "PIERCES MONSTERS/ARMOR  |  -25% DAMAGE";
+		case 5: return "x3 DAMAGE/CAPACITY  |  x3 AMMO COST";
+		case 6: return "PROJECTILES GUIDE TOWARD NEARBY ENEMIES";
+		case 7: return "x4 FIRE RATE  |  ONE-QUARTER DAMAGE";
+		case 8: return "-30% DAMAGE | 25% CRIT | +50% BURN / 5s, STACKS";
+		case 9: return "FIRE SPREADS TO 3 NEARBY FOES | +25% FUEL USE";
+		case 10: return "+50% DAMAGE / WAVE WIDTH | 30% LONGER CHARGE";
+		default: return "NO SPECIALIZATION FOR THIS WEAPON";
+		}
+	}
+
+	int SyncWeaponPerkMilestones(TuinPlayerData data)
+	{
+		if (!data || ClassesEnabled()) return 0;
+		int earned = clamp(data.PlayerLevel / 5, 0, 6);
+		if (!data.WeaponPerkScheduleInitialized)
+		{
+			data.WeaponPerkMilestonesAwarded = 0;
+			data.WeaponPerkScheduleInitialized = true;
+		}
+		int gained = max(0, earned - data.WeaponPerkMilestonesAwarded);
+		if (gained > 0)
+		{
+			data.UnspentWeaponPerkPoints += gained;
+			data.WeaponPerkMilestonesAwarded = earned;
+			if (data.Owner) AnnouncePoints(data.Owner.PlayerNumber(), 0, 0, gained);
+		}
+		return gained;
+	}
+
 	clearscope static int DifficultyMode()
 	{
+		if(TuinRun.Active())return 2;
 		return clamp(CVInt('tuin_difficulty', 2), 0, 3);
 	}
 
@@ -236,6 +675,7 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static string PlayerClassName(int playerClass)
 	{
+		if (!ClassesEnabled()) return "DOOM MARINE";
 		switch (playerClass)
 		{
 		case 1: return "HEAVY";
@@ -829,6 +1269,47 @@ class TuinRPGHandler : EventHandler
 				data.CurrentXP = 0;
 			}
 		}
+		if (data)
+		{
+			if (!ClassesEnabled() && !data.NoClassModeActive)
+			{
+				data.NoClassStoredPlayerClass = data.PlayerClass;
+				data.PlayerClass = 0;
+				data.NoClassModeActive = true;
+			}
+			else if (ClassesEnabled() && data.NoClassModeActive)
+			{
+				data.PlayerClass = data.NoClassStoredPlayerClass;
+				data.NoClassStoredPlayerClass = 0;
+				data.NoClassModeActive = false;
+			}
+			if (!ClassesEnabled() && players[playerNumber].mo)
+			{
+				// Bundled replacement and role weapons from a normal-edition save must
+				// not leak into the weapon-mod compatibility edition. The saved role is
+				// parked above and its normal loadout is granted again when restored.
+				Actor pawn = players[playerNumber].mo;
+				pawn.TakeInventory('PerkFist', 0x7FFFFFFF);
+				pawn.TakeInventory('PerkPistol', 0x7FFFFFFF);
+				pawn.TakeInventory('Z86Chainsaw', 0x7FFFFFFF);
+				pawn.TakeInventory('PerkShotgun', 0x7FFFFFFF);
+				pawn.TakeInventory('PerkSuperShotgun', 0x7FFFFFFF);
+				pawn.TakeInventory('Z86Chaingun', 0x7FFFFFFF);
+				pawn.TakeInventory('PerkRocketLauncher', 0x7FFFFFFF);
+				pawn.TakeInventory('BloxPlasmaRifle', 0x7FFFFFFF);
+				pawn.TakeInventory('Z86BFG9000', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinMinigun', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinMinigunRounds', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinMinigunInitialized', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinDoomGuyQuadShotgun', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinDoomGuyQuadLoaded', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinDoomGuyQuadAltChain', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinRogueKnife', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinRogueSilencedPistol', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinRogueBow', 0x7FFFFFFF);
+				pawn.TakeInventory('TuinRogueBoltAmmo', 0x7FFFFFFF);
+			}
+		}
 		if (data && !data.LivesInitialized)
 		{
 			data.Lives = clamp(CVInt('tuin_starting_lives', 3), 1, 99);
@@ -843,6 +1324,14 @@ class TuinRPGHandler : EventHandler
 			data.UnspentSkillPoints += max(0, newSchedulePoints - oldSchedulePoints);
 			data.PerkAwardScheduleMigrated = true;
 		}
+		if (data && !data.ArmorPenetrationScheduleMigrated)
+		{
+			// Saves which already passed level 30 predate the three points added
+			// alongside Armor Penetration. Lower-level characters earn them normally.
+			if (data.PlayerLevel >= 30) data.UnspentSkillPoints += 3;
+			data.ArmorPenetrationScheduleMigrated = true;
+		}
+		if (data) SyncWeaponPerkMilestones(data);
 		ApplyVitality(pawn, data);
 		ApplyPerkHealth(pawn, data);
 		ApplyClassHealth(pawn, data);
@@ -858,10 +1347,20 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static int PerkPointsAtLevel(int playerLevel)
 	{
+		if (!ClassesEnabled())
+		{
+			if (playerLevel == 5) return 1;
+			if (playerLevel == 10) return 3;
+			if (playerLevel == 15) return 4;
+			if (playerLevel == 20 || playerLevel == 25) return 5;
+			if (playerLevel == 30) return 3;
+			return 0;
+		}
 		if (playerLevel == 5) return 1;
 		if (playerLevel == 10) return 3;
 		if (playerLevel == 15) return 4;
-		if (playerLevel == 20 || playerLevel == 25 || playerLevel == 30) return 5;
+		if (playerLevel == 20 || playerLevel == 25) return 5;
+		if (playerLevel == 30) return 8;
 		// Complete builds need no more points, but later milestones retain one
 		// point for future perks and additions to the class system.
 		if (playerLevel > 30 && (playerLevel % 5) == 0) return 1;
@@ -910,7 +1409,7 @@ class TuinRPGHandler : EventHandler
 		int baseMaximum = max(1, unmodifiedMaximum - data.AppliedVitality * 5 - data.AppliedPerkHealth);
 		int desiredModifier = data.PlayerClass == 1 ? 175 + data.Strength * 5 - baseMaximum :
 			data.PlayerClass == 3 ? -max(1, int(unmodifiedMaximum * 0.25 + 0.5)) :
-			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.20 + 0.5)) :
+			data.PlayerClass == 5 ? -max(1, int(unmodifiedMaximum * 0.30 + 0.5)) :
 			data.PlayerClass == 6 ? -max(1, int(unmodifiedMaximum * 0.15 + 0.5)) : 0;
 		int currentModifier = -data.AppliedClassHealthPenalty;
 		int delta = desiredModifier - currentModifier;
@@ -1163,6 +1662,15 @@ class TuinRPGHandler : EventHandler
 			data.RogueStillTics = 0;
 			data.RogueAmbushGraceTics = 0;
 			data.RogueAmbushHitTime = -1;
+			data.RogueChainActive = false;
+			data.RogueChainTics = 0;
+			data.RogueChainHitsRemaining = 0;
+			data.RogueChainStartCount = 0;
+			data.RogueChainVisitedCount = 0;
+			data.RogueChainReturnValid = false;
+			data.RoguePistolBurstTics = 0;
+			data.RoguePistolBurstShotsRemaining = 0;
+			for (int chainSlot = 0; chainSlot < 32; chainSlot++) data.RogueChainVisited[chainSlot] = null;
 		}
 		if (data.PlayerClass != 5)
 		{
@@ -1181,6 +1689,350 @@ class TuinRPGHandler : EventHandler
 			return;
 		}
 		data.RogueStillTics = 0;
+	}
+
+	bool RogueChainAlreadyVisited(TuinPlayerData data, Actor target)
+	{
+		if (!data || !target) return true;
+		for (int i = 0; i < data.RogueChainVisitedCount; i++)
+			if (data.RogueChainVisited[i] == target) return true;
+		return false;
+	}
+
+	Actor FindRogueChainTarget(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data) return null;
+		Actor nearest;
+		double nearestDistance = 1024.0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (!IsValidMonster(candidate) || RogueChainAlreadyVisited(data, candidate)) continue;
+			double distance = pawn.Distance3D(candidate);
+			if (distance >= nearestDistance || !pawn.CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+			nearest = candidate;
+			nearestDistance = distance;
+		}
+		return nearest;
+	}
+
+	void SpawnRogueShadowSmoke(Vector3 position)
+	{
+		for (int i = 0; i < 7; i++)
+		{
+			Vector3 smokePosition = position +
+				(FRandom[TuinRogueChain](-18.0, 18.0),
+				 FRandom[TuinRogueChain](-18.0, 18.0),
+				 FRandom[TuinRogueChain](4.0, 48.0));
+			Actor smoke = Actor.Spawn('TuinRogueShadowSmoke', smokePosition, NO_REPLACE);
+			if (!smoke) continue;
+			double smokeScale = FRandom[TuinRogueChain](0.55, 1.15);
+			smoke.Scale *= smokeScale;
+			smoke.Vel = (FRandom[TuinRogueChain](-1.2, 1.2),
+				FRandom[TuinRogueChain](-1.2, 1.2),
+				FRandom[TuinRogueChain](0.6, 2.2));
+		}
+	}
+
+	bool PlaceRogueBesideTarget(Actor pawn, Actor target)
+	{
+		if (!pawn || !target) return false;
+		Vector3 oldPosition = pawn.Pos;
+		for (int attempt = 0; attempt < 8; attempt++)
+		{
+			double angleOffset = (attempt / 2) * 45.0;
+			if (attempt & 1) angleOffset = -angleOffset;
+			double angle = target.Angle + 180.0 + angleOffset;
+			double distance = attempt < 4 ? 48.0 : 64.0;
+			Vector3 destination = target.Pos + (cos(angle) * distance, sin(angle) * distance, 0);
+			pawn.SetOrigin(destination, false);
+			if (pawn.TestMobjLocation())
+			{
+				SpawnRogueShadowSmoke(oldPosition);
+				SpawnRogueShadowSmoke(pawn.Pos);
+				pawn.Angle = pawn.AngleTo(target, true);
+				return true;
+			}
+			pawn.SetOrigin(oldPosition, false);
+		}
+		return false;
+	}
+
+	void FinishRogueChain(int playerNumber, TuinPlayerData data, bool struckTarget)
+	{
+		if (!data) return;
+		int startingCharges = data.RogueChainStartCount;
+		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS && playerInGame[playerNumber] ?
+			players[playerNumber].mo : null;
+		bool returnedToStart = !struckTarget;
+		bool returnBlocked;
+		if (struckTarget && pawn && pawn.Health > 0 && data.RogueChainReturnValid)
+		{
+			Vector3 chainEndPosition = pawn.Pos;
+			pawn.SetOrigin(data.RogueChainStartPosition, false);
+			if (pawn.TestMobjLocation())
+			{
+				SpawnRogueShadowSmoke(chainEndPosition);
+				SpawnRogueShadowSmoke(pawn.Pos);
+				pawn.Angle = data.RogueChainStartAngle;
+				returnedToStart = true;
+			}
+			else
+			{
+				pawn.SetOrigin(chainEndPosition, false);
+				returnBlocked = true;
+				SetLootNotification(playerNumber, "CHAIN RETURN BLOCKED - REMAINING AT LAST TARGET", 0);
+			}
+		}
+		data.RogueChainActive = false;
+		data.RogueChainTics = 0;
+		data.RogueChainHitsRemaining = 0;
+		data.RogueChainStartCount = 0;
+		data.RogueChainVisitedCount = 0;
+		data.RogueChainReturnValid = false;
+		for (int i = 0; i < 32; i++) data.RogueChainVisited[i] = null;
+		if (!struckTarget)
+		{
+			data.RogueChainCharges = clamp(data.RogueChainCharges + startingCharges, 0, 9);
+			SetLootNotification(playerNumber, "NO CHAIN TARGET IN RANGE - CHARGES SAVED", 0);
+		}
+		else if (!returnBlocked) SetLootNotification(playerNumber, "CHAIN ASSASSINATION COMPLETE", 5);
+		if (playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS && RogueChainTestActive[playerNumber])
+		{
+			if (players[playerNumber].mo)
+				players[playerNumber].mo.A_Log(String.Format("ROGUE CHAIN RESULT: %d TARGETS STRUCK; RETURN %s.",
+					RogueChainTestHits[playerNumber], returnedToStart ? "SUCCESS" : "BLOCKED"));
+			RogueChainTestActive[playerNumber] = false;
+		}
+	}
+
+	void ActivateRogueChain(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.PlayerClass != 5 || pawn.Health <= 0) return;
+		if (data.RogueChainActive)
+		{
+			SetLootNotification(playerNumber, "CHAIN ASSASSINATION IN PROGRESS", 0);
+			return;
+		}
+		if (data.RogueChainCharges <= 0)
+		{
+			SetLootNotification(playerNumber, "KNIFE KILL REQUIRED FOR CHAIN ASSASSINATION", 0);
+			return;
+		}
+		data.RogueChainActive = true;
+		data.RogueChainTics = 1;
+		data.RogueChainStartCount = clamp(data.RogueChainCharges, 1, 9);
+		data.RogueChainHitsRemaining = data.RogueChainStartCount;
+		data.RogueChainCharges = 0;
+		data.RogueChainStartPosition = pawn.Pos;
+		data.RogueChainStartAngle = pawn.Angle;
+		data.RogueChainReturnValid = true;
+		data.RogueChainVisitedCount = 0;
+		for (int i = 0; i < 32; i++) data.RogueChainVisited[i] = null;
+		SetLootNotification(playerNumber, String.Format("CHAIN ASSASSINATION - %d STRIKES",
+			data.RogueChainHitsRemaining), 5);
+	}
+
+	void FireRoguePistolBurstShot(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.PlayerClass != 5 || pawn.Health <= 0 ||
+			data.RoguePistolBurstShotsRemaining <= 0)
+		{
+			if (data) data.RoguePistolBurstShotsRemaining = 0;
+			return;
+		}
+		let bullets = Ammo(pawn.FindInventory('Clip'));
+		if (!bullets || bullets.Amount <= 0)
+		{
+			data.RoguePistolBurstShotsRemaining = 0;
+			SetLootNotification(playerNumber, "SILENCED BURST ENDED - OUT OF BULLETS", 0);
+			return;
+		}
+		pawn.TakeInventory('Clip', 1);
+		pawn.A_StartSound("tuin/rogue/silenced", CHAN_WEAPON, CHANF_OVERLAP, 0.82, ATTN_NONE);
+		let pistol = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
+		if (pistol) pawn.player.SetPsprite(PSP_WEAPON, pistol.FindState('BurstShot'));
+		pawn.A_SpawnParticle(Color(255, 205, 92), SPF_FULLBRIGHT | SPF_FACECAMERA, 8, 2.5, 0,
+			cos(pawn.Angle) * 25.0, sin(pawn.Angle) * 25.0, pawn.Height * 0.72,
+			cos(pawn.Angle) * 0.8, sin(pawn.Angle) * 0.8, 0.1, 0, 0, 0, 0.05);
+		double bulletPitch = pawn.AimLineAttack(pawn.Angle, 8192.0);
+		ApplyingRoguePistolBurst = true;
+		RoguePistolBurstPlayer = playerNumber;
+		pawn.LineAttack(pawn.Angle, 8192.0, bulletPitch, 10, 'TuinRogueSilenced',
+			'TuinRogueSilencedPuff');
+		ApplyingRoguePistolBurst = false;
+		data.RoguePistolBurstShotsRemaining--;
+	}
+
+	void RestoreRoguePistolBurstWeapon(Actor pawn, TuinPlayerData data)
+	{
+		if (!data) return;
+		if (data.RoguePistolBurstWeaponShown && pawn && pawn.player &&
+			pawn.player.ReadyWeapon is 'TuinRogueKnife')
+		{
+			let knife = Weapon(pawn.FindInventory('TuinRogueKnife'));
+			if (knife)
+			{
+				pawn.player.SetPsprite(PSP_WEAPON, knife.FindState('ReadyLoop'));
+				let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+				if (weaponSprite)
+				{
+					weaponSprite.x = 0;
+					weaponSprite.y = WEAPONTOP;
+					weaponSprite.ResetInterpolation();
+				}
+			}
+		}
+		data.RoguePistolBurstWeaponShown = false;
+		data.RoguePistolBurstHolding = false;
+		data.RoguePistolBurstShotsRemaining = 0;
+		data.RoguePistolBurstTics = 0;
+	}
+
+	void BeginRoguePistolBurstHold(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.PlayerClass != 5 || pawn.Health <= 0) return;
+		if (!(pawn.player.ReadyWeapon is 'TuinRogueKnife'))
+		{
+			SetLootNotification(playerNumber, "EQUIP ROGUE KNIFE TO USE SILENCED BURST", 0);
+			return;
+		}
+		if (data.RoguePistolBurstWeaponShown || data.RoguePistolBurstShotsRemaining > 0)
+		{
+			SetLootNotification(playerNumber, "SILENCED BURST ALREADY FIRING", 0);
+			return;
+		}
+		if (data.RoguePistolBurstCooldownTics > 0)
+		{
+			SetLootNotification(playerNumber, String.Format("SILENCED BURST COOLDOWN: %.1f SEC",
+				data.RoguePistolBurstCooldownTics / 35.0), 0);
+			return;
+		}
+		let bullets = Ammo(pawn.FindInventory('Clip'));
+		if (!bullets || bullets.Amount < 3)
+		{
+			SetLootNotification(playerNumber, "SILENCED BURST NEEDS 3 BULLETS", 0);
+			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
+			return;
+		}
+		let pistol = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
+		if (!pistol)
+		{
+			SetLootNotification(playerNumber, "SILENCED PISTOL NOT AVAILABLE", 0);
+			return;
+		}
+		data.RoguePistolBurstShotsRemaining = 0;
+		data.RoguePistolBurstTics = 0;
+		data.RoguePistolBurstWeaponShown = true;
+		data.RoguePistolBurstHolding = true;
+		// Hold this static pistol pose until the key-up event starts the burst.
+		pawn.player.SetPsprite(PSP_WEAPON, pistol.FindState('BurstHold'));
+		let weaponSprite = pawn.player.FindPSprite(PSP_WEAPON);
+		if (weaponSprite)
+		{
+			weaponSprite.x = 0;
+			weaponSprite.y = WEAPONTOP;
+			weaponSprite.ResetInterpolation();
+		}
+		SetLootNotification(playerNumber, "SILENCED PISTOL READY - RELEASE C TO BURST", 4);
+	}
+
+	void ReleaseRoguePistolBurst(Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || !data.RoguePistolBurstHolding ||
+			!data.RoguePistolBurstWeaponShown) return;
+		data.RoguePistolBurstHolding = false;
+		data.RoguePistolBurstCooldownTics = 350;
+		data.RoguePistolBurstShotsRemaining = 3;
+		data.RoguePistolBurstTics = 0;
+		data.LevelAbilityUses++;
+		let pistol = Weapon(pawn.FindInventory('TuinRogueSilencedPistol'));
+		if (pistol) pawn.player.SetPsprite(PSP_WEAPON, pistol.FindState('BurstOverlay'));
+		SetLootNotification(pawn.PlayerNumber(), "SILENCED BURST - THREE SHOTS", 5);
+	}
+
+	void ActivateRoguePistolBurst(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		BeginRoguePistolBurstHold(playerNumber, pawn, data);
+		ReleaseRoguePistolBurst(pawn, data);
+	}
+
+	void UpdateRoguePistolBurst(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!data) return;
+		if (data.RoguePistolBurstCooldownTics > 0)
+		{
+			data.RoguePistolBurstCooldownTics--;
+			if (data.RoguePistolBurstCooldownTics == 0 && data.PlayerClass == 5)
+				SetLootNotification(playerNumber, "SILENCED BURST READY - PRESS C", 4);
+		}
+		if (!pawn || data.PlayerClass != 5 || pawn.Health <= 0)
+		{
+			RestoreRoguePistolBurstWeapon(pawn, data);
+			return;
+		}
+		if (data.RoguePistolBurstShotsRemaining <= 0)
+		{
+			if (data.RoguePistolBurstHolding) return;
+			if (!data.RoguePistolBurstWeaponShown) return;
+			if (data.RoguePistolBurstTics > 0) data.RoguePistolBurstTics--;
+			if (data.RoguePistolBurstTics <= 0) RestoreRoguePistolBurstWeapon(pawn, data);
+			return;
+		}
+		if (data.RoguePistolBurstTics > 0) data.RoguePistolBurstTics--;
+		if (data.RoguePistolBurstTics > 0) return;
+		FireRoguePistolBurstShot(playerNumber, pawn, data);
+		// Four tics between shots keeps it snappy while allowing each pistol
+		// recoil/muzzle animation to be seen instead of collapsing into one flash.
+		data.RoguePistolBurstTics = data.RoguePistolBurstShotsRemaining > 0 ? 4 : 5;
+	}
+
+	void UpdateRogueChain(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!data || !data.RogueChainActive) return;
+		if (RogueChainTestActive[playerNumber] && RogueChainTestHits[playerNumber] < 0)
+		{
+			if (pawn) pawn.A_Log("ROGUE CHAIN UPDATE ENTERED.");
+			RogueChainTestHits[playerNumber] = 0;
+		}
+		if (!pawn || pawn.Health <= 0 || data.PlayerClass != 5)
+		{
+			FinishRogueChain(playerNumber, data,
+				data.RogueChainHitsRemaining < data.RogueChainStartCount);
+			return;
+		}
+		if (--data.RogueChainTics > 0) return;
+		if (data.RogueChainVisitedCount >= 32)
+		{
+			FinishRogueChain(playerNumber, data,
+				data.RogueChainHitsRemaining < data.RogueChainStartCount);
+			return;
+		}
+		Actor target = FindRogueChainTarget(pawn, data);
+		if (!target)
+		{
+			FinishRogueChain(playerNumber, data,
+				data.RogueChainHitsRemaining < data.RogueChainStartCount);
+			return;
+		}
+		data.RogueChainVisited[data.RogueChainVisitedCount++] = target;
+		if (!PlaceRogueBesideTarget(pawn, target))
+		{
+			data.RogueChainTics = 1;
+			return;
+		}
+		pawn.A_StartSound("tuin/rogue/knifehit", CHAN_WEAPON, CHANF_MAYBE_LOCAL, 0.95, ATTN_NORM);
+		ApplyingRogueChainStrike = true;
+		RogueChainStrikePlayer = playerNumber;
+		target.DamageMobj(pawn, pawn, Random[TuinRogueChain](28, 42), 'TuinRogueKnife');
+		ApplyingRogueChainStrike = false;
+		RogueChainStrikePlayer = -1;
+		if (RogueChainTestActive[playerNumber]) RogueChainTestHits[playerNumber]++;
+		data.RogueChainHitsRemaining--;
+		if (data.RogueChainHitsRemaining <= 0)
+			FinishRogueChain(playerNumber, data, true);
+		else data.RogueChainTics = 4;
 	}
 
 	void ActivateTankOverdrive(int playerNumber, Actor pawn, TuinPlayerData data)
@@ -1393,6 +2245,322 @@ class TuinRPGHandler : EventHandler
 			pawn.TakeInventory('TuinTankOverdriveFiringSpeed', 1);
 			SetLootNotification(playerNumber, "OVERDRIVE ENDED - BUILD CHARGE", 0);
 		}
+	}
+
+	int DoomFatalityMaximumHealth(Actor target)
+	{
+		if (!target) return 1;
+		let monsterData = GetMonsterData(target);
+		if (monsterData && monsterData.ScaledMaxHealth > 0) return monsterData.ScaledMaxHealth;
+		return max(1, target.SpawnHealth());
+	}
+
+	bool CanDoomFatality(Actor pawn, Actor target)
+	{
+		if (!pawn || !IsValidMonster(target) || target.Health <= 0 ||
+			pawn.Distance3D(target) > 224.0 ||
+			abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(target, true))) > 48.0 ||
+			!pawn.CheckSight(target, SF_IGNOREWATERBOUNDARY)) return false;
+		let monsterData = GetMonsterData(target);
+		return monsterData && monsterData.DoomFatalityReservedBy == pawn &&
+			target.Health * 100 <= DoomFatalityMaximumHealth(target) * 10;
+	}
+
+	Actor FindDoomFatalityTarget(Actor pawn)
+	{
+		if (!pawn) return null;
+		Actor bestTarget;
+		double bestScore = 1000000.0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (!CanDoomFatality(pawn, candidate)) continue;
+			double distance = pawn.Distance3D(candidate);
+			double angleDifference = abs(Actor.deltaangle(pawn.Angle,
+				pawn.AngleTo(candidate, true)));
+			double score = distance + angleDifference * 2.5;
+			if (score >= bestScore) continue;
+			bestTarget = candidate;
+			bestScore = score;
+		}
+		return bestTarget;
+	}
+
+	bool CanMarkDoomFatality(Actor pawn, Actor target)
+	{
+		if (!pawn || !IsValidMonster(target) || target.Health <= 0 ||
+			pawn.Distance3D(target) > 2048.0 ||
+			abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(target, true))) > 72.0) return false;
+		let monsterData = GetMonsterData(target);
+		return monsterData && !monsterData.DoomFatalityExpired &&
+			(!monsterData.DoomFatalityReservedBy || monsterData.DoomFatalityReservedBy == pawn) &&
+			target.Health * 100 <= DoomFatalityMaximumHealth(target) * 10;
+	}
+
+	bool CanMaintainDoomFatalityReservation(Actor pawn, Actor target)
+	{
+		if (!pawn || !IsValidMonster(target) || target.Health <= 0 ||
+			pawn.Distance3D(target) > 2048.0) return false;
+		let monsterData = GetMonsterData(target);
+		return monsterData && monsterData.DoomFatalityReservedBy == pawn &&
+			monsterData.DoomFatalityWindowTics > 0;
+	}
+
+	Actor FindDoomFatalityMarkerTarget(Actor pawn)
+	{
+		if (!pawn) return null;
+		Actor bestTarget;
+		double bestScore = 1000000.0;
+		ThinkerIterator iterator = ThinkerIterator.Create('Actor');
+		Actor candidate;
+		while (candidate = Actor(iterator.Next()))
+		{
+			if (!CanMarkDoomFatality(pawn, candidate)) continue;
+			double distance = pawn.Distance3D(candidate);
+			double angleDifference = abs(Actor.deltaangle(pawn.Angle,
+				pawn.AngleTo(candidate, true)));
+			// Prefer what Doom Guy is looking at, then the nearer weakened enemy.
+			double score = angleDifference * 18.0 + distance +
+				(pawn.CheckSight(candidate, SF_IGNOREWATERBOUNDARY) ? 0.0 : 10000.0);
+			if (score >= bestScore) continue;
+			bestTarget = candidate;
+			bestScore = score;
+		}
+		return bestTarget;
+	}
+
+	void ClearDoomFatalityMarker(TuinPlayerData data, Actor reservationOwner = null)
+	{
+		if (!data) return;
+		if (data.DoomFatalityMarkerTarget)
+		{
+			let monsterData = GetMonsterData(data.DoomFatalityMarkerTarget);
+			if (monsterData && monsterData.DoomFatalityReservedBy &&
+				(!reservationOwner || monsterData.DoomFatalityReservedBy == reservationOwner))
+				monsterData.EndDoomFatalityReservation(false);
+		}
+		if (data.DoomFatalityMarker) data.DoomFatalityMarker.Destroy();
+		data.DoomFatalityMarker = null;
+		data.DoomFatalityMarkerTarget = null;
+	}
+
+	void UpdateDoomFatalityMarker(int playerNumber, TuinPlayerData data, Actor candidate)
+	{
+		if (!data) return;
+		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS &&
+			playerInGame[playerNumber] ? players[playerNumber].mo : null;
+		if (data.DoomFatalityMarkerTarget != candidate)
+		{
+			ClearDoomFatalityMarker(data, pawn);
+			data.DoomFatalityMarkerTarget = candidate;
+		}
+		if (!candidate || candidate.Health <= 0)
+		{
+			ClearDoomFatalityMarker(data, pawn);
+			return;
+		}
+		let monsterData = GetMonsterData(candidate);
+		if (monsterData && !monsterData.DoomFatalityReservedBy)
+			monsterData.BeginDoomFatalityReservation(pawn);
+		if (!monsterData || monsterData.DoomFatalityReservedBy != pawn) return;
+		if (!data.DoomFatalityMarker)
+			data.DoomFatalityMarker = Actor.Spawn('TuinDoomFatalitySkullMarker',
+				candidate.Pos + (0, 0, candidate.Height + 24), NO_REPLACE);
+		Actor marker = data.DoomFatalityMarker;
+		if (!marker) return;
+		double pulse = (sin((level.Time + playerNumber * 11) * 12.0) + 1.0) * 0.5;
+		double bob = 24.0 + sin((level.Time + playerNumber * 7) * 8.0) * 4.0;
+		marker.SetOrigin(candidate.Pos + (0, 0, candidate.Height + bob), false);
+		marker.Scale = (0.033 + pulse * 0.007, 0.033 + pulse * 0.007);
+		marker.Alpha = 0.82 + pulse * 0.16;
+		if ((level.Time + playerNumber * 3) % 6 == 0)
+		{
+			double emberAngle = FRandom[TuinRPGCritical](0.0, 360.0);
+			marker.A_SpawnParticle(Color(255, 34, 8),
+				SPF_FULLBRIGHT | SPF_FACECAMERA, 12, 3.2, 0,
+				cos(emberAngle) * 18.0, sin(emberAngle) * 18.0, 12.0,
+				-cos(emberAngle) * 0.7, -sin(emberAngle) * 0.7, 0.8,
+				0, 0, -0.03, 0.9, 0.07, -0.12);
+		}
+	}
+
+	void SpawnDoomFatalityImpact(Actor target)
+	{
+		if (!target) return;
+		for (int i = 0; i < 34; i++)
+		{
+			double particleAngle = FRandom[TuinRPGCritical](0.0, 360.0);
+			double speed = FRandom[TuinRPGCritical](2.5, 9.0);
+			Color particleColor = (i % 5) == 0 ? Color(22, 4, 3) :
+				((i & 1) ? Color(210, 12, 6) : Color(118, 0, 0));
+			target.A_SpawnParticle(particleColor, SPF_FULLBRIGHT | SPF_FACECAMERA,
+				18, FRandom[TuinRPGCritical](3.5, 8.0), 0,
+				FRandom[TuinRPGCritical](-10.0, 10.0),
+				FRandom[TuinRPGCritical](-10.0, 10.0),
+				FRandom[TuinRPGCritical](target.Height * 0.20, target.Height * 0.85),
+				cos(particleAngle) * speed, sin(particleAngle) * speed,
+				FRandom[TuinRPGCritical](0.5, 5.5), 0, 0, -0.18,
+				1.0, 0.07, -0.13);
+		}
+		target.A_QuakeEx(6, 6, 5, 18, 0, 720, "", QF_SCALEDOWN);
+	}
+
+	void FinishDoomFatality(Actor pawn, TuinPlayerData data)
+	{
+		if (!data) return;
+		Actor owner = data.DoomFatalityOwner ? data.DoomFatalityOwner : pawn;
+		if (data.DoomFatalityTarget && !data.DoomFatalityImpactDone &&
+			data.DoomFatalityTarget.Health > 0)
+			data.DoomFatalityTarget.reactiontime = data.DoomFatalityTargetReactionTime;
+		if (owner && owner.player)
+		{
+			if (!data.DoomFatalityWasFrozen) owner.player.cheats &= ~CF_TOTALLYFROZEN;
+			if (data.DoomFatalityWeaponHidden && owner.Health > 0 && owner.player.ReadyWeapon)
+			{
+				owner.player.SetPsprite(PSP_WEAPON, owner.player.ReadyWeapon.GetUpState());
+				let weaponSprite = owner.player.FindPSprite(PSP_WEAPON);
+				if (weaponSprite)
+				{
+					weaponSprite.y = WEAPONBOTTOM;
+					weaponSprite.alpha = 1.0;
+					weaponSprite.ResetInterpolation();
+				}
+			}
+			owner.player.SetPsprite(PSP_FLASH, null);
+		}
+		ClearDoomFatalityMarker(data, owner);
+		data.DoomFatalityOwner = null;
+		data.DoomFatalityTarget = null;
+		data.DoomFatalityCandidate = null;
+		data.DoomFatalityMarkerTarget = null;
+		data.DoomFatalityTics = 0;
+		data.DoomFatalityImpactDone = false;
+		data.DoomFatalityWasFrozen = false;
+		data.DoomFatalityWeaponHidden = false;
+		data.DoomFatalityTargetReactionTime = 0;
+	}
+
+	void ExecuteDoomFatalityImpact(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !data || data.DoomFatalityImpactDone) return;
+		Actor target = data.DoomFatalityTarget;
+		if (!target || target.Health <= 0)
+		{
+			FinishDoomFatality(pawn, data);
+			return;
+		}
+		data.DoomFatalityImpactDone = true;
+		SpawnDoomFatalityImpact(target);
+		pawn.A_StartSound("*fist", CHAN_WEAPON, 0, 1.0);
+		target.A_StartSound("misc/gibbed", CHAN_BODY, 0, 0.95);
+		int fatalDamage = max(1000, target.Health + DoomFatalityMaximumHealth(target) * 3);
+		ApplyingBonusDamage = true;
+		target.DamageMobj(pawn, pawn, fatalDamage, 'TuinDoomFatality', DMG_FORCED);
+		ApplyingBonusDamage = false;
+		if (target.Health <= 0) data.DoomFatalityCooldownTics = 180 * 35;
+		int healing = max(8, int(pawn.GetMaxHealth(true) * 0.10 + 0.5));
+		pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + healing));
+	}
+
+	bool BeginDoomFatality(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || data.PlayerClass != 4 ||
+			data.DoomFatalityCooldownTics > 0 || data.DoomFatalityTics > 0 || data.DoomBloodPunchHolding ||
+			data.DoomBloodPunchPrepareTics > 0 || data.DoomBloodPunchAttackTics > 0) return false;
+		Actor target = data.DoomFatalityMarkerTarget;
+		if (!target || !CanDoomFatality(pawn, target)) return false;
+		data.DoomFatalityOwner = pawn;
+		data.DoomFatalityTarget = target;
+		data.DoomFatalityCandidate = target;
+		data.DoomFatalityTics = 42;
+		data.DoomFatalityImpactDone = false;
+		data.DoomFatalityWasFrozen = (pawn.player.cheats & CF_TOTALLYFROZEN) != 0;
+		data.DoomFatalityWeaponHidden = true;
+		data.DoomFatalityTargetReactionTime = target.reactiontime;
+		target.reactiontime = max(target.reactiontime, 48);
+		target.Vel = (0, 0, 0);
+		let painState = target.FindState('Pain');
+		if (painState) target.SetState(painState);
+		pawn.player.cheats |= CF_TOTALLYFROZEN;
+		pawn.player.SetPsprite(PSP_WEAPON, null);
+		pawn.player.SetPsprite(PSP_FLASH, null);
+		data.LevelAbilityUses++;
+		return true;
+	}
+
+	void ApplyDoomFatality(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!data) return;
+		if (data.DoomFatalityCooldownTics > 0) data.DoomFatalityCooldownTics--;
+		if (data.DoomFatalityTics <= 0)
+		{
+			if (data.DoomFatalityCooldownTics > 0 || data.PlayerClass != 4 ||
+				!pawn || pawn.Health <= 0)
+			{
+				data.DoomFatalityCandidate = null;
+				UpdateDoomFatalityMarker(playerNumber, data, null);
+				return;
+			}
+			Actor markerTarget = CanMaintainDoomFatalityReservation(pawn,
+				data.DoomFatalityMarkerTarget) ? data.DoomFatalityMarkerTarget :
+				FindDoomFatalityMarkerTarget(pawn);
+			UpdateDoomFatalityMarker(playerNumber, data, markerTarget);
+			data.DoomFatalityCandidate = markerTarget && CanDoomFatality(pawn, markerTarget) ?
+				markerTarget : null;
+			return;
+		}
+		if (!pawn || pawn.Health <= 0 || data.PlayerClass != 4 ||
+			data.DoomFatalityOwner != pawn)
+		{
+			FinishDoomFatality(pawn, data);
+			return;
+		}
+		Actor target = data.DoomFatalityTarget;
+		if (!target || (!data.DoomFatalityImpactDone && target.Health <= 0))
+		{
+			FinishDoomFatality(pawn, data);
+			return;
+		}
+		UpdateDoomFatalityMarker(playerNumber, data,
+			data.DoomFatalityImpactDone ? null : target);
+		pawn.Vel = (0, 0, 0);
+		if (!data.DoomFatalityImpactDone)
+		{
+			target.Vel = (0, 0, 0);
+			target.reactiontime = max(target.reactiontime, 12);
+			pawn.Angle = pawn.AngleTo(target, true);
+			if (data.DoomFatalityTics >= 27)
+			{
+				double approachAngle = target.AngleTo(pawn, true);
+				double approachDistance = max(34.0, pawn.Radius + target.Radius + 5.0);
+				Vector3 oldPosition = pawn.Pos;
+				Vector3 destination =
+					(oldPosition.X * 0.55 + (target.Pos.X + cos(approachAngle) * approachDistance) * 0.45,
+					 oldPosition.Y * 0.55 + (target.Pos.Y + sin(approachAngle) * approachDistance) * 0.45,
+					 oldPosition.Z);
+				pawn.SetOrigin(destination, false);
+				if (!pawn.TestMobjLocation()) pawn.SetOrigin(oldPosition, false);
+			}
+		}
+		if (data.DoomFatalityTics == 29)
+			ShowDoomBloodPunchReadyFists(pawn);
+		if (data.DoomFatalityTics == 21)
+		{
+			let punchProvider = GetDefaultByType('TuinBloodPunchOverlayWeapon');
+			pawn.player.SetPsprite(PSP_WEAPON, punchProvider.FindState('ProjectSIDEPunch'));
+			let fistSprite = pawn.player.FindPSprite(PSP_WEAPON);
+			if (fistSprite)
+			{
+				fistSprite.x = 0;
+				fistSprite.y = WEAPONTOP;
+				fistSprite.ResetInterpolation();
+			}
+		}
+		if (data.DoomFatalityTics == 17)
+			ExecuteDoomFatalityImpact(playerNumber, pawn, data);
+		data.DoomFatalityTics--;
+		if (data.DoomFatalityTics <= 0) FinishDoomFatality(pawn, data);
 	}
 
 	void SpawnBloodPunchCone(Actor pawn)
@@ -1671,6 +2839,7 @@ class TuinRPGHandler : EventHandler
 
 	void ChoosePlayerClass(int playerNumber, int chosenClass)
 	{
+		if (!ClassesEnabled()) return;
 		let data = EnsurePlayerData(playerNumber);
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
 		if (!data || !pawn || chosenClass < 1 || chosenClass > 6) return;
@@ -1686,6 +2855,11 @@ class TuinRPGHandler : EventHandler
 		{
 			data.RogueChargeInitialized = true;
 			data.RogueVeilCharge = 100;
+			data.RoguePistolBurstCooldownTics = 0;
+			data.RoguePistolBurstTics = 0;
+			data.RoguePistolBurstShotsRemaining = 0;
+			data.RoguePistolBurstWeaponShown = false;
+			data.RoguePistolBurstHolding = false;
 			pawn.TakeInventory('Fist', 0x7FFFFFFF);
 			pawn.TakeInventory('PerkFist', 0x7FFFFFFF);
 			pawn.TakeInventory('Pistol', 0x7FFFFFFF);
@@ -1766,9 +2940,14 @@ class TuinRPGHandler : EventHandler
 		let data = EnsurePlayerData(playerNumber);
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
 		if (!data || !pawn) return;
-		if (data.PlayerClass == 0)
+		if (ClassesEnabled() && data.PlayerClass == 0)
 		{
 			SetLootNotification(playerNumber, "CHOOSE A CLASS BEFORE BUYING PERKS", 0);
+			return;
+		}
+		if (!ClassesEnabled() && (perk == 6 || perk == 7))
+		{
+			SetLootNotification(playerNumber, "ONLY UNIVERSAL PERKS ARE AVAILABLE", 0);
 			return;
 		}
 		if (data.UnspentSkillPoints <= 0)
@@ -1804,6 +2983,7 @@ class TuinRPGHandler : EventHandler
 			}
 			rank = data.PerkGiantSlayer;
 			break;
+		case 9: rank = data.PerkArmorPenetration; break;
 		default: return;
 		}
 		if (rank >= 3)
@@ -1818,10 +2998,37 @@ class TuinRPGHandler : EventHandler
 		else if (perk == 5) data.PerkBloodDrinker++;
 		else if (perk == 6) data.PerkClassMastery++;
 		else if (perk == 8) data.PerkGiantSlayer++;
+		else if (perk == 9) data.PerkArmorPenetration++;
 		data.UnspentSkillPoints--;
 		ApplyPerkHealth(pawn, data);
 		ApplyClassHealth(pawn, data);
 		SetLootNotification(playerNumber, String.Format("PERK UPGRADED TO RANK %d", rank + 1), 3);
+	}
+
+	void BuyWeaponPerk(int playerNumber, int family)
+	{
+		let data = EnsurePlayerData(playerNumber);
+		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
+		if (!data || !pawn || ClassesEnabled() || family < 1 || family > 10) return;
+		if (family >= 9 && !TuinRustSupport.Available(family))
+		{
+			SetLootNotification(playerNumber, "LEGACY OF RUST RESOURCES REQUIRED", 0);
+			return;
+		}
+		if (HasWeaponPerk(data, family))
+		{
+			SetLootNotification(playerNumber, "WEAPON PERK ALREADY CHOSEN", 0);
+			return;
+		}
+		if (data.UnspentWeaponPerkPoints <= 0)
+		{
+			SetLootNotification(playerNumber, "NO WEAPON PERK POINTS AVAILABLE", 0);
+			return;
+		}
+		data.WeaponPerkFlags |= 1 << (family - 1);
+		data.UnspentWeaponPerkPoints--;
+		data.ClassAmmoCount = 0;
+		SetLootNotification(playerNumber, String.Format("WEAPON PERK: %s", WeaponPerkName(family)), 5);
 	}
 
 	static void ApplyFlashlight(Actor pawn, TuinPlayerData data)
@@ -1857,6 +3064,7 @@ class TuinRPGHandler : EventHandler
 
 	int ProgressiveBaseLevel()
 	{
+        if(TuinRun.Active())return 1+TuinRun.Stage()*2;
 		int mapIndex = level.LevelNum;
 		if (mapIndex <= 0) mapIndex = max(1, MapsVisited + 1);
 		return 1 + int(max(0, mapIndex - 1) * 0.9);
@@ -1868,6 +3076,42 @@ class TuinRPGHandler : EventHandler
 		double rate = clamp(CVFloat(rateCVar, fallbackRate), 0.0, 10.0) * 0.01;
 		double cap = clamp(CVFloat(capCVar, fallbackCap), 1.0, 10.0);
 		return min(cap, 1.0 + max(0, progressLevel - 1) * rate);
+	}
+
+	bool AmmoFeedsWeaponFamily(Actor pawn, class<Ammo> ammoType, int family)
+	{
+		if (!pawn || !ammoType) return false;
+		for (Inventory item = pawn.Inv; item; item = item.Inv)
+		{
+			let weapon = Weapon(item);
+			if (weapon && WeaponFamily(weapon) == family &&
+				(weapon.AmmoType1 == ammoType || weapon.AmmoType2 == ammoType)) return true;
+		}
+		return false;
+	}
+
+	void ApplyWeaponPerkAmmoUse(int playerNumber, Actor pawn, TuinPlayerData data)
+	{
+		if (!pawn || !pawn.player || !data || ClassesEnabled() || !HasWeaponPerk(data, 5)) return;
+		Weapon weapon = pawn.player.ReadyWeapon;
+		if (!weapon || WeaponFamily(weapon) != 5 || !weapon.AmmoType1)
+		{
+			WeaponPerkTrackedAmmo[playerNumber] = null;
+			WeaponPerkTrackedAmmoAmount[playerNumber] = 0;
+			return;
+		}
+		let ammo = Ammo(pawn.FindInventory(weapon.AmmoType1));
+		if (!ammo) return;
+		class<Ammo> ammoType = (class<Ammo>)(ammo.GetClass());
+		if (WeaponPerkTrackedAmmo[playerNumber] != ammoType)
+		{
+			WeaponPerkTrackedAmmo[playerNumber] = ammoType;
+			WeaponPerkTrackedAmmoAmount[playerNumber] = ammo.Amount;
+			return;
+		}
+		int spent = max(0, WeaponPerkTrackedAmmoAmount[playerNumber] - ammo.Amount);
+		if (spent > 0) ammo.Amount = max(0, ammo.Amount - spent * 2);
+		WeaponPerkTrackedAmmoAmount[playerNumber] = ammo.Amount;
 	}
 
 	void ApplyAmmoCapacity(Actor pawn, TuinPlayerData data)
@@ -1886,8 +3130,10 @@ class TuinRPGHandler : EventHandler
 			if (!def || def.MaxAmount <= 0) continue;
 			int desiredMaximum = max(1, int(def.MaxAmount * multiplier + 0.5));
 			if (hasBackpack) desiredMaximum *= 2;
+			if (!ClassesEnabled() && HasWeaponPerk(data, 5) &&
+				AmmoFeedsWeaponFamily(pawn, (class<Ammo>)(ammo.GetClass()), 5)) desiredMaximum *= 3;
 			if (data.PlayerClass == 1 && ammo is 'Clip') desiredMaximum *= 3;
-			if (data.PlayerClass == 5) desiredMaximum = max(1, int(desiredMaximum * 0.50 + 0.5));
+			if (data.PlayerClass == 5) desiredMaximum = max(1, int(desiredMaximum * 0.70 + 0.5));
 			if (data.PlayerClass == 5)
 			{
 				ammo.MaxAmount = desiredMaximum;
@@ -1924,7 +3170,7 @@ class TuinRPGHandler : EventHandler
 				double rareInfluence = min(0.85, 0.55 + (rarity - 2) * 0.10);
 				randomLevel = int(randomLevel * (1.0 - rareInfluence) + playerLevel * rareInfluence + 0.5);
 			}
-			return clamp(randomLevel, minLevel, maxLevel);
+			return clamp(WhiteLevelFloor(randomLevel, rarity, playerLevel), minLevel, maxLevel);
 		}
 		int variance = max(0, CVInt('tuin_monster_level_variance', 3));
 		int baseLevel = ProgressiveBaseLevel();
@@ -1944,7 +3190,27 @@ class TuinRPGHandler : EventHandler
 		if (rarity >= 3) rolledLevel += rarity - 2;
 		if (Random[TuinRPGLevel](0, 99) < 12)
 			rolledLevel += Random[TuinRPGLevel](1, max(2, variance));
-		return clamp(rolledLevel, minLevel, maxLevel);
+		return clamp(WhiteLevelFloor(rolledLevel, rarity, playerLevel), minLevel, maxLevel);
+	}
+	clearscope static int WhiteLevelFloor(int rolled, int rarity, int playerLevel)
+	{
+		return !ClassesEnabled() && rarity == 0 && playerLevel >= 20 ? max(rolled, playerLevel - 3) : rolled;
+	}
+	clearscope static double WhiteCatchupBonus(int rarity, bool damage, int playerLevel)
+	{
+		if (ClassesEnabled() || rarity != 0 || playerLevel < 20) return 1.;
+		return 1. + (damage ? .20 : .15) + min(10, playerLevel - 20) * .02;
+	}
+	clearscope static int CatchupPlayerLevel()
+	{
+		int highest=1;
+		for(int i=0;i<TUIN_MAX_PLAYERS;i++)
+		{
+			if(!playerInGame[i] || !players[i].mo) continue;
+			let data=GetPlayerData(players[i].mo);
+			if(data) highest=max(highest,data.PlayerLevel);
+		}
+		return highest;
 	}
 
 	clearscope static string RarityName(int rarity)
@@ -2003,6 +3269,21 @@ class TuinRPGHandler : EventHandler
 
 	clearscope static int WeaponQualityFontColor(int quality)
 	{
+		if (quality == 6)
+		{
+			// Godly gear cycles through the full rarity spectrum anywhere its name
+			// is drawn, including the arsenal, comparison panel and weapon wheel.
+			switch ((gametic / 7) % 7)
+			{
+			case 0: return Font.CR_RED;
+			case 1: return Font.CR_ORANGE;
+			case 2: return Font.CR_GOLD;
+			case 3: return Font.CR_GREEN;
+			case 4: return Font.CR_CYAN;
+			case 5: return Font.CR_ICE;
+			default: return Font.CR_PURPLE;
+			}
+		}
 		switch (quality)
 		{
 		case 1: return Font.CR_GREEN;
@@ -2010,7 +3291,6 @@ class TuinRPGHandler : EventHandler
 		case 3: return Font.CR_ORANGE;
 		case 4: return Font.CR_GOLD;
 		case 5: return Font.CR_PURPLE;
-		case 6: return Font.CR_ICE;
 		case 7: return Font.CR_GOLD;
 		default: return Font.CR_WHITE;
 		}
@@ -2087,9 +3367,11 @@ class TuinRPGHandler : EventHandler
 		if (affixFlags & WEAPON_AFFIX_HASTE) adjective = "Swift";
 		else if (affixFlags & WEAPON_AFFIX_POWER) adjective = "Brutal";
 		else if (affixFlags & WEAPON_AFFIX_LEECH) adjective = "Vampiric";
-		else if (affixFlags & WEAPON_AFFIX_EXECUTION) adjective = "Executioner's";
+		else if (affixFlags & WEAPON_AFFIX_EXECUTION) adjective = ClassesEnabled() ? "Executioner's" : "Finishing";
 		else if (affixFlags & WEAPON_AFFIX_PROSPERITY) adjective = "Prosperous";
 		else if (affixFlags & WEAPON_AFFIX_CRITICAL) adjective = "Keen";
+		int trait = !ClassesEnabled() ? TuinWeaponTraits.Nth(affixFlags, 0) : -1;
+		if (trait >= 0) adjective = TuinWeaponTraits.NameOf(trait);
 		return String.Format("%s %s", adjective, WeaponBaseName(weaponType));
 	}
 
@@ -2124,6 +3406,8 @@ class TuinRPGHandler : EventHandler
 		Weapon activeWeapon = null)
 	{
 		if (!data) return 0.0;
+		if (!activeWeapon && data.Owner && data.Owner.player) activeWeapon = data.Owner.player.ReadyWeapon;
+		if (WeaponFamily(activeWeapon) == 8 && HasWeaponPerk(data, 8)) return 25.0;
 		double chance = 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 +
 			RogueCriticalBonus(data, activeWeapon);
 		if (variantIndex >= 0 && variantIndex < data.WeaponVariantCount)
@@ -2136,7 +3420,7 @@ class TuinRPGHandler : EventHandler
 	clearscope static double RogueCriticalBonus(TuinPlayerData data, Weapon activeWeapon = null)
 	{
 		return data && data.PlayerClass == 5 && IsNativeRogueWeapon(activeWeapon) ?
-			5.0 + data.PerkClassMastery * 2.0 : 0.0;
+			5.0 + data.PerkClassMastery * 5.0 : 0.0;
 	}
 
 	clearscope static bool IsGrenadeDamage(Actor inflictor, Name damageType)
@@ -2276,6 +3560,26 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
+	clearscope static double NativeBossResistance(Actor victim, Actor inflictor, Actor source, Name damageType)
+	{
+		if(!victim || !(victim is 'Cyberdemon' || victim is 'SpiderMastermind')) return 1.;
+		if(!ClassesEnabled())
+		{
+			string typeName=String.Format("%s",damageType).MakeLower();
+			string projectileName=inflictor?String.Format("%s",inflictor.GetClassName()).MakeLower():"";
+			// Despite its name, ID24IncineratorProjectile is the Calamity Blade's heatwave.
+			if((inflictor && inflictor is 'ID24IncineratorProjectile') ||
+				projectileName.IndexOf("calamity")>=0 || typeName.IndexOf("calamity")>=0 ||
+				projectileName.IndexOf("heatwave")>=0) return .25;
+			// Burn ticks are fire, not a second rocket hit. Never infer delayed hits from ReadyWeapon.
+			if(typeName=="tuinrocketburn" || typeName=="tuinhellfireburn" ||
+				typeName=="tuinshotgunburn" || typeName=="tuinwildfire") return .65;
+			if((inflictor && inflictor is 'Rocket') || IsPlayerRocketDamage(inflictor,damageType) ||
+				(!IsGrenadeDamage(inflictor,damageType) && projectileName.IndexOf("rocket")>=0)) return .5;
+			if(damageType=='Fire' || (inflictor && inflictor is 'ID24IncineratorFlame')) return .65;
+		}
+		return IsBFGDamage(inflictor,source,damageType)?.25:1.;
+	}
 	clearscope static bool IsBFGDamage(Actor inflictor, Actor source, Name damageType)
 	{
 		string typeName = String.Format("%s", damageType).MakeLower();
@@ -2340,9 +3644,10 @@ class TuinRPGHandler : EventHandler
 		return ready ? data.FindEquippedVariant((class<Weapon>)(ready.GetClass())) : -1;
 	}
 
-	int RollWeaponQuality(int monsterRarity)
+	int RollWeaponQuality(int monsterRarity, TuinPlayerData finder = null)
 	{
 		double roll = FRandom[TuinRPGLoot](0.0, 100.0);
+		roll /= 1.0 + TuinWeaponTraits.Strength(finder, 14) * 0.04;
 		double mythic = 0.25 * (1.0 + monsterRarity * 1.40);
 		double legendary = 1.00 * (1.0 + monsterRarity * 1.00);
 		double elite = 3.00 * (1.0 + monsterRarity * 0.80);
@@ -2397,6 +3702,8 @@ class TuinRPGHandler : EventHandler
 	void RollWeaponAffixes(TuinWeaponDrop lootDrop, int itemLevel, int quality)
 	{
 		if (!lootDrop) return;
+		if (!ClassesEnabled()) lootDrop.AffixFlags = TuinWeaponTraits.Roll(
+			lootDrop.AffixFlags, quality, Random[TuinTraitRoll](0, 1000000), lootDrop.WeaponType);
 		int affixCount = quality == 1 ? 1 : quality <= 3 ? 2 : quality == 4 ? 3 : 4;
 		for (int i = 0; i < affixCount; i++)
 		{
@@ -2428,6 +3735,36 @@ class TuinRPGHandler : EventHandler
 		return choices.Size() ? choices[Random[TuinRPGLoot](0, choices.Size() - 1)] : null;
 	}
 
+	class<Weapon> PickDropWeapon(Actor pawn)
+	{
+		if(ClassesEnabled()) return PickOwnedWeapon(pawn);
+		Array<class<Weapon> > choices;
+		class<Weapon> baseTypes[9]={'Fist','Chainsaw','Pistol','Shotgun','SuperShotgun',
+			'Chaingun','RocketLauncher','PlasmaRifle','BFG9000'};
+		for(int i=0;i<9;i++)
+		{
+			// Check actual resources, not the map name: Doom II maps can be named E1M1 too.
+			if(baseTypes[i]=='SuperShotgun' && !TexMan.CheckForTexture("SHT2A0",TexMan.Type_Any).IsValid()) continue;
+			class<Weapon> candidate=(class<Weapon>)(Actor.GetReplacement(baseTypes[i]));
+			if(!candidate) continue; // Never bypass a mod's non-weapon replacement.
+			readonly<Weapon> def=GetDefaultByType(candidate);
+			if(def.bPowered_Up) continue;
+			bool duplicate=false;
+			for(int j=0;j<choices.Size();j++) if(choices[j]==candidate) duplicate=true;
+			if(!duplicate) choices.Push(candidate);
+		}
+		// Retain mod-specific extras once discovered, without enumerating hidden/internal weapon classes.
+		if(pawn) for(Inventory item=pawn.Inv;item;item=item.Inv)
+		{
+			let weapon=Weapon(item);
+			if(!weapon || weapon.Amount<=0 || weapon.bPowered_Up) continue;
+			class<Weapon> candidate=(class<Weapon>)(weapon.GetClass());
+			bool duplicate=false;
+			for(int j=0;j<choices.Size();j++) if(choices[j]==candidate) duplicate=true;
+			if(!duplicate) choices.Push(candidate);
+		}
+		return choices.Size()?choices[Random[TuinRPGLoot](0,choices.Size()-1)]:null;
+	}
 	class<Weapon> PickClassRewardWeapon(Actor pawn, TuinPlayerData playerData)
 	{
 		if (!pawn || !playerData) return null;
@@ -2443,9 +3780,10 @@ class TuinRPGHandler : EventHandler
 
 	TuinWeaponDrop SpawnRolledWeaponDrop(Vector3 position, class<Weapon> weaponType, int itemLevel, int quality)
 	{
+		weaponType = TuinRustSupport.Resolve(weaponType);
 		if (!weaponType) return null;
 		class<Weapon> shotgunType = (class<Weapon>)(Actor.GetReplacement('Shotgun'));
-		if ((weaponType == 'Shotgun' || weaponType == shotgunType) &&
+		if (ClassesEnabled() && (weaponType == 'Shotgun' || weaponType == shotgunType) &&
 			FRandom[TuinRPGLoot](0.0, 100.0) < clamp(CVFloat('tuin_riot_shotgun_chance', 8.0), 0.0, 100.0))
 		{
 			weaponType = (class<Weapon>)(FindClass('TuinRiotShotgun', 'Weapon'));
@@ -2459,7 +3797,19 @@ class TuinRPGHandler : EventHandler
 		RollWeaponAffixes(lootDrop, itemLevel, quality);
 		lootDrop.DisplayName = WeaponVariantName(weaponType, lootDrop.AffixFlags, quality, lootDrop.VariantID);
 		lootDrop.ConfigureVisuals();
+		AnnounceWeaponDrop(lootDrop);
 		return lootDrop;
+	}
+
+	void ReleaseBossChestReward(TuinBossRewardChest chest)
+	{
+		if (!chest || !chest.RewardWeapon) return;
+		let reward = SpawnRolledWeaponDrop(chest.Pos + (0, 0, 42),
+			chest.RewardWeapon, chest.RewardLevel, chest.RewardQuality);
+		if (!reward) return;
+		reward.Vel = (0, 0, 7.0);
+		reward.NudgeCooldown = 18;
+		chest.A_StartSound("misc/secret", CHAN_ITEM, 0, 0.8);
 	}
 
 	TuinWeaponDrop SpawnLeadSpitterDrop(Vector3 position)
@@ -2474,6 +3824,8 @@ class TuinRPGHandler : EventHandler
 		lootDrop.Quality = TUIN_LEAD_SPITTER_QUALITY;
 		lootDrop.AffixFlags = WEAPON_AFFIX_HASTE | WEAPON_AFFIX_POWER | WEAPON_AFFIX_LEECH |
 			WEAPON_AFFIX_EXECUTION | WEAPON_AFFIX_PROSPERITY | WEAPON_AFFIX_CRITICAL;
+		lootDrop.AffixFlags = TuinWeaponTraits.Roll(lootDrop.AffixFlags,
+			lootDrop.Quality, lootDrop.VariantID, lootDrop.WeaponType);
 		lootDrop.HastePercent = 75;
 		lootDrop.PowerPercent = 75;
 		lootDrop.LeechPercent = 75;
@@ -2585,6 +3937,7 @@ class TuinRPGHandler : EventHandler
 
 	void ApplyLateStartCatchup(int playerNumber)
 	{
+        if(TuinRun.Active())return;
 		let data = EnsurePlayerData(playerNumber);
 		Actor pawn = playerNumber >= 0 && playerNumber < TUIN_MAX_PLAYERS ? players[playerNumber].mo : null;
 		if (!data || !pawn) return;
@@ -2618,12 +3971,15 @@ class TuinRPGHandler : EventHandler
 			return;
 
 		int oldLevel = max(1, data.PlayerLevel);
+		int catchupPerks = 0;
 		for (int newLevel = oldLevel + 1; newLevel <= targetLevel; newLevel++)
 		{
 			data.UnspentStatPoints++;
 			data.UnspentSkillPoints += PerkPointsAtLevel(newLevel);
+			catchupPerks += PerkPointsAtLevel(newLevel);
 		}
 		data.PlayerLevel = targetLevel;
+		AnnouncePoints(playerNumber, targetLevel - oldLevel, catchupPerks, 0);
 		data.CurrentXP = 0;
 		SpawnCatchupWeaponChoices(pawn, targetLevel);
 		SetLootNotification(playerNumber, String.Format("LATE-START CATCH-UP: LEVEL %d, +%d STAT POINTS, 3 RARE+ WEAPONS",
@@ -2735,7 +4091,15 @@ class TuinRPGHandler : EventHandler
 		pp.Stamina += delta;
 		data.AppliedLifeEssenceOverhealth = desired;
 		if (drainHealth && delta < 0 && pawn.Health > 0)
-			pawn.A_SetHealth(max(1, pawn.Health + delta));
+		{
+			// Expiring temporary health is allowed to return a healthy marine to
+			// 100, but it must never turn the timer itself into real damage. If the
+			// player was already below that floor, preserve their current health.
+			int decayFloor = min(100, pawn.GetMaxHealth(true));
+			int targetHealth = pawn.Health >= decayFloor ?
+				max(decayFloor, pawn.Health + delta) : pawn.Health;
+			pawn.A_SetHealth(max(1, targetHealth));
+		}
 		if (pawn.Health > pawn.GetMaxHealth(true)) pawn.A_SetHealth(pawn.GetMaxHealth(true));
 	}
 
@@ -2747,7 +4111,10 @@ class TuinRPGHandler : EventHandler
 		data.LifeEssenceHealingRemainder = 0.0;
 		data.LifeEssenceHealingTics = 0;
 		data.LifeEssenceOverhealth += 30.0;
-		data.LifeEssenceDecayClock = 35;
+		// A fresh orb refreshes the complete temporary-health pool back to the
+		// gentle opening stage before its decay begins accelerating again.
+		data.LifeEssenceDecayAgeTics = 0;
+		data.LifeEssenceDecayClock = 0;
 		SynchronizeLifeEssenceOverhealth(pawn, data, false);
 		pawn.A_SetHealth(min(pawn.GetMaxHealth(true), pawn.Health + 30));
 	}
@@ -2764,14 +4131,20 @@ class TuinRPGHandler : EventHandler
 	{
 		if (!pawn || !data) return;
 		SynchronizeLifeEssenceOverhealth(pawn, data, false);
-		if (data.LifeEssenceOverhealth <= 0.0) return;
-		if (data.LifeEssenceDecayClock > 0)
+		if (data.LifeEssenceOverhealth <= 0.0)
 		{
-			data.LifeEssenceDecayClock--;
+			data.LifeEssenceDecayAgeTics = 0;
+			data.LifeEssenceDecayClock = 0;
 			return;
 		}
-		data.LifeEssenceDecayClock = 35;
-		data.LifeEssenceOverhealth = max(0.0, data.LifeEssenceOverhealth - 1.0);
+		int ageSeconds = data.LifeEssenceDecayAgeTics / 35;
+		double decayPerSecond = ageSeconds < 5 ? 1.0 :
+			ageSeconds < 10 ? 2.0 :
+			ageSeconds < 15 ? 4.0 :
+			ageSeconds < 20 ? 8.0 : 16.0;
+		data.LifeEssenceDecayAgeTics++;
+		data.LifeEssenceOverhealth = max(0.0,
+			data.LifeEssenceOverhealth - decayPerSecond / 35.0);
 		SynchronizeLifeEssenceOverhealth(pawn, data, true);
 		if ((level.Time % 7) == 0 && pawn.Health > 0)
 			pawn.A_SpawnParticle(Color(70, 255, 125), SPF_FULLBRIGHT | SPF_FACECAMERA,
@@ -2858,6 +4231,10 @@ class TuinRPGHandler : EventHandler
 
 	ui string JohnMilestoneQuote(int quote)
 	{
+		// Keep role advice entirely out of the compatibility edition, even if an
+		// old save or a manually sent test event supplies one of these indices.
+		if (!ClassesEnabled() && quote >= 29 && quote <= 42)
+			return "Use the universal perks to shape the build around your weapon mod.";
 		switch (quote)
 		{
 		case 0: return "Keep moving. A still marine is an easy target.";
@@ -2916,8 +4293,16 @@ class TuinRPGHandler : EventHandler
 	void StartJohnMilestoneComment(int playerNumber, int percent, int forcedQuote = -1)
 	{
 		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS) return;
-		JohnCommentQuote[playerNumber] = forcedQuote >= 0 ? clamp(forcedQuote, 0, 49) :
-			Random[TuinJohnMilestones](0, 49);
+		if (forcedQuote >= 0)
+			JohnCommentQuote[playerNumber] = clamp(forcedQuote, 0, 49);
+		else if (!ClassesEnabled())
+		{
+			// Quotes 29-42 discuss the six classes and their abilities. The
+			// compatibility edition samples only the general gameplay remarks.
+			int generalQuote = Random[TuinJohnMilestones](0, 35);
+			JohnCommentQuote[playerNumber] = generalQuote <= 28 ? generalQuote : generalQuote + 14;
+		}
+		else JohnCommentQuote[playerNumber] = Random[TuinJohnMilestones](0, 49);
 		JohnCommentPercent[playerNumber] = percent;
 		JohnCommentTics[playerNumber] = 245;
 		// This is a screen-local UI event, so use the engine's direct sound route.
@@ -2952,7 +4337,7 @@ class TuinRPGHandler : EventHandler
 		case 0: return "John: You made it. Spend those coins before the exit.";
 		case 1: return "John: Monsters hoard everything. Lucky for you, I sell it back.";
 		case 2: return "John: Need shells, armor, or something louder?";
-		case 3: return "John: That Boss looks expensive. Make sure it pays for the trouble.";
+		case 3: return "John: That boss looks tough. Gear up before you take it on.";
 		case 4: return "John: Browse with the arrow keys. Enter buys. Simple.";
 		default: return "John: Welcome, survivor. No refunds after teleporting.";
 		}
@@ -3101,6 +4486,7 @@ class TuinRPGHandler : EventHandler
 		}
 		if (JohnMerchant)
 		{
+			AnnounceMilestone(true);
 			for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
 				if (playerInGame[playerNumber] && players[playerNumber].mo)
 					SetLootNotification(playerNumber, "JOHN HAS ARRIVED - PRESS USE [E] TO TRADE", 0);
@@ -3121,7 +4507,9 @@ class TuinRPGHandler : EventHandler
 		let coins = Inventory(pawn.FindInventory('TuinCoinPickup'));
 		if (!coins)
 		{
+			BootstrappingCoinStack=true;
 			pawn.GiveInventory('TuinCoinPickup', 1);
+			BootstrappingCoinStack=false;
 			coins = Inventory(pawn.FindInventory('TuinCoinPickup'));
 			if (coins)
 			{
@@ -3131,7 +4519,12 @@ class TuinRPGHandler : EventHandler
 				coins.A_RemoveLight('TuinCoinGlow');
 			}
 		}
-		if (coins) coins.Amount = min(coins.MaxAmount, coins.Amount + amount);
+		if (coins)
+		{
+			int previous=coins.Amount;
+			coins.Amount = min(coins.MaxAmount, coins.Amount + amount);
+			RecordCoinMilestone(pawn,coins.Amount-previous);
+		}
 	}
 
 	int RefillAmmo(Actor pawn, bool fullRefill)
@@ -3334,24 +4727,49 @@ class TuinRPGHandler : EventHandler
 		// Half of a Rogue's successful weapon-drop rolls stay class-relevant.
 		// The drop remains a shared world object, so multiplayer pickup rules
 		// still let another Rogue claim it without a non-Rogue consuming it.
-		if (colossalGodly)
+		if (!ClassesEnabled())
+			weaponType = PickDropWeapon(players[playerNumber].mo);
+		else if (colossalGodly)
 			weaponType = PickClassRewardWeapon(players[playerNumber].mo, playerData);
 		else if (playerData && playerData.PlayerClass == 5 && Random[TuinRPGLoot](0, 1) == 0)
 			weaponType = RandomRogueWeaponType();
 		else
 			weaponType = PickOwnedWeapon(players[playerNumber].mo);
+		class<Weapon> rustReward = TuinRustSupport.Discovery(monsterData.MonsterRarity,
+			FRandom[TuinRustLoot](0.0, 100.0));
+		if (rustReward) weaponType = rustReward;
 		if (!weaponType) return;
 		int itemLevel = clamp(monsterData.MonsterLevel + Random[TuinRPGLoot](-2, 2), 1, max(1, CVInt('tuin_monster_max_level', 40)));
 		int quality = colossalGodly || nativeBossGodly ? 6 : monsterData.MonsterRarity >= 6 ?
-			RollBossWeaponQuality(trueFinale) : RollWeaponQuality(monsterData.MonsterRarity);
+			RollBossWeaponQuality(trueFinale) : RollWeaponQuality(monsterData.MonsterRarity, playerData);
 		if (!colossalGodly && scaledMaximum >= 5000 && quality < 5 &&
 			FRandom[TuinRPGLoot](0.0, 100.0) < 15.0 + colossalProgress * 35.0)
 			quality = 5;
+		if (monsterData.MonsterRarity >= 6)
+		{
+			class<Actor> chestClass = CVInt('tuin_boss_chest_style', 0) == 1 ?
+				'TuinBossRewardChestMinecraft' : 'TuinBossRewardChest';
+			let chest = TuinBossRewardChest(Actor.Spawn(chestClass,
+				(corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 2.0), NO_REPLACE));
+			if (chest)
+			{
+				chest.Angle = chest.AngleTo(players[playerNumber].mo, true);
+				chest.RewardWeapon = weaponType;
+				chest.RewardLevel = itemLevel;
+				chest.RewardQuality = quality;
+				chest.PushNearbyBodies();
+				for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+					if (playerInGame[i] && players[i].mo)
+						SetLootNotification(i, "BOSS CHEST DROPPED - PRESS USE TO OPEN", 5);
+				return;
+			}
+		}
 		SpawnRolledWeaponDrop((corpse.Pos.x, corpse.Pos.y, corpse.FloorZ + 8.0), weaponType, itemLevel, quality);
 	}
 
 	int RollRarity()
 	{
+        if(TuinRun.Active())return TuinRun.RarityForRoll(TuinRun.Stage(),FRandom[TuinRunRarity](0.,100.));
 		if (!CVInt('tuin_rarity_enabled', 1)) return 0;
 		double chanceFactor = DifficultyRarityChanceFactor();
 		double mythic = max(0.0, CVFloat('tuin_rarity_mythic_chance', 0.50)) * chanceFactor;
@@ -3385,7 +4803,7 @@ class TuinRPGHandler : EventHandler
 		case 6: multiplier = 6.00; break;
 		default: multiplier = 1.00; break;
 		}
-		return ScaleHealthPower(multiplier);
+		return ScaleHealthPower(multiplier) * WhiteCatchupBonus(rarity, false, CatchupPlayerLevel()) * (1.+TuinRun.Stage()*.08);
 	}
 
 	clearscope static double RarityDamageMultiplier(int rarity)
@@ -3401,7 +4819,7 @@ class TuinRPGHandler : EventHandler
 		case 6: multiplier = 2.50; break;
 		default: multiplier = 1.00; break;
 		}
-		return ScaleDamagePower(multiplier);
+		return ScaleDamagePower(multiplier) * WhiteCatchupBonus(rarity, true, CatchupPlayerLevel()) * (1.+TuinRun.Stage()*.04);
 	}
 
 	clearscope static double RarityXPMultiplier(int rarity)
@@ -3739,6 +5157,28 @@ class TuinRPGHandler : EventHandler
 		return true;
 	}
 
+	bool TryOpenBossChest(int playerNumber)
+	{
+		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS || !playerInGame[playerNumber]) return false;
+		Actor pawn = players[playerNumber].mo;
+		if (!pawn || pawn.Health <= 0) return false;
+		TuinBossRewardChest nearestChest;
+		double nearestDistance = 96.0;
+		ThinkerIterator iterator = ThinkerIterator.Create('TuinBossRewardChest');
+		TuinBossRewardChest chest;
+		while (chest = TuinBossRewardChest(iterator.Next()))
+		{
+			if (chest.Opened) continue;
+			double distance = pawn.Distance3D(chest);
+			if (distance > nearestDistance || !pawn.CheckSight(chest)) continue;
+			if (distance > 36.0 &&
+				abs(Actor.deltaangle(pawn.Angle, pawn.AngleTo(chest, true))) > 55.0) continue;
+			nearestChest = chest;
+			nearestDistance = distance;
+		}
+		return nearestChest && nearestChest.Used(pawn);
+	}
+
 	bool TryOpenJohnShop(int playerNumber)
 	{
 		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS || !playerInGame[playerNumber]) return false;
@@ -3809,6 +5249,8 @@ class TuinRPGHandler : EventHandler
 		candidate.A_SetHealth(data.ScaledMaxHealth);
 		data.UpdateRarityGlow();
 		FinaleBoss = candidate;
+		if (announce && !ClassesEnabled())
+			BossArrivalBannerStart = NextBannerSlot();
 
 		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
 		{
@@ -4012,11 +5454,13 @@ class TuinRPGHandler : EventHandler
 		if (data.AffixFlags & TuinMonsterData.AFFIX_EXPLOSIVE) result.AppendFormat("%sEXPLOSIVE", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_VAMPIRIC) result.AppendFormat("%sVAMPIRIC", result.Length() ? "  |  " : "");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_POISONOUS) result.AppendFormat("%sPOISONOUS", result.Length() ? "  |  " : "");
-		if (data.AffixFlags & TuinMonsterData.AFFIX_HEALER) result.AppendFormat("%sHEALER", result.Length() ? "  |  " : "");
+		if (data.AffixFlags & TuinMonsterData.AFFIX_HEALER)
+			result.AppendFormat("%s%s", result.Length() ? "  |  " : "", ClassesEnabled() ? "HEALER" : "SUPPORT");
 		if (data.AffixFlags & TuinMonsterData.AFFIX_WARDING) result.AppendFormat("%sWARDING", result.Length() ? "  |  " : "");
 		else if (data.WardTics > 0) result.AppendFormat("%sWARDED", result.Length() ? "  |  " : "");
 		if (data.Owner && (data.Owner is 'Cyberdemon' || data.Owner is 'SpiderMastermind'))
-			result.AppendFormat("%sBFG RESIST 75%%", result.Length() ? "  |  " : "");
+			result.AppendFormat("%s%s", result.Length() ? "  |  " : "", ClassesEnabled() ? "BFG RESIST 75%" :
+				"BFG 75% | ROCKET 50% | CALAMITY 75% | FIRE 35% RESIST");
 		if (data.BleedPulsesRemaining > 0) result.AppendFormat("%sBLEEDING", result.Length() ? "  |  " : "");
 		if (data.RoguePoisonPulsesRemaining > 0) result.AppendFormat("%sVENOMED", result.Length() ? "  |  " : "");
 		return result;
@@ -4042,6 +5486,8 @@ class TuinRPGHandler : EventHandler
 		data.DamageMultiplier = damageMultiplier;
 		data.UniqueID = NextMonsterID;
 		data.LastPlayerNumber = -1;
+		data.LastRogueKnifePlayer = -1;
+		data.LastRogueKnifeDamageTime = -1;
 		data.XPValue = max(1, int((5.0 + sqrt(originalHealth) * 2.5) * (1.0 + (monsterLevel - 1) * 0.08) * RarityXPMultiplier(rarity) + 0.5));
 		data.GeneratedName = rarity > 0 ? GenerateMonsterName(mo, rarity) : mo.GetTag(mo.GetClassName());
 		data.AffixFlags = RollOrdinaryMonsterAffixes(originalHealth, rarity);
@@ -4080,6 +5526,7 @@ class TuinRPGHandler : EventHandler
 		double healthFraction = clamp(double(mo.Health) / max(1, data.ScaledMaxHealth), 0.0, 1.0);
 		monsterLevel = clamp(monsterLevel, max(1, CVInt('tuin_monster_min_level', 1)),
 			max(1, CVInt('tuin_monster_max_level', 40)));
+		monsterLevel = min(max(1, CVInt('tuin_monster_max_level', 40)), WhiteLevelFloor(monsterLevel, rarity, CatchupPlayerLevel()));
 		double healthMultiplier = (1.0 + (monsterLevel - 1) * max(0.0,
 			CVFloat('tuin_health_scale', 0.05))) * RarityHealthMultiplier(rarity);
 		double damageMultiplier = (1.0 + (monsterLevel - 1) * max(0.0,
@@ -4202,6 +5649,16 @@ class TuinRPGHandler : EventHandler
 		int targetLevel = max(data.MonsterLevel, RollMonsterLevel(targetRarity) + (assassin ? 2 : 1));
 		ApplyOrdinaryMonsterScale(monster, data, targetLevel, targetRarity, true);
 		if (assassin) data.GeneratedName = String.Format("%s THE TRAIL ASSASSIN", PickLegendaryName()).MakeUpper();
+		if (!ClassesEnabled())
+		{
+			// Coalesce a burst of promotions into one latest-target announcement.
+			PromotionBannerStart = 0;
+			PromotionBannerStart = NextBannerSlot();
+			PromotionBannerTitle = assassin ? "HELL HAS YOUR SCENT" :
+				targetRarity >= 5 ? "A NIGHTMARE ASCENDS" :
+				targetRarity == 4 ? "HELL CROWNS A CHAMPION" : "A NEW THREAT AWAKENS";
+			PromotionBannerDetail = data.GeneratedName.MakeUpper() .. " - EMPOWERED";
+		}
 		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
 		{
 			if (!playerInGame[playerNumber] || !players[playerNumber].mo) continue;
@@ -4266,6 +5723,88 @@ class TuinRPGHandler : EventHandler
 		return true;
 	}
 
+	clearscope static int PressureRarity(int roll)
+	{
+		return roll < 70 ? 2 : roll < 90 ? 3 : roll < 98 ? 4 : 5;
+	}
+	void RecordPressureDamage(int playerNumber, int amount)
+	{
+		if (playerNumber < 0 || playerNumber >= 8 || PressureStart[playerNumber] == 0) return;
+		PressureDamage[playerNumber] += max(0, amount);
+		if (PressureDamage[playerNumber] > 15)
+			PressureKills[playerNumber] = PressureDamage[playerNumber] = PressureStart[playerNumber] = 0;
+	}
+	bool TrySpawnPressureReinforcement(int playerNumber, Actor corpse, int rarity)
+	{
+		Actor pawn=players[playerNumber].mo;
+		if(!pawn || pawn.Health<=0 || (PressureReinforcement && PressureReinforcement.Health>0)) return false;
+		// Reuse fought ground; validate space and distance from every player.
+		ThinkerIterator bodies=ThinkerIterator.Create('Actor');
+		Actor anchor=corpse;
+		int attempts=0;
+		while(anchor && attempts<16)
+		{
+			if(anchor.Health<=0 && anchor.bCORPSE && abs(anchor.Pos.Z-anchor.FloorZ)<8 &&
+				pawn.Distance3D(anchor)>=256 && pawn.Distance3D(anchor)<=1024 && pawn.CheckSight(anchor))
+			{
+				bool safe=true;
+				for(int i=0;i<8;i++)
+					if(playerInGame[i] && players[i].mo && players[i].mo.Distance3D(anchor)<256) safe=false;
+				if(safe)
+				{
+					attempts++;
+					class<Actor> kind=rarity>=4?'Revenant':rarity==3?'Demon':'DoomImp';
+					Actor reinforcement=Actor.Spawn(kind,anchor.Pos,ALLOW_REPLACE);
+					if(reinforcement)
+					{
+						reinforcement.ClearCounters();
+						if(reinforcement.TestMobjLocation() && !reinforcement.bFRIENDLY)
+						{
+							if(!GetMonsterData(reinforcement)) InitializeMonster(reinforcement);
+							let data=GetMonsterData(reinforcement);
+							if(data)
+							{
+								ApplyOrdinaryMonsterScale(reinforcement,data,RollMonsterLevel(rarity),rarity,true);
+								PressureReinforcement=reinforcement;
+								reinforcement.bDORMANT=false;
+								reinforcement.bAMBUSH=false;
+								reinforcement.Target=pawn;
+								if(reinforcement.SeeState) reinforcement.SetState(reinforcement.SeeState);
+								Actor.Spawn('TeleportFog',reinforcement.Pos,ALLOW_REPLACE);
+								PromotionBannerStart=0;
+								PromotionBannerStart=NextBannerSlot();
+								PromotionBannerTitle=rarity>=5?"HELL SENDS ITS ANSWER":rarity>=4?"A CHAMPION ENTERS THE HUNT":"HELL WON'T LET YOU COAST";
+								PromotionBannerDetail=RarityName(rarity).." REINFORCEMENT - "..data.GeneratedName.MakeUpper();
+								return true;
+							}
+						}
+						reinforcement.Destroy();
+					}
+				}
+			}
+			anchor=Actor(bodies.Next());
+		}
+		return false;
+	}
+	void RecordPressureKill(int playerNumber, Actor corpse, TuinMonsterData data)
+	{
+		if(ClassesEnabled() || !CVInt('tuin_director_enabled',1) || !CVInt('tuin_rarity_enabled',1) ||
+			playerNumber<0 || playerNumber>=8 || !data || data.MonsterRarity!=0 || !corpse || !corpse.bCOUNTKILL || corpse.bFRIENDLY) return;
+		let playerData=GetPlayerData(players[playerNumber].mo);
+		if(!playerData || playerData.PlayerLevel<20 || !players[playerNumber].mo || players[playerNumber].mo.Health<=0) return;
+		if(level.Time<PressureNextTime || (PressureReinforcement && PressureReinforcement.Health>0)) return;
+		if(PressureStart[playerNumber]==0 || level.Time-(PressureStart[playerNumber]-1)>180*35)
+		{
+			PressureKills[playerNumber]=PressureDamage[playerNumber]=0;
+			PressureStart[playerNumber]=level.Time+1;
+		}
+		if(++PressureKills[playerNumber]<8) return;
+		PressureKills[playerNumber]=PressureDamage[playerNumber]=PressureStart[playerNumber]=0;
+		// Failed rolls also cool down. Do not prolong an almost-cleared map.
+		PressureNextTime=level.Time+90*35;
+		if(level.total_monsters-level.killed_monsters<=3 || Random[TuinRPGPressure](0,99)>=50) return;
+		TrySpawnPressureReinforcement(playerNumber,corpse,PressureRarity(Random[TuinRPGPressure](0,99)));
+	}
 	bool TrySpawnDirectorAssassin()
 	{
 		int chosenPlayer = -1;
@@ -4536,7 +6075,7 @@ class TuinRPGHandler : EventHandler
 		if (candidate) UpgradeDirectorMonster(candidate, targetRarity);
 	}
 
-	void RerollLivingMonsters(int requestingPlayer)
+	void RerollLivingMonsters(int requestingPlayer,bool preserveBosses=false)
 	{
 		int count = 0;
 		ThinkerIterator it = ThinkerIterator.Create('Actor');
@@ -4544,7 +6083,7 @@ class TuinRPGHandler : EventHandler
 		while (mo = Actor(it.Next()))
 		{
 			let data = GetMonsterData(mo);
-			if (IsValidMonster(mo) && data)
+			if (IsValidMonster(mo) && data && (!preserveBosses || data.MonsterRarity<6))
 			{
 				RerollMonster(mo, data);
 				count++;
@@ -4780,15 +6319,44 @@ class TuinRPGHandler : EventHandler
 		MigrateScalingDefaults();
 	}
 
+	override void WorldUnloaded(WorldEvent e)
+	{
+		if(Run)Run.Unloaded(e);
+	}
 	override void WorldLoaded(WorldEvent e)
 	{
+        EnsureRun();
+        if(Run && !e.IsSaveGame)Run.Bootstrapping=false;
+        if(Run)Run.Loaded(e);
+        if(!e.IsSaveGame)
+        {
+            FullHealthCheckTime=0;FullHealthCheckDone=false;FullHealthReinforcement=null;
+        }
+        ScheduleFullHealthCheck();
+        EnsureLocator();
+        if (Locator) Locator.Loaded(e);
 		for (int playerNumber = 0; playerNumber < TUIN_MAX_PLAYERS; playerNumber++)
 			InitialClassMenuRequested[playerNumber] = false;
 		if (!e.IsSaveGame)
 		{
+			for(int i=0;i<3;i++) { CompletionAnnounced[i]=false; CompletionBannerStart[i]=0; }
+			for(int i=0;i<8;i++) CoinBannerStart[i]=CoinBannerAmount[i]=0;
+			PressureNextTime=0;
+			PressureReinforcement=null;
+			for(int i=0;i<8;i++) PressureKills[i]=PressureDamage[i]=PressureStart[i]=0;
 			FinaleBossPromoted = false;
 			FinaleBoss = null;
 			JohnMerchant = null;
+			BossBannerStart = JohnBannerStart = BossArrivalBannerStart = 0;
+			PromotionBannerStart = 0;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++) HeavyBannerStart[i] = 0;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++) WeaponBannerStart[i] = 0;
+			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
+			{
+				PointBannerStart[i] = PoisonBannerStart[i] = PoisonBannerTick[i] = 0;
+				KeySnapshotReady[i] = false;
+				KeyBannerStart[i] = KeyBannerMask[i] = KnownKeyMask[i] = 0;
+			}
 			MonsterLevelsSynchronized = false;
 			DirectorCheckpoint = 0;
 			for (int family = 0; family < 4; family++) DirectorEmergencyAmmoUsed[family] = false;
@@ -4820,6 +6388,7 @@ class TuinRPGHandler : EventHandler
 				levelData.LevelCriticalHits = 0;
 				levelData.LevelAbilityUses = 0;
 				levelData.LevelLivesUsed = 0;
+				TuinWeaponTraits.ResetMap(levelData);
 			}
 		}
 		MigrateBalanceDefaults();
@@ -4837,14 +6406,69 @@ class TuinRPGHandler : EventHandler
 	override void PlayerEntered(PlayerEvent e) { EnsurePlayerData(e.PlayerNumber); }
 	override void PlayerSpawned(PlayerEvent e) { EnsurePlayerData(e.PlayerNumber); }
 	override void PlayerRespawned(PlayerEvent e) { EnsurePlayerData(e.PlayerNumber); }
+
+	void TrackWeaponPerkProjectile(Actor projectile)
+	{
+		if (ClassesEnabled() || !projectile || !projectile.bMISSILE) return;
+		int owner = PlayerNumberFromSource(projectile.Target, projectile);
+		if (owner < 0 || owner >= TUIN_MAX_PLAYERS || !playerInGame[owner]) return;
+		let data = EnsurePlayerData(owner);
+		if (!HasWeaponPerk(data, 6) || WeaponFamily(players[owner].ReadyWeapon) != 6) return;
+		int slot = NextWeaponPerkGuidedProjectile;
+		NextWeaponPerkGuidedProjectile = (slot + 1) % TUIN_MAX_GUIDED_PROJECTILES;
+		WeaponPerkGuidedProjectile[slot] = projectile;
+		WeaponPerkGuidedOwner[slot] = owner;
+	}
+
+	void UpdateWeaponPerkProjectiles()
+	{
+		if (ClassesEnabled()) return;
+		for (int i = 0; i < TUIN_MAX_GUIDED_PROJECTILES; i++)
+		{
+			Actor projectile = WeaponPerkGuidedProjectile[i];
+			if (!projectile || !projectile.bMISSILE)
+			{
+				WeaponPerkGuidedProjectile[i] = null;
+				continue;
+			}
+			Actor best;
+			double bestDistance = 1024.0;
+			foreach (sector: level.Sectors)
+			{
+				for (Actor candidate = sector.thinglist; candidate; candidate = candidate.snext)
+				{
+					if (candidate.Health <= 0 || !candidate.bISMONSTER || candidate.bFRIENDLY) continue;
+					double distance = projectile.Distance3D(candidate);
+					if (distance >= bestDistance || !projectile.CheckSight(candidate, SF_IGNOREWATERBOUNDARY)) continue;
+					best = candidate;
+					bestDistance = distance;
+				}
+			}
+			if (!best) continue;
+			double speed = max(6.0, projectile.Vel.Length());
+			double dx = best.Pos.x - projectile.Pos.x;
+			double dy = best.Pos.y - projectile.Pos.y;
+			double dz = best.Pos.z + best.Height * 0.5 - projectile.Pos.z;
+			double length = max(0.001, sqrt(dx * dx + dy * dy + dz * dz));
+			// Strong steering still leaves a small amount of the original motion,
+			// keeping custom plasma projectiles smooth instead of snapping sideways.
+			projectile.Vel = projectile.Vel * 0.35 + (dx, dy, dz) * (speed * 0.65 / length);
+		}
+	}
+
 	override void WorldThingSpawned(WorldEvent e)
 	{
 		InitializeMonster(e.Thing);
 		ScaleSpawnedAmmo(e.Thing);
+		TrackWeaponPerkProjectile(e.Thing);
+		TuinWeaponTraits.Stamp(e.Thing);
 	}
 
 	override void CheckReplacement(ReplaceEvent e)
 	{
+        EnsureRun();
+        if(Run)Run.Replace(e);
+        if(e.IsFinal)return;
 		// E2M8 and E3M8 normally call A_BossDeath from the stock actor's final
 		// death frame, immediately ending the episode. Replace only those exact
 		// finale actors with visually identical subclasses whose death animation
@@ -4867,6 +6491,8 @@ class TuinRPGHandler : EventHandler
 		if (data)
 		{
 			data.LastPlayerNumber = -1;
+			data.LastRogueKnifePlayer = -1;
+			data.LastRogueKnifeDamageTime = -1;
 			data.BleedPulsesRemaining = 0;
 			data.BleedPlayerNumber = -1;
 			data.BleedResistanceTics = 0;
@@ -4974,6 +6600,61 @@ class TuinRPGHandler : EventHandler
 		data.BurnPulsesRemaining = 4;
 		data.BurnPlayerNumber = playerNumber;
 		data.LastPlayerNumber = playerNumber;
+	}
+
+	void ApplyWeaponPerkShotgunBurn(int playerNumber, Actor primaryVictim, int triggeringDamage)
+	{
+		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS || !primaryVictim ||
+			!players[playerNumber].mo) return;
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				let data = GetMonsterData(victim);
+				if (!data || victim.Health <= 0 || victim.bFRIENDLY ||
+					primaryVictim.Distance3D(victim) > 176.0 ||
+					!primaryVictim.CheckSight(victim, SF_IGNOREWATERBOUNDARY)) continue;
+				victim.GiveInventoryType('TuinShotgunBurn');
+				let burn = TuinShotgunBurn(victim.FindInventory('TuinShotgunBurn'));
+				if (burn) burn.Refresh(players[playerNumber].mo, triggeringDamage);
+				victim.A_SpawnParticle(Color(255, 92, 12), SPF_FULLBRIGHT | SPF_FACECAMERA,
+					18, 3.0, FRandom[TuinRPGDamage](0.0, 360.0), 0, 0, victim.Height * 0.45,
+					0, 0, 0.3, 0, 0, 0.01, 0.70, 0.04, -0.06);
+			}
+		}
+	}
+
+	void ApplyWeaponPerkSuperShotgunPierce(int playerNumber, Actor primaryVictim,
+		Actor source, Actor inflictor, int damage)
+	{
+		if (playerNumber < 0 || playerNumber >= TUIN_MAX_PLAYERS || !primaryVictim ||
+			!source || damage <= 0 || WeaponPerkPierceProcTime[playerNumber] == level.Time) return;
+		WeaponPerkPierceProcTime[playerNumber] = level.Time;
+		double dirX = primaryVictim.Pos.x - source.Pos.x;
+		double dirY = primaryVictim.Pos.y - source.Pos.y;
+		double dirLength = max(0.001, sqrt(dirX * dirX + dirY * dirY));
+		dirX /= dirLength;
+		dirY /= dirLength;
+		foreach (sector: level.Sectors)
+		{
+			for (Actor victim = sector.thinglist; victim; victim = victim.snext)
+			{
+				if (victim == primaryVictim || victim.Health <= 0 || !GetMonsterData(victim) ||
+					victim.bFRIENDLY) continue;
+				double dx = victim.Pos.x - primaryVictim.Pos.x;
+				double dy = victim.Pos.y - primaryVictim.Pos.y;
+				double forward = dx * dirX + dy * dirY;
+				if (forward <= 0.0 || forward > 512.0) continue;
+				double lateral = abs(dx * dirY - dy * dirX);
+				if (lateral > victim.Radius + 28.0 || !primaryVictim.CheckSight(victim)) continue;
+				int healthBefore = victim.Health;
+				ApplyingBonusDamage = true;
+				victim.DamageMobj(inflictor, source, damage, 'TuinWeaponPerkPierce', DMG_FORCED);
+				ApplyingBonusDamage = false;
+				int dealt = min(healthBefore, max(0, healthBefore - victim.Health));
+				if (dealt > 0) SpawnDamageNumber(playerNumber, victim, dealt, false);
+			}
+		}
 	}
 
 	void ApplyMinigunBurn(int playerNumber, TuinMonsterData data, int triggeringDamage)
@@ -5162,6 +6843,17 @@ class TuinRPGHandler : EventHandler
 	override void WorldThingDamaged(WorldEvent e)
 	{
 		if (!CVInt('tuin_enabled', 1) || !e.Thing || e.Damage <= 0) return;
+		if (!ClassesEnabled() && e.Thing.player && e.DamageType == 'Poison')
+		{
+			int poisoned = e.Thing.PlayerNumber();
+			if (poisoned >= 0 && poisoned < TUIN_MAX_PLAYERS)
+			{
+				if (PoisonBannerTick[poisoned] <= 0 || level.Time > PoisonBannerTick[poisoned] + 70)
+					PoisonBannerStart[poisoned] = level.Time + 1;
+				PoisonBannerTick[poisoned] = level.Time + 1;
+				PoisonBannerDamage[poisoned] = e.Damage;
+			}
+		}
 		int attacker = PlayerNumberFromSource(e.DamageSource, e.Inflictor);
 		let victimData = GetMonsterData(e.Thing);
 		if ((victimData || (e.Thing.bISMONSTER && !e.Thing.bFRIENDLY)) &&
@@ -5172,10 +6864,26 @@ class TuinRPGHandler : EventHandler
 			// lethal blows count correctly without counting their overkill damage.
 			if (recordData) recordData.LevelDamageDealt += min(e.Damage,
 				max(0, e.Thing.Health + e.Damage));
+			// Follow the monster the player actually struck. Secondary damage ticks
+			// and autonomous sentries must not steal the deliberate combat target.
+			if (!ApplyingBonusDamage && e.DamageType != 'TuinEngineerTurret')
+			{
+				LastHitTarget[attacker] = e.Thing;
+				LastHitTargetTics[attacker] = TUIN_LAST_HIT_TARGET_TICS;
+			}
 		}
 		if (victimData)
 		{
-			if (attacker >= 0) victimData.LastPlayerNumber = attacker;
+			if (attacker >= 0)
+			{
+				victimData.LastPlayerNumber = attacker;
+				if (!ApplyingBonusDamage && (e.DamageType == 'TuinRogueKnife' ||
+					e.Inflictor is 'TuinRogueKnifePuff'))
+				{
+					victimData.LastRogueKnifePlayer = attacker;
+					victimData.LastRogueKnifeDamageTime = level.Time;
+				}
+			}
 			// A healer under fire cannot sustain itself until it has avoided damage for two seconds.
 			victimData.HealerSelfLockTics = 70;
 		}
@@ -5184,6 +6892,7 @@ class TuinRPGHandler : EventHandler
 			int hurtPlayer = e.Thing.PlayerNumber();
 			if (hurtPlayer >= 0 && hurtPlayer < TUIN_MAX_PLAYERS)
 				DirectorDamageTaken[hurtPlayer] = min(1000000, DirectorDamageTaken[hurtPlayer] + e.Damage);
+			if (!ClassesEnabled()) RecordPressureDamage(hurtPlayer, e.Damage);
 			let hurtData = GetPlayerData(e.Thing);
 			if (hurtData) hurtData.LevelDamageTaken += min(e.Damage,
 				max(0, e.Thing.Health + e.Damage));
@@ -5204,13 +6913,14 @@ class TuinRPGHandler : EventHandler
 		}
 		double multiplier = 1.0;
 		double playerBaseDamageFactor = 1.0;
-		double targetBaseDamageFactor = 1.0;
+		double targetBaseDamageFactor = (e.DamageFlags & DMG_FORCED) ? 1.0 :
+			NativeBossResistance(e.Thing, e.Inflictor, e.DamageSource, e.DamageType);
 		bool bloodPunchAttack = e.DamageType == 'TuinBloodPunch';
-		if ((e.Thing is 'Cyberdemon' || e.Thing is 'SpiderMastermind') &&
-			IsBFGDamage(e.Inflictor, e.DamageSource, e.DamageType))
-			targetBaseDamageFactor = 0.25;
 		bool wasCritical = false;
 		bool rogueAmbushAttack = false;
+		int weaponPerkFamily;
+		bool weaponPerkDirectHit;
+		bool rocketPerkHit;
 		bool engineerTurretAttack = e.DamageType == 'TuinEngineerTurret';
 		let engineerTurret = engineerTurretAttack && e.Inflictor ?
 			TuinEngineerTurret(e.Inflictor.target) : null;
@@ -5254,6 +6964,34 @@ class TuinRPGHandler : EventHandler
 			let playerData = EnsurePlayerData(attacker);
 			if (playerData)
 			{
+				bool roguePistolBurst = ApplyingRoguePistolBurst && RoguePistolBurstPlayer == attacker &&
+					e.DamageType == 'TuinRogueSilenced';
+				Weapon attackWeapon = players[attacker].ReadyWeapon;
+				if (roguePistolBurst && players[attacker].mo)
+					attackWeapon = Weapon(players[attacker].mo.FindInventory('TuinRogueSilencedPistol'));
+				bool rogueChainStrike = ApplyingRogueChainStrike && RogueChainStrikePlayer == attacker &&
+					e.DamageType == 'TuinRogueKnife';
+				weaponPerkFamily = WeaponFamily(attackWeapon);
+				let rocketStamp = e.Inflictor ? TuinTraitProjectileStamp(e.Inflictor.FindInventory('TuinTraitProjectileStamp')) : null;
+				rocketPerkHit = !ClassesEnabled() && (rocketStamp && rocketStamp.Initialized ? rocketStamp.RocketPerk :
+					weaponPerkFamily == 8 && HasWeaponPerk(playerData, 8));
+				if (rocketPerkHit) weaponPerkFamily = 8;
+				if (IsBFGDamage(e.Inflictor, e.DamageSource, e.DamageType)) weaponPerkFamily = 7;
+				weaponPerkDirectHit = !ClassesEnabled() && victimData && attackWeapon &&
+					HasWeaponPerk(playerData, weaponPerkFamily) &&
+					!IsGrenadeDamage(e.Inflictor, e.DamageType) &&
+					e.DamageType != 'TuinBleed' && e.DamageType != 'TuinRocketBurn' &&
+					e.DamageType != 'TuinPlasmaArc' && e.DamageType != 'TuinRoguePoison' &&
+					e.DamageType != 'TuinWeaponPerkPierce';
+				if (weaponPerkDirectHit)
+				{
+					if (weaponPerkFamily == 1) multiplier *= 2.0;
+					else if (weaponPerkFamily == 2) multiplier *= 15.0;
+					else if (weaponPerkFamily == 3) playerBaseDamageFactor *= 0.85;
+					else if (weaponPerkFamily == 4) playerBaseDamageFactor *= 0.75;
+					else if (weaponPerkFamily == 5) multiplier *= 3.0;
+					else if (weaponPerkFamily == 7) playerBaseDamageFactor *= 0.25;
+				}
 				if (playerData.PlayerClass == 1) playerBaseDamageFactor = 1.0;
 				else if (playerData.PlayerClass == 2) playerBaseDamageFactor = 0.75;
 				else if (playerData.PlayerClass == 3)
@@ -5265,15 +7003,14 @@ class TuinRPGHandler : EventHandler
 				else if (playerData.PlayerClass == 4) multiplier *= 1.10;
 				else if (playerData.PlayerClass == 6 && !engineerTurretAttack)
 					playerBaseDamageFactor = 0.90;
-				bool firstAmbushHit = playerData.PlayerClass == 5 &&
+				bool firstAmbushHit = !rogueChainStrike && playerData.PlayerClass == 5 &&
 					(playerData.RogueVeiled || playerData.RogueAmbushGraceTics > 0);
 				bool rogueAmbush = firstAmbushHit ||
 					(playerData.PlayerClass == 5 && playerData.RogueAmbushHitTime == level.Time);
 				if (rogueAmbush && victimData)
 				{
 					rogueAmbushAttack = true;
-					let readyWeapon = players[attacker].ReadyWeapon;
-					bool melee = IsRogueMeleeWeapon(readyWeapon);
+					bool melee = IsRogueMeleeWeapon(attackWeapon);
 					bool knifeAmbush = e.DamageType == 'TuinRogueKnife';
 					double ambushMultiplier = knifeAmbush ? (playerData.PerkCapstone ? 16.0 : 11.0) :
 						melee ? 1.0 : (playerData.PerkCapstone ? 6.0 : 4.0);
@@ -5300,8 +7037,10 @@ class TuinRPGHandler : EventHandler
 				Actor roguePawn = players[attacker].mo;
 				bool pistolUnseen = rogueSilencedPistol && roguePawn &&
 					(rogueAmbushAttack || e.Thing.target != roguePawn);
-				bool openingCritical = pistolUnseen || rogueKnife;
-				if (openingCritical)
+				// Every ability-burst bullet is a guaranteed critical. Unlike the
+				// normal pistol opener, this must not be consumed by per-target masks.
+				bool openingCritical = rogueChainStrike || roguePistolBurst || pistolUnseen || rogueKnife;
+				if (openingCritical && !rogueChainStrike && !roguePistolBurst)
 				{
 					int playerBit = 1 << attacker;
 					int previousHits = rogueKnife ? victimData.RogueKnifeHitMask :
@@ -5320,13 +7059,13 @@ class TuinRPGHandler : EventHandler
 					e.NewDamage = max(1, int(e.Damage * playerBaseDamageFactor + 0.5));
 				multiplier *= 1.0 + playerData.Strength * 0.02;
 				int variantIndex = (bloodPunchAttack || engineerTurretAttack) ? -1 :
+					roguePistolBurst ? playerData.FindEquippedVariant('TuinRogueSilencedPistol') :
 					ActiveWeaponVariantIndex(attacker, playerData);
 				if (!wasCritical && victimData && !bloodPunchAttack &&
-					(!rogueSilencedPistol || pistolUnseen) &&
 					!IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 					FRandom[TuinRPGCritical](0.0, 100.0) <
-					TotalCriticalChance(playerData, variantIndex, players[attacker].ReadyWeapon) +
-					engineerCriticalBonus)
+					(rocketPerkHit ? 25.0 : TotalCriticalChance(playerData, variantIndex, attackWeapon) +
+					engineerCriticalBonus))
 				{
 					multiplier *= 2.0;
 					wasCritical = true;
@@ -5412,7 +7151,27 @@ class TuinRPGHandler : EventHandler
 			int effectiveBonusDamage = int(max(0, bonusDamage) * targetBaseDamageFactor + 0.5);
 			int totalDamage = baseDamage + effectiveBonusDamage;
 			SpawnDamageNumber(attacker, e.Thing, totalDamage, wasCritical);
-			if (IsPlayerRocketDamage(e.Inflictor, e.DamageType))
+			if (weaponPerkDirectHit && weaponPerkFamily == 2 && players[attacker].mo &&
+				players[attacker].mo.Health > 1)
+			{
+				Actor fistUser = players[attacker].mo;
+				int selfDamage = max(1, int(fistUser.GetMaxHealth(true) * 0.05 + 0.5));
+				ApplyingBonusDamage = true;
+				fistUser.DamageMobj(fistUser, fistUser, selfDamage, 'TuinWeaponPerkFist', DMG_FORCED);
+				ApplyingBonusDamage = false;
+			}
+			else if (weaponPerkDirectHit && weaponPerkFamily == 3)
+				ApplyWeaponPerkShotgunBurn(attacker, e.Thing, totalDamage);
+			else if (weaponPerkDirectHit && weaponPerkFamily == 4)
+				ApplyWeaponPerkSuperShotgunPierce(attacker, e.Thing, e.DamageSource,
+					e.Inflictor, max(1, totalDamage));
+			if (rocketPerkHit && wasCritical && e.Thing.Health > 0)
+			{
+				e.Thing.GiveInventoryType('TuinHellfireBurn');
+				let burn = TuinHellfireBurn(e.Thing.FindInventory('TuinHellfireBurn'));
+				if (burn) burn.AddStack(players[attacker].mo, totalDamage);
+			}
+			if (ClassesEnabled() && !rocketPerkHit && IsPlayerRocketDamage(e.Inflictor, e.DamageType))
 				ApplyRocketBurn(attacker, victimData, totalDamage,
 					RocketHitWasDirect(e.Inflictor, e.Thing));
 			else if (IsMinigunExplosiveDamage(e.Inflictor, e.DamageType))
@@ -5422,11 +7181,18 @@ class TuinRPGHandler : EventHandler
 			if (e.DamageType == 'TuinRogueBolt')
 				ApplyRoguePoison(attacker, victimData, totalDamage);
 			let attackData = EnsurePlayerData(attacker);
-			Weapon chargeWeapon = players[attacker].ReadyWeapon;
+			bool roguePistolBurst = ApplyingRoguePistolBurst && RoguePistolBurstPlayer == attacker &&
+				e.DamageType == 'TuinRogueSilenced';
+			Weapon chargeWeapon = roguePistolBurst && players[attacker].mo ?
+				Weapon(players[attacker].mo.FindInventory('TuinRogueSilencedPistol')) :
+				players[attacker].ReadyWeapon;
 			bool weaponChargeDamage = chargeWeapon && !IsGrenadeDamage(e.Inflictor, e.DamageType) &&
 				e.DamageType != 'TuinBleed' && e.DamageType != 'TuinRocketBurn' &&
 				e.DamageType != 'TuinPlasmaArc' && e.DamageType != 'TuinRoguePoison';
-			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack && weaponChargeDamage)
+			bool rogueChainStrike = ApplyingRogueChainStrike && RogueChainStrikePlayer == attacker &&
+				e.DamageType == 'TuinRogueKnife';
+			if (attackData && attackData.PlayerClass == 5 && !rogueAmbushAttack &&
+				!rogueChainStrike && weaponChargeDamage)
 			{
 				int rogueChargeDamage = min(totalDamage, max(0, victimHealthBefore));
 				if (e.DamageType == 'TuinRogueBolt') rogueChargeDamage *= 3;
@@ -5442,7 +7208,9 @@ class TuinRPGHandler : EventHandler
 					min(totalDamage, max(0, victimHealthBefore)));
 			if (attackData && attackData.PlayerClass == 4 && !bloodPunchAttack)
 				AddDoomBloodPunchCharge(attacker, attackData, min(totalDamage, max(0, victimHealthBefore)));
-			int attackVariant = attackData ? ActiveWeaponVariantIndex(attacker, attackData) : -1;
+			int attackVariant = attackData ? (roguePistolBurst ?
+				attackData.FindEquippedVariant('TuinRogueSilencedPistol') :
+				ActiveWeaponVariantIndex(attacker, attackData)) : -1;
 			bool leadSpitterCritical = attackVariant >= 0 &&
 				attackData.VariantQuality[attackVariant] == TUIN_LEAD_SPITTER_QUALITY;
 			bool rogueKnifeDamage = attackData && attackData.PlayerClass == 5 &&
@@ -5496,15 +7264,19 @@ class TuinRPGHandler : EventHandler
 		{
 			data.CurrentXP -= XPRequired(data.PlayerLevel);
 			data.PlayerLevel++;
+			if (data.PlayerLevel == 15) AnnounceHeavyMilestone(playerNumber);
 			data.UnspentStatPoints++;
 			int gainedPerks = PerkPointsAtLevel(data.PlayerLevel);
 			data.UnspentSkillPoints += gainedPerks;
+			AnnouncePoints(playerNumber, 1, gainedPerks, 0);
+			int gainedWeaponPerks = SyncWeaponPerkMilestones(data);
 			if (players[playerNumber].mo)
 			{
-				if (gainedPerks > 0)
+				if (gainedPerks > 0 || gainedWeaponPerks > 0)
 					players[playerNumber].mo.A_Log(String.Format(
-						"LEVEL UP! You are now level %d. +1 stat point, +%d perk point%s",
-						data.PlayerLevel, gainedPerks, gainedPerks == 1 ? "" : "s"));
+						"LEVEL UP! Level %d. +1 stat, +%d perk, +%d weapon perk point%s",
+						data.PlayerLevel, gainedPerks, gainedWeaponPerks,
+						gainedWeaponPerks == 1 ? "" : "s"));
 				else players[playerNumber].mo.A_Log(String.Format(
 					"LEVEL UP! You are now level %d. +1 stat point", data.PlayerLevel));
 			}
@@ -5519,13 +7291,16 @@ class TuinRPGHandler : EventHandler
 		for (int i = 0; i < amount; i++)
 		{
 			data.PlayerLevel++;
+			if (data.PlayerLevel == 15) AnnounceHeavyMilestone(playerNumber);
 			data.UnspentStatPoints++;
 			data.UnspentSkillPoints += PerkPointsAtLevel(data.PlayerLevel);
+			AnnouncePoints(playerNumber, 1, PerkPointsAtLevel(data.PlayerLevel), 0);
+			SyncWeaponPerkMilestones(data);
 		}
 		if (players[playerNumber].mo)
-			players[playerNumber].mo.A_Log(String.Format("TEST CHEAT: gained %d level%s. Now level %d with %d stat points and %d perk points.",
+			players[playerNumber].mo.A_Log(String.Format("TEST CHEAT: gained %d level%s. Now level %d with %d stat, %d perk and %d weapon perk points.",
 				amount, amount == 1 ? "" : "s", data.PlayerLevel, data.UnspentStatPoints,
-				data.UnspentSkillPoints));
+				data.UnspentSkillPoints, data.UnspentWeaponPerkPoints));
 	}
 
 	void TriggerFinalVerdict(int playerNumber, Actor corpse, TuinMonsterData corpseData,
@@ -5592,11 +7367,28 @@ class TuinRPGHandler : EventHandler
 
 	override void WorldThingDied(WorldEvent e)
 	{
+        if(e.Thing && e.Thing.player)
+        {
+            EnsureRun();
+            if(Run)Run.Finish(GetPlayerData(e.Thing));
+        }
 		let data = GetMonsterData(e.Thing);
 		if (!data) return;
+		// WorldThingDied does not populate DamageSource/DamageType in UZDoom.
+		if (data.MonsterRarity >= 6) AnnounceMilestone(false);
+		// The passive damage hook records the lethal hit before this event fires.
+		if (data.TraitKillTime == level.Time)
+			TuinWeaponTraits.Kill(data, data.TraitKillSource, data.TraitKillDamageType);
 		e.Thing.A_RemoveLight('TuinSignatureTell');
 		int killer = PlayerNumberFromSource(e.DamageSource, e.Inflictor);
 		if (killer < 0) killer = data.LastPlayerNumber;
+        if(TuinRun.Active() && killer>=0 && killer<TUIN_MAX_PLAYERS && e.Thing.bCOUNTKILL)
+        {
+            let runData=GetPlayerData(players[killer].mo);
+            if(runData && runData.RunActive && !runData.RunEnded)
+                runData.RunScore+=10+data.MonsterRarity*10;
+        }
+		RecordPressureKill(killer, e.Thing, data);
 		if (data.MonsterRarity >= 6 && killer < 0)
 		{
 			for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
@@ -5626,6 +7418,20 @@ class TuinRPGHandler : EventHandler
 			let playerData = EnsurePlayerData(killer);
 			if (playerData)
 			{
+				if (playerData.PlayerClass == 4 && playerData.DoomFatalityCooldownTics > 0 &&
+					e.DamageType != 'TuinDoomFatality')
+					playerData.DoomFatalityCooldownTics =
+						max(0, playerData.DoomFatalityCooldownTics - 5 * 35);
+				bool knifeKill = e.DamageType == 'TuinRogueKnife' ||
+					e.Inflictor is 'TuinRogueKnifePuff' ||
+					(data.LastRogueKnifePlayer == killer && data.LastRogueKnifeDamageTime == level.Time);
+				if (playerData.PlayerClass == 5 && knifeKill &&
+					!playerData.RogueChainActive)
+				{
+					playerData.RogueChainCharges = min(9, playerData.RogueChainCharges + 1);
+					SetLootNotification(killer, String.Format("CHAIN ASSASSINATION %d / 9 - PRESS B",
+						playerData.RogueChainCharges), 5);
+				}
 				if (data.MonsterRarity >= 6) playerData.LevelBossKills++;
 				else if (data.MonsterRarity >= 2) playerData.LevelEliteKills++;
 				if (playerData.PlayerClass == 6)
@@ -5641,6 +7447,7 @@ class TuinRPGHandler : EventHandler
 				xpAward = int(xpAward * (1.0 + playerData.VariantProsperityPercent[variantIndex] * 0.01) + 0.5);
 			AwardXP(killer, xpAward);
 			TryDropWeapon(e.Thing, data, killer);
+			TuinRustSupport.DropFuel(e.Thing, players[killer].mo);
 			TryDropRogueBolts(e.Thing, killer, data);
 		}
 		SpawnCoinReward(e.Thing, data);
@@ -5689,16 +7496,25 @@ class TuinRPGHandler : EventHandler
 		TargetLevel[playerNumber] = 0;
 		TargetRarity[playerNumber] = 0;
 		TargetDeathSentence[playerNumber] = false;
+		TargetIsBoss[playerNumber] = false;
 		int healthBarMode = CVInt('tuin_healthbar_mode', 1);
 		if (!CVInt('tuin_enabled', 1) || healthBarMode == 3 || !playerInGame[playerNumber]) return;
 		Actor pawn = players[playerNumber].mo;
 		if (!pawn || pawn.Health <= 0) return;
-		FLineTraceData trace;
-		double distance = max(64.0, CVFloat('tuin_healthbar_distance', 2048.0));
-		if (!pawn.LineTrace(pawn.Angle, distance, pawn.Pitch, 0, pawn.Height * 0.5, data: trace)) return;
-		Actor target = trace.HitActor;
+		if (LastHitTargetTics[playerNumber] > 0) LastHitTargetTics[playerNumber]--;
+		Actor target = LastHitTarget[playerNumber];
+		if (!target || LastHitTargetTics[playerNumber] <= 0)
+		{
+			LastHitTarget[playerNumber] = null;
+			return;
+		}
 		let data = GetMonsterData(target);
-		if (!data || target.Health <= 0 || target.bFRIENDLY) return;
+		if (!data || target.bFRIENDLY)
+		{
+			LastHitTarget[playerNumber] = null;
+			LastHitTargetTics[playerNumber] = 0;
+			return;
+		}
 		TargetName[playerNumber] = data.GeneratedName.Length() ? data.GeneratedName : target.GetTag(target.GetClassName());
 		TargetAffixes[playerNumber] = AffixList(data);
 		let playerData = GetPlayerData(pawn);
@@ -5715,6 +7531,8 @@ class TuinRPGHandler : EventHandler
 		TargetDisplayHealth[playerNumber] = data.DisplayHealth;
 		TargetLevel[playerNumber] = data.MonsterLevel;
 		TargetRarity[playerNumber] = data.MonsterRarity;
+		TargetIsBoss[playerNumber] = data.MonsterRarity >= 6 || target is 'Cyberdemon' ||
+			target is 'SpiderMastermind' || IsIconicEpisodeBoss(target);
 	}
 
 	clearscope static string CompactOverheadName(string value)
@@ -5816,9 +7634,50 @@ class TuinRPGHandler : EventHandler
 		if (!data || !players[playerNumber].mo) return;
 		let weapon = players[playerNumber].ReadyWeapon;
 		let psp = players[playerNumber].FindPSprite(PSprite.WEAPON);
-		if (!weapon || !psp || !psp.CurState || psp.Tics <= 0) return;
+		if (!weapon || !psp || !psp.CurState || psp.Tics <= 0)
+		{
+			RustChargeState[playerNumber] = null;
+			WeaponSwitchAccumulator[playerNumber] = 0.0;
+			return;
+		}
+
+		State select = weapon.GetUpState();
+		State deselect = weapon.GetDownState();
+		bool switching = (select && psp.CurState.InStateSequence(select)) ||
+			(deselect && psp.CurState.InStateSequence(deselect));
+		if (switching)
+		{
+			RustChargeState[playerNumber] = null;
+			// The shared baseline is twice normal speed. Rogue gets four extra
+			// state steps per tick for a near-instant five-times-speed swap.
+			double switchBonus = data.PlayerClass == 5 ? 4.0 : 1.0;
+			WeaponSwitchAccumulator[playerNumber] += switchBonus;
+			int switchSteps = 0;
+			while (WeaponSwitchAccumulator[playerNumber] >= 1.0 && switchSteps < 5 && psp.CurState && psp.Tics > 0)
+			{
+				bool stillSwitching = (select && psp.CurState.InStateSequence(select)) ||
+					(deselect && psp.CurState.InStateSequence(deselect));
+				if (!stillSwitching) break;
+				WeaponSwitchAccumulator[playerNumber] -= 1.0;
+				psp.Tics--;
+				if (psp.Tics == 0) psp.SetState(psp.CurState.NextState);
+				switchSteps++;
+			}
+			return;
+		}
+		WeaponSwitchAccumulator[playerNumber] = 0.0;
 
 		State fire = weapon.FindState('Fire');
+		// Native Calamity charges are five 20-tic states. Add six tics once
+		// per stage, without slowing equip, recovery, or other weapons.
+		if (HasWeaponPerk(data, 10) && WeaponFamily(weapon) == 10 &&
+			TuinRustSupport.IsChargeState(weapon, psp.CurState))
+		{
+			if (RustChargeState[playerNumber] != psp.CurState) psp.Tics += 6;
+			RustChargeState[playerNumber] = psp.CurState;
+			return;
+		}
+		RustChargeState[playerNumber] = null;
 		State hold = weapon.FindState('Hold');
 		State altFire = weapon.FindState('AltFire');
 		State altHold = weapon.FindState('AltHold');
@@ -5827,8 +7686,37 @@ class TuinRPGHandler : EventHandler
 			(altFire && psp.CurState.InStateSequence(altFire)) ||
 			(altHold && psp.CurState.InStateSequence(altHold));
 		if (!firing) return;
+		int weaponFamily = WeaponFamily(weapon);
+		double traitHaste = players[playerNumber].mo && players[playerNumber].mo.Health * 100 <
+			players[playerNumber].mo.GetMaxHealth(true) * 30 ? TuinWeaponTraits.Strength(data, 8) * 0.05 : 0.0;
+		if (!ClassesEnabled() && HasWeaponPerk(data, 1) && weaponFamily == 1)
+		{
+			// Repeat every other engine tick, doubling the time spent in firing
+			// states without changing the external weapon's own state graph.
+			if ((level.Time & 1) == 0 && psp.Tics > 0) psp.Tics++;
+			AgilityAccumulator[playerNumber] += traitHaste * 0.5;
+			if (AgilityAccumulator[playerNumber] >= 1.0 && psp.CurState && psp.Tics > 0)
+			{
+				AgilityAccumulator[playerNumber] -= 1.0;
+				psp.Tics--;
+				if (psp.Tics == 0) psp.SetState(psp.CurState.NextState);
+			}
+			return;
+		}
+		if (!ClassesEnabled() && HasWeaponPerk(data, 7) && weaponFamily == 7)
+		{
+			AgilityAccumulator[playerNumber] += traitHaste * 4.0;
+			int rapidSteps = 3 + int(AgilityAccumulator[playerNumber]);
+			AgilityAccumulator[playerNumber] -= int(AgilityAccumulator[playerNumber]);
+			for (int rapidStep = 0; rapidStep < rapidSteps && psp.CurState && psp.Tics > 0; rapidStep++)
+			{
+				psp.Tics--;
+				if (psp.Tics == 0) psp.SetState(psp.CurState.NextState);
+			}
+			return;
+		}
 
-		double speedBonus = data.Agility * 0.02;
+		double speedBonus = data.Agility * 0.02 + traitHaste;
 		int variantIndex = data.FindEquippedVariant((class<Weapon>)(weapon.GetClass()));
 		if (variantIndex >= 0) speedBonus += data.VariantHastePercent[variantIndex] * 0.01;
 		bool rogueKnife = data.PlayerClass == 5 && weapon.GetClassName() == 'TuinRogueKnife';
@@ -5880,6 +7768,7 @@ class TuinRPGHandler : EventHandler
 
 	void UpdateWeaponDropTarget(int playerNumber)
 	{
+		WeaponPickupInReach[playerNumber] = false;
 		TuinWeaponDrop previous = TargetWeaponDrop[playerNumber];
 		TargetWeaponDrop[playerNumber] = null;
 		if (!playerInGame[playerNumber] || !players[playerNumber].mo) return;
@@ -5916,30 +7805,64 @@ class TuinRPGHandler : EventHandler
 			TargetWeaponDrop[playerNumber] = previous;
 			WeaponDropTargetGrace[playerNumber]--;
 		}
+		let pickupTarget = TargetWeaponDrop[playerNumber];
+		WeaponPickupInReach[playerNumber] = pickupTarget && pawn.Distance3D(pickupTarget) <= 128.0 && pawn.CheckSight(pickupTarget);
 	}
 
+	void UpdateWeaponPickupHold(int playerNumber, bool useDown, bool otherInteraction)
+	{
+		if (!useDown)
+		{
+			WeaponPickupHold[playerNumber] = 0;
+			WeaponPickupTarget[playerNumber] = null;
+			WeaponPickupConsumed[playerNumber] = false;
+			return;
+		}
+		Actor pawn = players[playerNumber].mo;
+		let drop = TargetWeaponDrop[playerNumber];
+		bool valid = pawn && pawn.Health > 0 && drop && pawn.Distance3D(drop) <= 128.0 && pawn.CheckSight(drop);
+		if (otherInteraction || !valid || (WeaponPickupTarget[playerNumber] && WeaponPickupTarget[playerNumber] != drop))
+		{
+			WeaponPickupHold[playerNumber] = 0;
+			WeaponPickupTarget[playerNumber] = null;
+			WeaponPickupConsumed[playerNumber] = true;
+			return;
+		}
+		if (WeaponPickupConsumed[playerNumber]) return;
+		WeaponPickupTarget[playerNumber] = drop;
+		WeaponPickupHold[playerNumber]++;
+		if (WeaponPickupHold[playerNumber] >= WEAPON_PICKUP_HOLD_TICS)
+		{
+			// One pickup per press: a newly dropped old variant cannot chain-swap back.
+			WeaponPickupConsumed[playerNumber] = true;
+			WeaponPickupHold[playerNumber] = 0;
+			WeaponPickupTarget[playerNumber] = null;
+			TryCollectWeaponDrop(playerNumber);
+		}
+	}
 	void TryCollectWeaponDrop(int playerNumber)
 	{
 		let lootDrop = TargetWeaponDrop[playerNumber];
 		Actor pawn = players[playerNumber].mo;
 		if (!lootDrop || !pawn || pawn.Distance3D(lootDrop) > 128.0) return;
+		lootDrop.WeaponType = TuinRustSupport.Resolve(lootDrop.WeaponType);
 		let data = EnsurePlayerData(playerNumber);
 		if (!data) return;
 		if (IsRogueOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 5)
 		{
-			SetLootNotification(playerNumber, "ROGUE CLASS ONLY", 0);
+			SetLootNotification(playerNumber, ClassesEnabled() ? "ROGUE CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD", 0);
 			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			return;
 		}
 		if (IsDoomGuyOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 4)
 		{
-			SetLootNotification(playerNumber, "DOOM GUY CLASS ONLY", 0);
+			SetLootNotification(playerNumber, ClassesEnabled() ? "DOOM GUY CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD", 0);
 			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			return;
 		}
 		if (IsHeavyOnlyWeaponType(lootDrop.WeaponType) && data.PlayerClass != 1)
 		{
-			SetLootNotification(playerNumber, "HEAVY CLASS ONLY", 0);
+			SetLootNotification(playerNumber, ClassesEnabled() ? "HEAVY CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD", 0);
 			pawn.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			return;
 		}
@@ -5999,7 +7922,12 @@ class TuinRPGHandler : EventHandler
 
 	override void WorldTick()
 	{
+        EnsureRun();
+        if(Run && Run.Tick(self))return;
+        EnsureLocator();
+        if (Locator) Locator.TickLocator();
 		UpdateGrenadeBossDamage();
+		UpdateWeaponPerkProjectiles();
 		UpdateJohnMilestoneComments();
 		for (int damageNumber = 0; damageNumber < TUIN_MAX_DAMAGE_NUMBERS; damageNumber++)
 		{
@@ -6014,6 +7942,7 @@ class TuinRPGHandler : EventHandler
 		{
 			AppliedDifficultyMode = currentDifficulty;
 			RebalanceLivingMonstersForDifficulty(consoleplayer);
+            if(!ClassesEnabled()) RerollLivingMonsters(consoleplayer,true);
 		}
 		if ((level.Time % 35) == 0)
 		{
@@ -6050,6 +7979,8 @@ class TuinRPGHandler : EventHandler
 			if (EpisodeTravelTics == 0 && EpisodeTravelDestination.Length())
 			{
 				string destination = EpisodeTravelDestination;
+				let runData=GetPlayerData(players[consoleplayer].mo);
+				if(TuinRun.Active() && runData && runData.RunNextMap.Length())destination=runData.RunNextMap;
 				EpisodeTravelDestination = "";
 				bool showIntermission = EpisodeTravelShowsIntermission;
 				EpisodeTravelShowsIntermission = false;
@@ -6077,13 +8008,15 @@ class TuinRPGHandler : EventHandler
 			// its persistent inventory token has transferred from the previous map.
 			ApplyLateStartCatchup(i);
 			let playerData = EnsurePlayerData(i);
-			if (playerData && playerData.PlayerClass != 0 && !playerData.FreeClassChoiceRefunded)
+			UpdatePointReminder(i, playerData);
+			UpdateKeyNotice(i, players[i].mo);
+			if (ClassesEnabled() && playerData && playerData.PlayerClass != 0 && !playerData.FreeClassChoiceRefunded)
 			{
 				playerData.FreeClassChoiceRefunded = true;
 				playerData.UnspentSkillPoints++;
 				SetLootNotification(i, "FREE CLASS CHOICE: 1 PERK POINT REFUNDED", 4);
 			}
-			if (playerData && playerData.PlayerClass == 0 && players[i].mo &&
+			if (ClassesEnabled() && playerData && playerData.PlayerClass == 0 && players[i].mo &&
 				level.Time >= 10 && !InitialClassMenuRequested[i])
 			{
 				InitialClassMenuRequested[i] = true;
@@ -6103,23 +8036,55 @@ class TuinRPGHandler : EventHandler
 			if (playerData && playerData.LifeReviveFadeTics > 0) playerData.LifeReviveFadeTics--;
 			if (JohnCommentTics[i] > 0) JohnCommentTics[i]--;
 			if ((level.Time % 35) == 0) ApplyAmmoCapacity(players[i].mo, playerData);
+			ApplyWeaponPerkAmmoUse(i, players[i].mo, playerData);
+			TuinWeaponTraits.Tick(playerData);
+			if ((level.Time % 35) == 1) TuinRustSupport.MigratePlayer(players[i].mo, playerData);
 			ApplyClassAmmoBonus(players[i].mo, playerData);
 			ApplyClassRegeneration(i, players[i].mo, playerData);
 			UpdateEngineerSentries(i, players[i].mo, playerData);
 			UpdateEngineerAmmoFabrication(i, players[i].mo, playerData);
 			UpdateLifeEssenceOverhealth(players[i].mo, playerData);
 			ApplyRogueStealth(i, players[i].mo, playerData);
+			UpdateRogueChain(i, players[i].mo, playerData);
+			UpdateRoguePistolBurst(i, players[i].mo, playerData);
+			if (RoguePistolBurstTestPending[i] && playerData && players[i].ReadyWeapon is 'TuinRogueKnife')
+			{
+				RoguePistolBurstTestPending[i] = false;
+				BeginRoguePistolBurstHold(i, players[i].mo, playerData);
+				RoguePistolBurstTestReleaseTics[i] = 6;
+			}
+			else if (RoguePistolBurstTestReleaseTics[i] > 0 && playerData)
+			{
+				RoguePistolBurstTestReleaseTics[i]--;
+				if (RoguePistolBurstTestReleaseTics[i] == 0)
+					ReleaseRoguePistolBurst(players[i].mo, playerData);
+			}
+			else if (RoguePistolBurstTestTarget[i] && playerData && !RoguePistolBurstTestPending[i] &&
+				playerData.RoguePistolBurstShotsRemaining <= 0)
+			{
+				players[i].mo.A_Log(String.Format(
+					"ROGUE BURST RESULT: %d DAMAGE, %d BULLETS, %.1f SEC COOLDOWN.",
+					max(0, RoguePistolBurstTestHealth[i] - max(0, RoguePistolBurstTestTarget[i].Health)),
+					Ammo(players[i].mo.FindInventory('Clip')).Amount,
+					playerData.RoguePistolBurstCooldownTics / 35.0));
+				RoguePistolBurstTestTarget[i] = null;
+			}
 			ApplyTankOverdrive(i, players[i].mo, playerData);
 			ApplyHeavyMovement(players[i].mo, playerData);
 			UpdateHeavyRadio(i, players[i].mo, playerData);
 			ApplyExecutionerDeathSentence(i, players[i].mo, playerData);
+			ApplyDoomFatality(i, players[i].mo, playerData);
 			ApplyDoomBloodPunch(i, players[i].mo, playerData);
 			ApplyFlashlight(players[i].mo, playerData);
 			ApplyHeldGodlyGlow(i, playerData);
 			ApplyAgility(i, playerData);
 			UpdateWeaponDropTarget(i);
 			bool useDown = (players[i].cmd.buttons & BT_USE) != 0;
-			if (useDown && !UseHeld[i] && !TryOpenJohnShop(i)) TryCollectWeaponDrop(i);
+			bool otherUse = false;
+			if (useDown && !UseHeld[i])
+				otherUse = TryOpenBossChest(i) || TryOpenJohnShop(i);
+			if (!ClassesEnabled()) UpdateWeaponPickupHold(i, useDown, otherUse);
+			else if (useDown && !UseHeld[i] && !otherUse) TryCollectWeaponDrop(i);
 			UseHeld[i] = useDown;
 			UpdateTarget(i);
 			if (PopupTics[i] > 0)
@@ -6193,11 +8158,36 @@ class TuinRPGHandler : EventHandler
 			}
 		}
 		UpdateHellDirector();
+        UpdateAmmoPressureDirector();
+        UpdateFullHealthDirector();
+		UpdateCompletionMilestones();
 	}
 
-	override void NetworkProcess(ConsoleEvent e)
+    override void WorldLineActivated(WorldEvent e)
+    {
+        EnsureLocator();
+        if(Locator) Locator.RecordActivatedLine(e.ActivatedLine);
+    }
+
+    override void NetworkProcess(ConsoleEvent e)
 	{
+        EnsureLocator();
+        if (Locator) Locator.ProcessRequest(e.Name,e.Args[0],e.Player);
 		if (e.Player < 0 || e.Player >= TUIN_MAX_PLAYERS) return;
+		if (e.Name ~== "tuin_inspect_weapon" && !ClassesEnabled())
+		{
+			InspectWeapon[e.Player] = !InspectWeapon[e.Player];
+			return;
+		}
+		if (!ClassesEnabled() && (e.Name ~== "tuin_heavy_radio" ||
+			e.Name ~== "tuin_rogue_pistol_burst_down" || e.Name ~== "tuin_rogue_pistol_burst" ||
+			e.Name ~== "tuin_rogue_pistol_burst_up" || e.Name ~== "tuin_class_ability_up" ||
+			e.Name ~== "tuin_class_ability_down" || e.Name ~== "tuin_rogue_shadow_veil" ||
+			e.Name ~== "tuin_test_heavy_radio" || e.Name ~== "tuin_test_rogue_chain" ||
+			e.Name ~== "tuin_test_rogue_pistol_burst" || e.Name ~== "tuin_test_engineer_turret" ||
+			e.Name ~== "tuin_test_blood_punch" || e.Name ~== "tuin_test_fatality" ||
+			e.Name ~== "tuin_test_death_sentence" || e.Name ~== "tuin_choose_class" ||
+			e.Name ~== "tuin_test_minigun")) return;
 		if (e.Name ~== "tuin_toggle_flashlight")
 		{
 			let flashlightData = EnsurePlayerData(e.Player);
@@ -6221,7 +8211,29 @@ class TuinRPGHandler : EventHandler
 			let radioPawn = players[e.Player].mo;
 			if (radioData && radioPawn && radioData.PlayerClass == 1)
 				ActivateHeavyRadio(e.Player, radioPawn, radioData);
-			else SetLootNotification(e.Player, "HEAVY CLASS ONLY", 0);
+			else if (radioData && radioPawn && radioData.PlayerClass == 5)
+				ActivateRogueChain(e.Player, radioPawn, radioData);
+			else SetLootNotification(e.Player, "NO SECONDARY CLASS ABILITY", 0);
+			return;
+		}
+		if (e.Name ~== "tuin_rogue_pistol_burst_down" || e.Name ~== "tuin_rogue_pistol_burst")
+		{
+			let burstData = EnsurePlayerData(e.Player);
+			let burstPawn = players[e.Player].mo;
+			if (burstData && burstPawn && burstData.PlayerClass == 5)
+			{
+				if (e.Name ~== "tuin_rogue_pistol_burst") ActivateRoguePistolBurst(e.Player, burstPawn, burstData);
+				else BeginRoguePistolBurstHold(e.Player, burstPawn, burstData);
+			}
+			else SetLootNotification(e.Player, "NO THIRD CLASS ABILITY", 0);
+			return;
+		}
+		if (e.Name ~== "tuin_rogue_pistol_burst_up")
+		{
+			let burstData = EnsurePlayerData(e.Player);
+			let burstPawn = players[e.Player].mo;
+			if (burstData && burstPawn && burstData.PlayerClass == 5)
+				ReleaseRoguePistolBurst(burstPawn, burstData);
 			return;
 		}
 		if (e.Name ~== "tuin_class_ability_up")
@@ -6260,6 +8272,8 @@ class TuinRPGHandler : EventHandler
 			}
 			if (rogueData && pawn && rogueData.PlayerClass == 4)
 			{
+				if (rogueData.DoomFatalityTics > 0) return;
+				if (BeginDoomFatality(e.Player, pawn, rogueData)) return;
 				if (rogueData.DoomBloodPunchCharge >= 100)
 				{
 					BeginDoomBloodPunchHold(e.Player, pawn, rogueData);
@@ -6333,6 +8347,75 @@ class TuinRPGHandler : EventHandler
 			}
 			return;
 		}
+		if (e.Name ~== "tuin_test_rogue_chain")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 5;
+				testData.RogueVeilOwner = testPawn;
+				testData.RogueChainCharges = 0;
+				Vector3 testKillPosition = testPawn.Pos + (cos(testPawn.Angle) * 96.0,
+					sin(testPawn.Angle) * 96.0, 0);
+				let testKillTarget = Actor.Spawn('DoomImp', testKillPosition, ALLOW_REPLACE);
+				if (testKillTarget)
+				{
+					InitializeMonster(testKillTarget);
+					let knifePuff = Actor.Spawn('TuinRogueKnifePuff', testKillTarget.Pos, NO_REPLACE);
+					testKillTarget.DamageMobj(knifePuff, testPawn, testKillTarget.Health + 1, 'Melee');
+				}
+				testPawn.A_Log(String.Format("ROGUE KNIFE KILL DETECTION: %d / 9 CHARGES.",
+					testData.RogueChainCharges));
+				testData.RogueChainCharges = 9;
+				RogueChainTestActive[e.Player] = true;
+				RogueChainTestHits[e.Player] = -1;
+				for (int i = 0; i < 9; i++)
+				{
+					double spawnAngle = testPawn.Angle + (i - 4) * 18.0;
+					double spawnDistance = 160.0 + (i % 3) * 64.0;
+					Vector3 spawnPosition = testPawn.Pos + (cos(spawnAngle) * spawnDistance,
+						sin(spawnAngle) * spawnDistance, 0);
+					let monster = Actor.Spawn('DoomImp', spawnPosition, ALLOW_REPLACE);
+					if (monster && !monster.TestMobjLocation()) monster.Destroy();
+				}
+				ActivateRogueChain(e.Player, testPawn, testData);
+				testPawn.A_Log(String.Format("ROGUE CHAIN TEST STARTED: ACTIVE %d, %d STRIKES.",
+					testData.RogueChainActive, testData.RogueChainHitsRemaining));
+			}
+			return;
+		}
+		if (e.Name ~== "tuin_test_rogue_pistol_burst")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 5;
+				testData.RogueVeilOwner = testPawn;
+				testData.RogueVeiled = false;
+				testData.RoguePistolBurstCooldownTics = 0;
+				testData.RoguePistolBurstShotsRemaining = 0;
+				if (!testPawn.FindInventory('TuinRogueSilencedPistol'))
+					testPawn.GiveInventory('TuinRogueSilencedPistol', 1);
+				if (!testPawn.FindInventory('TuinRogueKnife'))
+					testPawn.GiveInventory('TuinRogueKnife', 1);
+				testPawn.GiveInventory('Clip', 3);
+				Vector3 targetPosition = testPawn.Pos + (cos(testPawn.Angle) * 96.0,
+					sin(testPawn.Angle) * 96.0, 0);
+				let target = Actor.Spawn('DoomImp', targetPosition, ALLOW_REPLACE);
+				if (target)
+				{
+					InitializeMonster(target);
+					RoguePistolBurstTestTarget[e.Player] = target;
+					RoguePistolBurstTestHealth[e.Player] = target.Health;
+					RoguePistolBurstTestPending[e.Player] = true;
+					testPawn.player.PendingWeapon = Weapon(testPawn.FindInventory('TuinRogueKnife'));
+					testPawn.A_Log("ROGUE SILENCED BURST TEST STARTED.");
+				}
+			}
+			return;
+		}
 		if (e.Name ~== "tuin_test_engineer_turret")
 		{
 			let testData = EnsurePlayerData(e.Player);
@@ -6375,6 +8458,30 @@ class TuinRPGHandler : EventHandler
 			}
 			return;
 		}
+		if (e.Name ~== "tuin_test_fatality")
+		{
+			let testData = EnsurePlayerData(e.Player);
+			let testPawn = players[e.Player].mo;
+			if (testData && testPawn)
+			{
+				testData.PlayerClass = 4;
+				ApplyClassHealth(testPawn, testData);
+				Vector3 targetPosition = testPawn.Pos +
+					(cos(testPawn.Angle) * 112.0, sin(testPawn.Angle) * 112.0, 0);
+				Actor target = Actor.Spawn('Demon', targetPosition, NO_REPLACE);
+				if (target)
+				{
+					InitializeMonster(target);
+					target.Health = max(1, DoomFatalityMaximumHealth(target) / 10);
+					target.reactiontime = 350;
+					testPawn.Angle = testPawn.AngleTo(target, true);
+					testPawn.A_Log("FATALITY TEST READY. The Demon is at 10% health; face it and press V.");
+					SetLootNotification(e.Player, "FATALITY READY - PRESS V", 5);
+				}
+				else SetLootNotification(e.Player, "FATALITY TEST NEEDS OPEN SPACE", 0);
+			}
+			return;
+		}
 		if (e.Name ~== "tuin_test_death_sentence")
 		{
 			let testData = EnsurePlayerData(e.Player);
@@ -6397,6 +8504,26 @@ class TuinRPGHandler : EventHandler
 		{
 			if (!TryPromoteFinaleBoss(true) && players[e.Player].mo)
 				players[e.Player].mo.A_Log("No eligible monster is alive for finale-boss testing.");
+			return;
+		}
+		if (e.Name ~== "tuin_test_boss_chest")
+		{
+			Actor pawn = players[e.Player].mo;
+			if (!pawn) return;
+			class<Actor> chestClass = CVInt('tuin_boss_chest_style', 0) == 1 ?
+				'TuinBossRewardChestMinecraft' : 'TuinBossRewardChest';
+			let chest = TuinBossRewardChest(Actor.Spawn(chestClass,
+				(pawn.Pos.X + cos(pawn.Angle) * 92.0,
+				 pawn.Pos.Y + sin(pawn.Angle) * 92.0,
+				 pawn.FloorZ + 2.0), NO_REPLACE));
+			if (chest)
+			{
+				chest.Angle = chest.AngleTo(pawn, true);
+				chest.RewardWeapon = PickDropWeapon(pawn);
+				chest.RewardLevel = max(1, EnsurePlayerData(e.Player).PlayerLevel);
+				chest.RewardQuality = 6;
+				pawn.A_Log("Boss chest test spawned. Face it and press Use.");
+			}
 			return;
 		}
 		if (e.Name ~== "tuin_test_promote_heavy" || e.Name ~== "tuin_test_promote_hellknight" ||
@@ -6556,6 +8683,11 @@ class TuinRPGHandler : EventHandler
 			BuyPerk(e.Player, e.Args[0]);
 			return;
 		}
+		if (e.Name ~== "tuin_buy_weapon_perk")
+		{
+			BuyWeaponPerk(e.Player, e.Args[0]);
+			return;
+		}
 		if (e.Name ~== "tuin_reset_rarity")
 		{
 			ResetRarityDefaults();
@@ -6590,6 +8722,14 @@ class TuinRPGHandler : EventHandler
 
 	override void InterfaceProcess(ConsoleEvent e)
 	{
+        if(e.Name=="tuin_run_finished") {Menu.SetMenu('TuinRunScores');return;}
+        if(e.Name=="tuin_run_score")
+        {
+            TuinRun.SaveScore(e.Args[0],e.Args[1],e.Args[2]);
+            Menu.SetMenu('TuinRunScores');
+            return;
+        }
+        if (Locator) Locator.HandleInterface(e);
 		if (e.Name ~== "tuin_toggle_minimap_silent")
 		{
 			let minimap = CVar.FindCVar('tuin_minimap_enabled');
@@ -6601,9 +8741,11 @@ class TuinRPGHandler : EventHandler
 		else if (e.Name ~== "tuin_open_john_finale_shop")
 			Menu.SetMenu('TuinRPGFinaleJohnShop');
 		else if (e.Name ~== "tuin_open_class_choice")
-			Menu.SetMenu('TuinRPGClassChoice');
+		{
+			if (ClassesEnabled()) Menu.SetMenu('TuinRPGClassChoice');
+		}
 		else if (e.Name ~== "tuin_open_perk_hub")
-			Menu.SetMenu('TuinRPGPerkHub');
+			Menu.SetMenu(ClassesEnabled() ? 'TuinRPGPerkHub' : 'TuinRPGGeneralPerks');
 	}
 
 	clearscope static bool, Vector2 ProjectOverheadPoint(Vector3 worldPosition, Vector3 viewPosition,
@@ -6721,8 +8863,47 @@ class TuinRPGHandler : EventHandler
 		}
 	}
 
+	ui void DrawBossTarget(RenderEvent e, int p, int sw, int sh)
+	{
+		if (ClassesEnabled() || menuactive || !TargetIsBoss[p] || TargetMaxHealth[p] <= 0 ||
+			CVInt('tuin_healthbar_mode',1) == 3) return;
+		Font f = "TINYBABY";
+		double s = min(sw / 1280., sh / 800.);
+		int w = int(460*s), x = (sw-w)/2, y = int(24*s);
+		double ratio = clamp(double(TargetHealth[p])/TargetMaxHealth[p],0.,1.);
+		double trail = clamp((TargetPreviousDisplayHealth[p] +
+			(TargetDisplayHealth[p]-TargetPreviousDisplayHealth[p])*e.FracTic)/TargetMaxHealth[p],ratio,1.);
+		Color accent = Color(70,185,245);
+		Screen.Dim(Color(3,10,20),.94,x,y,w,int(93*s));
+		Screen.DrawLineFrame(Color(28,75,110),x,y,w,int(93*s),1);
+		string title = CVInt('tuin_healthbar_show_name',1) ? TargetName[p] : "BOSS";
+		double nameScale = min(2.0*s,(w-24*s)/max(1,f.StringWidth(title)));
+		Screen.DrawText(f,Font.CR_WHITE,x+12*s,y+9*s,title,DTA_ScaleX,nameScale,DTA_ScaleY,nameScale);
+		string hp = CVInt('tuin_healthbar_show_exact',1) ?
+			String.Format("%d / %d HP   |   %.0f%%",TargetHealth[p],TargetMaxHealth[p],ratio*100) : String.Format("%.0f%%",ratio*100);
+		if (CVInt('tuin_healthbar_show_level',1)) hp = String.Format("LV %d   |   ",TargetLevel[p]) .. hp;
+		Screen.DrawText(f,Font.CR_LIGHTBLUE,x+12*s,y+27*s,hp,DTA_ScaleX,1.2*s,DTA_ScaleY,1.2*s);
+		int bx=x+int(12*s), by=y+int(43*s), bw=w-int(24*s), bh=max(3,int(12*s));
+		Screen.Dim(Color(16,30,45),1,bx,by,bw,bh);
+		if (trail>0) Screen.Dim(Color(245,170,60),.85,bx,by,int(bw*trail),bh);
+		if (ratio>0) Screen.Dim(accent,.95,bx,by,int(bw*ratio),bh);
+		for(int tick=1;tick<4;tick++) Screen.Dim(Color(3,10,20),.65,bx+bw*tick/4,by,max(1,int(s)),bh);
+		string details = CVInt('tuin_healthbar_show_affixes',1) ? TargetAffixes[p] : "";
+		// Wrap rather than shrinking resistance labels into unreadable microtext.
+		int split = details.Length()>65 ? details.IndexOf(" | ",40) : -1;
+		string first = split>=0 ? details.Left(split) : details;
+		string second = split>=0 ? details.Mid(split+3) : "";
+		for(int row=0;row<2;row++)
+		{
+			string label = row==0 ? first : second;
+			double fs=min(1.1*s,(w-24*s)/max(1,f.StringWidth(label)));
+			Screen.DrawText(f,Font.CR_GRAY,x+12*s,y+(63+13*row)*s,label,DTA_ScaleX,fs,DTA_ScaleY,fs);
+		}
+	}
+
 	ui void DrawCurrentTargetPanel(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
+		if (!ClassesEnabled() && TargetIsBoss[playerNumber]) return;
 		int healthBarMode = CVInt('tuin_healthbar_mode', 1);
 		if ((healthBarMode != 1 && healthBarMode != 2) || menuactive || TargetMaxHealth[playerNumber] <= 0) return;
 		double scale = clamp(hudScale, 1.4, 2.0);
@@ -6736,12 +8917,17 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			int playerStatusY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7);
-			double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7);
+			double statusScale = clamp(hudScale * 1.45, 2.0, 2.8);
 			panelY = playerStatusY + int(47 * statusScale) + 7;
 			let targetPlayerData = GetPlayerData(players[playerNumber].mo);
 			if (targetPlayerData && targetPlayerData.PlayerClass >= 1 && targetPlayerData.PlayerClass <= 6)
-				panelY += int(22 * statusScale) + 5;
+			{
+				double classAbilityScale = clamp(hudScale * 1.45, 2.0, 2.8);
+				int classPanelUnits = targetPlayerData.PlayerClass == 5 ? 52 :
+					targetPlayerData.PlayerClass == 1 ? 36 : 20;
+				panelY += int(classPanelUnits * classAbilityScale) + 5;
+			}
 			panelWidth = mapSize;
 		}
 
@@ -6752,7 +8938,7 @@ class TuinRPGHandler : EventHandler
 		int panelHeight = int(42 * scale);
 		if (panelY + panelHeight > screenHeight - 8) panelY = screenHeight - panelHeight - 8;
 		Screen.Dim(Color(3, 5, 9), 0.94, panelX, panelY, panelWidth, panelHeight);
-		Screen.DrawText(font, Font.CR_GOLD, panelX + 7, panelY + 5, "CURRENT TARGET",
+		Screen.DrawText(font, Font.CR_GOLD, panelX + 7, panelY + 5, "LAST HIT",
 			DTA_ScaleX, scale, DTA_ScaleY, scale);
 		int targetColor = TargetRarity[playerNumber] > 0 ? RarityColor(TargetRarity[playerNumber]) : Font.CR_WHITE;
 		double nameScale = min(scale, double(panelWidth - 14) / max(1, font.StringWidth(TargetName[playerNumber])));
@@ -6770,7 +8956,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 2) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status = data.HealerSupplyCooldownTics > 0 ?
 			String.Format("FIELD SUPPLY  %.1f SEC", data.HealerSupplyCooldownTics / 35.0) :
 			"FIELD SUPPLY READY  -  PRESS V";
@@ -6785,7 +8971,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(2, 14, 9), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -6800,7 +8986,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 6) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status = "";
 		int statusColor = Font.CR_GOLD;
 		for (int slot = 0; slot < (data.PerkCapstone ? 2 : 1); slot++)
@@ -6832,7 +9018,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(2, 10, 15), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -6847,7 +9033,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 3) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status;
 		int statusColor;
 		int activeMarks = data.ExecutionerMarkedTarget && data.ExecutionerMarkTics > 0 ? 1 : 0;
@@ -6888,7 +9074,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -6903,8 +9089,10 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 5) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status;
+		string chainStatus;
+		string burstStatus;
 		int statusColor;
 		if (data.RogueVeiled)
 		{
@@ -6922,7 +9110,26 @@ class TuinRPGHandler : EventHandler
 			status = "SHADOW VEIL READY  -  USE ROGUE ABILITY";
 			statusColor = Font.CR_GREEN;
 		}
-		int panelWidth = min(screenWidth - 20, int(font.StringWidth(status) * scale) + 16);
+		if (data.RogueChainActive)
+			chainStatus = String.Format("CHAIN ASSASSINATION  %d STRIKE%s REMAINING",
+				data.RogueChainHitsRemaining, data.RogueChainHitsRemaining == 1 ? "" : "S");
+		else if (data.RogueChainCharges > 0)
+			chainStatus = String.Format("CHAIN ASSASSINATION  %d / 9  -  PRESS B",
+				data.RogueChainCharges);
+		else chainStatus = "CHAIN ASSASSINATION  0 / 9  -  KNIFE KILLS ADD STRIKES";
+		if (data.RoguePistolBurstHolding)
+			burstStatus = "SILENCED PISTOL AIMING  -  RELEASE C TO BURST";
+		else if (data.RoguePistolBurstShotsRemaining > 0)
+			burstStatus = String.Format("SILENCED BURST  %d SHOT%s REMAINING",
+				data.RoguePistolBurstShotsRemaining,
+				data.RoguePistolBurstShotsRemaining == 1 ? "" : "S");
+		else if (data.RoguePistolBurstCooldownTics > 0)
+			burstStatus = String.Format("SILENCED BURST  %.1f SEC",
+				data.RoguePistolBurstCooldownTics / 35.0);
+		else burstStatus = "SILENCED BURST READY  -  PRESS C  -  COST 3 BULLETS";
+		int longestWidth = max(font.StringWidth(status),
+			max(font.StringWidth(chainStatus), font.StringWidth(burstStatus)));
+		int panelWidth = min(screenWidth - 20, int(longestWidth * scale) + 16);
 		int panelX = screenWidth - panelWidth - 10;
 		int panelY = 10;
 		if (CVInt('tuin_minimap_enabled', 1))
@@ -6932,14 +9139,51 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
-		Screen.Dim(Color(8, 3, 14), 0.94, panelX, panelY, panelWidth, int(20 * scale));
-		Screen.DrawLineFrame(Color(150, 70, 220), panelX, panelY, panelWidth, int(20 * scale), 2);
+		Screen.Dim(Color(8, 3, 14), 0.94, panelX, panelY, panelWidth, int(52 * scale));
+		Screen.DrawLineFrame(Color(150, 70, 220), panelX, panelY, panelWidth, int(52 * scale), 2);
 		double textScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(status)));
 		Screen.DrawText(font, statusColor, panelX + 6, panelY + int(4 * scale), status,
 			DTA_ScaleX, textScale, DTA_ScaleY, textScale);
+		double chainScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(chainStatus)));
+		Screen.DrawText(font, data.RogueChainCharges > 0 || data.RogueChainActive ? Font.CR_GREEN : Font.CR_GOLD,
+			panelX + 6, panelY + int(20 * scale), chainStatus,
+			DTA_ScaleX, chainScale, DTA_ScaleY, chainScale);
+		double burstScale = min(scale, double(panelWidth - 12) / max(1, font.StringWidth(burstStatus)));
+		Screen.DrawText(font, data.RoguePistolBurstCooldownTics <= 0 ? Font.CR_GREEN : Font.CR_GOLD,
+			panelX + 6, panelY + int(36 * scale), burstStatus,
+			DTA_ScaleX, burstScale, DTA_ScaleY, burstScale);
+	}
+
+	ui void DrawRogueBurstCrosshair(int playerNumber, int screenWidth, int screenHeight, double hudScale)
+	{
+		if (menuactive || !players[playerNumber].mo) return;
+		let data = GetPlayerData(players[playerNumber].mo);
+		if (!data || data.PlayerClass != 5 || !data.RoguePistolBurstHolding) return;
+		int centerX = screenWidth / 2;
+		int centerY = screenHeight / 2;
+		double pulse = 1.0 + 0.12 * sin((gametic + 1.0) * 18.0);
+		int gap = int(7 * pulse);
+		int arm = int(10 * pulse);
+		Color crosshairColor = Color(205, 105, 255);
+		Screen.DrawThickLine(centerX - gap - arm, centerY, centerX - gap, centerY,
+			2, crosshairColor, 245);
+		Screen.DrawThickLine(centerX + gap, centerY, centerX + gap + arm, centerY,
+			2, crosshairColor, 245);
+		Screen.DrawThickLine(centerX, centerY - gap - arm, centerX, centerY - gap,
+			2, crosshairColor, 245);
+		Screen.DrawThickLine(centerX, centerY + gap, centerX, centerY + gap + arm,
+			2, crosshairColor, 245);
+		Screen.DrawThickLine(centerX - 2, centerY, centerX + 2, centerY,
+			2, Color(255, 220, 100), 255);
+		Font aimFont = "TINYBABY";
+		string prompt = "RELEASE C - FIRE 3-SHOT BURST";
+		double promptScale = clamp(hudScale * 1.35, 1.9, 2.6);
+		Screen.DrawText(aimFont, Font.CR_PURPLE,
+			centerX - int(aimFont.StringWidth(prompt) * promptScale * 0.5), centerY + int(27 * pulse),
+			prompt, DTA_ScaleX, promptScale, DTA_ScaleY, promptScale);
 	}
 
 	ui void DrawTankStatus(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
@@ -6947,7 +9191,7 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 1) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status;
 		string radioStatus;
 		int statusColor;
@@ -6983,7 +9227,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(15, 2, 2), 0.94, panelX, panelY, panelWidth, int(36 * scale));
@@ -7002,7 +9246,11 @@ class TuinRPGHandler : EventHandler
 		if (menuactive || !players[playerNumber].mo) return;
 		let data = GetPlayerData(players[playerNumber].mo);
 		if (!data || data.PlayerClass != 4) return;
-		double scale = clamp(hudScale * 1.10, 1.5, 2.2);
+		// The world-space skull is the complete Fatality prompt. Do not add a
+		// second textual instruction or let the Blood Punch panel compete with it.
+		if (data.DoomFatalityTics > 0 || data.DoomFatalityCandidate ||
+			data.DoomFatalityMarkerTarget) return;
+		double scale = clamp(hudScale * 1.45, 2.0, 2.8);
 		string status;
 		int statusColor;
 		if (data.DoomBloodPunchHolding || data.DoomBloodPunchPrepareTics > 0 ||
@@ -7036,7 +9284,7 @@ class TuinRPGHandler : EventHandler
 			double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 			panelX = int(8 + (screenWidth - mapSize - 16) * mapHorizontal);
 			panelY = int(8 + (screenHeight - mapSize - 16) * mapVertical) + mapSize +
-				(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7) + int(47 * clamp(hudScale * 1.20, 1.75, 2.4)) + 3;
+				(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7) + int(47 * clamp(hudScale * 1.45, 2.0, 2.8)) + 3;
 			panelWidth = mapSize;
 		}
 		Screen.Dim(Color(16, 1, 1), 0.94, panelX, panelY, panelWidth, int(20 * scale));
@@ -7048,6 +9296,8 @@ class TuinRPGHandler : EventHandler
 
 	ui void DrawCurrentTargetAffixes(int playerNumber, Font font, int screenWidth, int screenHeight, double hudScale)
 	{
+		// The modern boss panel already contains these traits below its health bar.
+		if (!ClassesEnabled() && TargetIsBoss[playerNumber] && CVInt('tuin_healthbar_mode',1) != 3) return;
 		if (menuactive || !CVInt('tuin_healthbar_show_affixes', 1) ||
 			TargetMaxHealth[playerNumber] <= 0 || !TargetAffixes[playerNumber].Length()) return;
 		double scale = clamp(hudScale * 1.12, 1.65, 2.55);
@@ -7075,6 +9325,21 @@ class TuinRPGHandler : EventHandler
 
 	override bool InputProcess(InputEvent e)
 	{
+		if (!ClassesEnabled()) return false;
+		if (gamestate == GS_LEVEL && e.KeyScan == 0x2E &&
+			Bindings.GetBinding(e.KeyScan) ~== "netevent tuin_rogue_pistol_burst")
+		{
+			if (e.Type == InputEvent.Type_KeyDown)
+			{
+				EventHandler.SendNetworkEvent("tuin_rogue_pistol_burst_down");
+				return true;
+			}
+			if (e.Type == InputEvent.Type_KeyUp)
+			{
+				EventHandler.SendNetworkEvent("tuin_rogue_pistol_burst_up");
+				return true;
+			}
+		}
 		// UZDoom does not permit changing bindings from an event handler. For
 		// existing installs where V still carries the old one-shot command,
 		// translate the physical key-down/key-up pair without altering config.
@@ -7096,13 +9361,23 @@ class TuinRPGHandler : EventHandler
 
 	override void RenderOverlay(RenderEvent e)
 	{
+        if (Locator) Locator.DrawLocator(e);
 		int pnum = consoleplayer;
 		if (pnum < 0 || pnum >= TUIN_MAX_PLAYERS || !playerInGame[pnum]) return;
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
 		Font font = SmallFont;
+		Font classStatusFont = "TINYBABY";
 		double hudScale = clamp(CVFloat('tuin_hud_scale', 1.5), 1.25, 3.0);
 		let overlayData = GetPlayerData(players[pnum].mo);
+        if(overlayData && overlayData.RunActive)
+        {
+            if(overlayData.RunClearTics>0 && !menuactive)TuinRunArt.ClearPopup(overlayData.RunScore,overlayData.RunStages,(245-overlayData.RunClearTics)/35.);
+            double rs=min(sw/1100.,sh/750.);
+            Screen.DrawText(classStatusFont,Font.CR_GOLD,sw*.025,sh*.17,
+                overlayData.RunEnded?"GAMBIT ENDED / NEW GAME TO TRY AGAIN":String.Format("HELL'S GAMBIT / STAGE %d / SCORE %d",overlayData.RunStages+1,overlayData.RunScore),
+                DTA_ScaleX,rs,DTA_ScaleY,rs);
+        }
 		if (overlayData && overlayData.LifeRevivePending)
 		{
 			double pulse = 0.31 + 0.09 * sin(level.Time * 24.0);
@@ -7182,14 +9457,29 @@ class TuinRPGHandler : EventHandler
 			double flashStrength = 0.08 + 0.18 * overlayData.DoomBloodPunchFlashTics / 22.0;
 			Screen.Dim(Color(155, 0, 0), flashStrength, 0, 0, sw, sh);
 		}
+		if (overlayData && overlayData.PlayerClass == 4 && overlayData.DoomFatalityTics > 0)
+		{
+			double fatalityPulse = 0.10 + 0.05 * sin((gametic + e.FracTic) * 22.0);
+			if (overlayData.DoomFatalityImpactDone) fatalityPulse += 0.12;
+			Screen.Dim(Color(115, 0, 0), fatalityPulse, 0, 0, sw, sh);
+			double fatalityScale = clamp(hudScale * 1.55, 2.2, 3.4);
+			string fatalityText = overlayData.DoomFatalityImpactDone ? "RIP AND TEAR" : "FATALITY";
+			Screen.DrawText(BigFont, Font.CR_RED,
+				(sw - BigFont.StringWidth(fatalityText) * fatalityScale) / 2,
+				int(sh * 0.16), fatalityText,
+				DTA_ScaleX, fatalityScale, DTA_ScaleY, fatalityScale,
+				DTA_Alpha, min(1.0, 0.72 + fatalityPulse));
+		}
 		DrawOverheadHealthBars(e, pnum, font, sw, sh);
+		DrawBossTarget(e, pnum, sw, sh);
 		DrawDamageNumbers(e, pnum, font, sw, sh);
-		DrawHealerSupplyStatus(pnum, font, sw, sh, hudScale);
-		DrawEngineerTurretStatus(pnum, font, sw, sh, hudScale);
-		DrawExecutionerStatus(pnum, font, sw, sh, hudScale);
-		DrawRogueStatus(pnum, font, sw, sh, hudScale);
-		DrawTankStatus(pnum, font, sw, sh, hudScale);
-		DrawDoomBloodPunchStatus(pnum, font, sw, sh, hudScale);
+		DrawHealerSupplyStatus(pnum, classStatusFont, sw, sh, hudScale);
+		DrawEngineerTurretStatus(pnum, classStatusFont, sw, sh, hudScale);
+		DrawExecutionerStatus(pnum, classStatusFont, sw, sh, hudScale);
+		DrawRogueStatus(pnum, classStatusFont, sw, sh, hudScale);
+		DrawRogueBurstCrosshair(pnum, sw, sh, hudScale);
+		DrawTankStatus(pnum, classStatusFont, sw, sh, hudScale);
+		DrawDoomBloodPunchStatus(pnum, classStatusFont, sw, sh, hudScale);
 		DrawCurrentTargetPanel(pnum, font, sw, sh, hudScale);
 		DrawCurrentTargetAffixes(pnum, font, sw, sh, hudScale);
 		if (DifficultyNoticeTics[pnum] > 0 && DifficultyNoticeTitle[pnum].Length())
@@ -7213,7 +9503,8 @@ class TuinRPGHandler : EventHandler
 		let viewedDrop = TargetWeaponDrop[pnum];
 		if (viewedDrop && !menuactive)
 		{
-			double lootScale = clamp(hudScale, 1.0, 1.75);
+			Font lootFont = "TINYBABY";
+			double lootScale = min(clamp(hudScale * 1.35, 1.7, 2.4), double(sh - 48) / 210.0);
 			let playerData = GetPlayerData(players[pnum].mo);
 			int equippedIndex = playerData ? playerData.FindEquippedVariant(viewedDrop.WeaponType) : -1;
 			int equippedScore = equippedIndex >= 0 ? StoredWeaponVariantScore(playerData, equippedIndex) : 0;
@@ -7229,29 +9520,41 @@ class TuinRPGHandler : EventHandler
 				playerData.VariantQuality[equippedIndex], playerData.VariantItemLevel[equippedIndex]) : 0;
 			int viewedCritical = WeaponCriticalPercent(viewedDrop.AffixFlags, viewedDrop.Quality, viewedDrop.ItemLevel);
 			int panelWidth = min(sw - 24, int(440 * lootScale));
-			int panelHeight = int(151 * lootScale);
+			int traitRows = !ClassesEnabled() ? TuinWeaponTraits.Slots(viewedDrop.Quality) : 0;
+			int panelHeight = int((151 + traitRows * 16 + (!ClassesEnabled() ? 28 : 0)) * lootScale);
 			int panelX = (sw - panelWidth) / 2;
 			int panelY = min(int(sh * 0.48), sh - panelHeight - 16);
 			int textX = panelX + int(10 * lootScale);
 			int line = int(13 * lootScale);
 			int color = WeaponQualityFontColor(viewedDrop.Quality);
 			Screen.Dim(Color(8, 8, 14), 0.88, panelX, panelY, panelWidth, panelHeight);
-			Screen.DrawText(font, color, textX, panelY + 6, viewedDrop.DisplayName, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, color, textX, panelY + 6 + line, String.Format("DROP: %s   LEVEL %d   SCORE %d", WeaponQualityName(viewedDrop.Quality), viewedDrop.ItemLevel, viewedScore), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			TuinWeaponTraits.FluidText(lootFont, color, textX, panelY + 6, TuinWeaponTraits.DisplayName(viewedDrop.WeaponType,
+				viewedDrop.AffixFlags, viewedDrop.Quality, viewedDrop.VariantID), lootScale,
+				panelWidth - 20 * lootScale, viewedDrop.Quality == 6, viewedDrop.Quality >= 2, viewedDrop.Quality == 5, viewedDrop.Quality);
+			Screen.DrawText(lootFont, color, textX, panelY + 6 + line, String.Format("DROP: %s   LEVEL %d   SCORE %d", WeaponQualityName(viewedDrop.Quality), viewedDrop.ItemLevel, viewedScore), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			string currentLine = hasCurrent ? String.Format("CURRENT: %s   LEVEL %d   SCORE %d", WeaponQualityName(playerData.VariantQuality[equippedIndex]), playerData.VariantItemLevel[equippedIndex], equippedScore) : "CURRENT: NORMAL WEAPON - NO BONUSES";
-			Screen.DrawText(font, Font.CR_WHITE, textX, panelY + 6 + line * 2, currentLine, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, Font.CR_WHITE, textX, panelY + 6 + line * 2, currentLine, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			string comparison = equippedIndex < 0 ? "NEW WEAPON VARIANT" : difference > 0 ? String.Format("UPGRADE  +%d SCORE", difference) : difference < 0 ? String.Format("LOWER  %d SCORE", difference) : "EQUAL GEAR SCORE";
-			Screen.DrawText(font, difference >= 0 ? Font.CR_GREEN : Font.CR_RED, textX, panelY + 6 + line * 3, comparison, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.HastePercent, currentHaste, hasCurrent), textX, panelY + 6 + line * 4, WeaponStatComparison("FIRE SPEED", viewedDrop.HastePercent, currentHaste, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, difference >= 0 ? Font.CR_GREEN : Font.CR_RED, textX, panelY + 6 + line * 3, comparison, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedDrop.HastePercent, currentHaste, hasCurrent), textX, panelY + 6 + line * 4, WeaponStatComparison("FIRE SPEED", viewedDrop.HastePercent, currentHaste, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 			int viewedPower = WeaponTotalPowerPercent(viewedDrop.ItemLevel, viewedDrop.PowerPercent);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedPower, currentPower, hasCurrent), textX, panelY + 6 + line * 5, WeaponStatComparison("TOTAL DAMAGE", viewedPower, currentPower, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.LeechPercent, currentLeech, hasCurrent), textX, panelY + 6 + line * 6, WeaponStatComparison("DAMAGE LEECH", viewedDrop.LeechPercent, currentLeech, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.ExecutionPercent, currentExecution, hasCurrent), textX, panelY + 6 + line * 7, WeaponStatComparison("EXECUTION", viewedDrop.ExecutionPercent, currentExecution, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), textX, panelY + 6 + line * 8, WeaponStatComparison("KILL XP", viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			Screen.DrawText(font, WeaponStatComparisonColor(viewedCritical, currentCritical, hasCurrent), textX,
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedPower, currentPower, hasCurrent), textX, panelY + 6 + line * 5, WeaponStatComparison("TOTAL DAMAGE", viewedPower, currentPower, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedDrop.LeechPercent, currentLeech, hasCurrent), textX, panelY + 6 + line * 6, WeaponStatComparison("DAMAGE LEECH", viewedDrop.LeechPercent, currentLeech, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedDrop.ExecutionPercent, currentExecution, hasCurrent), textX, panelY + 6 + line * 7, WeaponStatComparison("EXECUTION", viewedDrop.ExecutionPercent, currentExecution, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), textX, panelY + 6 + line * 8, WeaponStatComparison("KILL XP", viewedDrop.ProsperityPercent, currentProsperity, hasCurrent), DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
+			Screen.DrawText(lootFont, WeaponStatComparisonColor(viewedCritical, currentCritical, hasCurrent), textX,
 				panelY + 6 + line * 9, WeaponStatComparison("CRITICAL", viewedCritical, currentCritical, hasCurrent),
 				DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
-			bool closeEnough = players[pnum].mo.Distance3D(viewedDrop) <= 128.0;
+			for (int row = 0; row < traitRows; row++)
+			{
+				int trait = TuinWeaponTraits.Nth(viewedDrop.AffixFlags, row);
+				if (trait < 0) break;
+				string traitLine = TuinWeaponTraits.Label(trait, viewedDrop.Quality);
+				double traitScale = min(lootScale, double(panelWidth - 20) / max(1, lootFont.StringWidth(traitLine)));
+				Screen.DrawText(lootFont, Font.CR_WHITE, textX, panelY + 6 + line * 10 + int(row * 16 * lootScale),
+					traitLine, DTA_ScaleX, traitScale, DTA_ScaleY, traitScale);
+			}
+			bool closeEnough = WeaponPickupInReach[pnum];
 			bool rogueRestricted = IsRogueOnlyWeaponType(viewedDrop.WeaponType) &&
 				(!playerData || playerData.PlayerClass != 5);
 			bool doomGuyRestricted = IsDoomGuyOnlyWeaponType(viewedDrop.WeaponType) &&
@@ -7259,16 +9562,48 @@ class TuinRPGHandler : EventHandler
 			bool heavyRestricted = IsHeavyOnlyWeaponType(viewedDrop.WeaponType) &&
 				(!playerData || playerData.PlayerClass != 1);
 			bool classRestricted = rogueRestricted || doomGuyRestricted || heavyRestricted;
-			string prompt = rogueRestricted ? "ROGUE CLASS ONLY" :
+			string prompt = classRestricted && !ClassesEnabled() ? "UNAVAILABLE IN UNIVERSAL BUILD" :
+				rogueRestricted ? "ROGUE CLASS ONLY" :
 				doomGuyRestricted ? "DOOM GUY CLASS ONLY" :
 				heavyRestricted ? "HEAVY CLASS ONLY" : closeEnough ?
 				(equippedIndex >= 0 ? "PRESS USE [E] TO SWAP - OLD WEAPON DROPS" : "PRESS USE [E] TO EQUIP") :
 				"MOVE CLOSER TO INSPECT AND EQUIP";
-			Screen.DrawText(font, classRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,
-				(sw - font.StringWidth(prompt) * lootScale) / 2, panelY + panelHeight - int(15 * lootScale),
+			if (!ClassesEnabled() && !classRestricted)
+			{
+				bool holding = WeaponPickupHold[pnum] > 0 && WeaponPickupTarget[pnum] == viewedDrop;
+				prompt = !closeEnough ? "MOVE CLOSER TO PICK UP" : WeaponPickupConsumed[pnum] ? "RELEASE USE [E] - THEN HOLD TO PICK UP" :
+					holding ? "PICKING UP... KEEP HOLDING" : equippedIndex >= 0 ? "HOLD USE [E] 3 SEC TO SWAP - OLD VARIANT DROPS" : "HOLD USE [E] 3 SEC TO PICK UP WEAPON";
+				double promptScale = min(lootScale, (panelWidth - 24.0) / max(1, lootFont.StringWidth(prompt)));
+				double promptX = (sw - lootFont.StringWidth(prompt) * promptScale) / 2;
+				int promptY = panelY + panelHeight - int(43 * lootScale);
+				TuinWeaponTraits.FluidText(lootFont, closeEnough ? color : Font.CR_GRAY, promptX, promptY, prompt,
+					promptScale, panelWidth - 24, viewedDrop.Quality == 6, closeEnough, viewedDrop.Quality == 5, viewedDrop.Quality);
+				string hint = "TAP USE [E] FOR DOORS / SWITCHES";
+				double hintScale = lootScale * .82;
+				Screen.DrawText(lootFont, Font.CR_GRAY, (sw - lootFont.StringWidth(hint) * hintScale) / 2,
+					promptY + 15 * lootScale, hint, DTA_ScaleX, hintScale, DTA_ScaleY, hintScale);
+				int barX = panelX + int(12 * lootScale), barWidth = panelWidth - int(24 * lootScale);
+				int barY = panelY + panelHeight - int(10 * lootScale), barHeight = max(2, int(4 * lootScale));
+				Screen.Dim(Color(25,39,54), .95, barX, barY, barWidth, barHeight);
+				double fill = holding ? clamp((WeaponPickupHold[pnum] + e.FracTic) / double(WEAPON_PICKUP_HOLD_TICS), 0., 1.) : 0;
+				if (fill > 0)
+				{
+					int filled = max(1, int(barWidth * fill));
+					Screen.Dim(Color(72,205,238), .95, barX, barY, filled, barHeight);
+					Screen.Dim(Color(190,249,255), .4 + .25 * sin(MSTimeF() * .4),
+						barX + filled - max(1, int(2 * lootScale)), barY - 1, max(1, int(2 * lootScale)), barHeight + 2);
+				}
+			}
+			else Screen.DrawText(lootFont, classRestricted ? Font.CR_RED : closeEnough ? Font.CR_GOLD : Font.CR_WHITE,
+				(sw - lootFont.StringWidth(prompt) * lootScale) / 2, panelY + panelHeight - int(15 * lootScale),
 				prompt, DTA_ScaleX, lootScale, DTA_ScaleY, lootScale);
 		}
-		if (LootNotificationTics[pnum] > 0 && LootNotification[pnum].Length())
+		// The animated poison notice replaces both legacy poison labels.
+		// Keep the legacy fallback when either modern HUD option is disabled.
+		bool animatedPoison = !ClassesEnabled() && CVInt('tuin_modern_hud', 1)
+			&& CVInt('tuin_combat_bonus_hud', 1);
+		if (LootNotificationTics[pnum] > 0 && LootNotification[pnum].Length()
+			&& !(animatedPoison && LootNotification[pnum] ~== "POISONED"))
 		{
 			double noticeScale = clamp(hudScale, 1.25, 1.75);
 			string notice = LootNotification[pnum];
@@ -7286,7 +9621,7 @@ class TuinRPGHandler : EventHandler
 			Screen.DrawText(font, Font.CR_GOLD, (sw - font.StringWidth(criticalText) * criticalScale) / 2,
 				int(sh * 0.42), criticalText, DTA_ScaleX, criticalScale, DTA_ScaleY, criticalScale);
 		}
-		if (PoisonTics[pnum] > 0)
+		if (PoisonTics[pnum] > 0 && !animatedPoison)
 		{
 			double poisonScale = clamp(hudScale, 1.0, 1.7);
 			string poisonText = String.Format("POISONED  %d", (PoisonTics[pnum] + 34) / 35);
@@ -7294,7 +9629,7 @@ class TuinRPGHandler : EventHandler
 				int(sh * 0.46), poisonText, DTA_ScaleX, poisonScale, DTA_ScaleY, poisonScale);
 		}
 		int activeHealthBarMode = CVInt('tuin_healthbar_mode', 1);
-		if (TargetMaxHealth[pnum] > 0 && (activeHealthBarMode == 0 || activeHealthBarMode == 2))
+		if (TargetMaxHealth[pnum] > 0 && (ClassesEnabled() || !TargetIsBoss[pnum]) && (activeHealthBarMode == 0 || activeHealthBarMode == 2))
 		{
 			int barWidth = clamp(int(CVInt('tuin_healthbar_width', 360) * hudScale), 240, min(1080, sw - 20));
 			int x = (sw - barWidth) / 2;
@@ -7344,11 +9679,12 @@ class TuinRPGHandler : EventHandler
 				string resources = String.Format("STAT %d   PERK %d   COINS %d", pd.UnspentStatPoints,
 					pd.UnspentSkillPoints, CoinBalance(players[pnum].mo));
 				string lives = String.Format("LIVES %d", pd.Lives);
-				double statusScale = clamp(hudScale * 1.20, 1.75, 2.4);
+				Font minimapFont = "TINYBABY";
+				double statusScale = clamp(hudScale * 1.45, 2.0, 2.8);
 				int statusX = 10;
 				int statusY = 10;
-				int statusWidth = max(max(int(font.StringWidth(progress) * statusScale),
-					int(font.StringWidth(resources) * statusScale)), int(font.StringWidth(lives) * statusScale)) + 14;
+				int statusWidth = max(max(int(minimapFont.StringWidth(progress) * statusScale),
+					int(minimapFont.StringWidth(resources) * statusScale)), int(minimapFont.StringWidth(lives) * statusScale)) + 14;
 				if (CVInt('tuin_minimap_enabled', 1))
 				{
 					int mapSize = clamp(CVInt('tuin_minimap_size', 320), 140, min(520, sh - 32));
@@ -7356,15 +9692,15 @@ class TuinRPGHandler : EventHandler
 					double mapVertical = clamp(CVFloat('tuin_minimap_vertical', 0.02), 0.0, 1.0);
 					statusX = int(8 + (sw - mapSize - 16) * mapHorizontal);
 					statusY = int(8 + (sh - mapSize - 16) * mapVertical) + mapSize +
-						(CVInt('tuin_minimap_show_stats', 1) ? 29 : 7);
+						(CVInt('tuin_minimap_show_stats', 1) ? 33 : 7);
 					statusWidth = mapSize;
 				}
 				Screen.Dim(Color(3, 5, 9), 0.93, statusX, statusY - 5, statusWidth, int(47 * statusScale));
-				Screen.DrawText(font, Font.CR_GOLD, statusX + 6, statusY, progress,
+				Screen.DrawText(minimapFont, Font.CR_GOLD, statusX + 6, statusY, progress,
 					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
-				Screen.DrawText(font, Font.CR_GOLD, statusX + 6, statusY + int(13 * statusScale), resources,
+				Screen.DrawText(minimapFont, Font.CR_GOLD, statusX + 6, statusY + int(13 * statusScale), resources,
 					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
-				Screen.DrawText(font, pd.Lives > 1 ? Font.CR_RED : Font.CR_GOLD,
+				Screen.DrawText(minimapFont, pd.Lives > 1 ? Font.CR_RED : Font.CR_GOLD,
 					statusX + 6, statusY + int(26 * statusScale), lives,
 					DTA_ScaleX, statusScale, DTA_ScaleY, statusScale);
 			}

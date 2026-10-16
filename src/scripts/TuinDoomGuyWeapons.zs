@@ -15,7 +15,7 @@ class TuinDoomGuyWeapon : Weapon
 			if (playerNumber >= 0 && playerNumber < MAXPLAYERS && level.Time >= RejectMessageTime[playerNumber])
 			{
 				RejectMessageTime[playerNumber] = level.Time + 35;
-				toucher.A_Print("DOOM GUY CLASS ONLY");
+				toucher.A_Print(TuinRPGHandler.ClassesEnabled() ? "DOOM GUY CLASS ONLY" : "UNAVAILABLE IN UNIVERSAL BUILD");
 				toucher.A_StartSound("weapons/noammo", CHAN_ITEM, CHANF_MAYBE_LOCAL, 0.65, ATTN_NONE);
 			}
 			return false;

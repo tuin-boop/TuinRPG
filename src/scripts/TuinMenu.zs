@@ -159,16 +159,34 @@ class TuinRPGCharacterMenuLegacy : OptionMenu
 		int playerHaste = min(75, data.Agility * 2);
 		double luckCritical = data.Luck * 0.5;
 		Weapon activeWeapon = players[consoleplayer].ReadyWeapon;
+		bool classesEnabled = TuinRPGHandler.ClassesEnabled();
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data, activeWeapon);
 		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 1.00) : data.PlayerClass == 2 ? 0.75 :
 			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : data.PlayerClass == 6 ? 0.90 : 1.0;
+		int dashboardWeaponFamily = !classesEnabled ? TuinRPGHandler.WeaponFamily(activeWeapon) : 0;
+		bool dashboardWeaponPerk = TuinRPGHandler.HasWeaponPerk(data, dashboardWeaponFamily);
+		if (dashboardWeaponPerk)
+		{
+			if (dashboardWeaponFamily == 1) classDamage *= 2.0;
+			else if (dashboardWeaponFamily == 2) classDamage *= 15.0;
+			else if (dashboardWeaponFamily == 3) classDamage *= 0.85;
+			else if (dashboardWeaponFamily == 4) classDamage *= 0.75;
+			else if (dashboardWeaponFamily == 5) classDamage *= 3.0;
+			else if (dashboardWeaponFamily == 7) classDamage *= 0.25;
+			else if (dashboardWeaponFamily == 8) classDamage *= 0.70;
+			else if (dashboardWeaponFamily == 10) classDamage *= 1.50;
+		}
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
 		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
 			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
+		if (dashboardWeaponPerk && dashboardWeaponFamily == 1)
+			firingSpeed = int((100 + firingSpeed) * 0.5 - 100);
+		else if (dashboardWeaponPerk && dashboardWeaponFamily == 7)
+			firingSpeed = (100 + firingSpeed) * 4 - 100;
 		double criticalChance = TuinRPGHandler.TotalCriticalChance(data, variantIndex, activeWeapon);
 		double bonusXPChance = (1.0 - exp(log(0.97) * max(0, data.Luck))) * 100.0;
 		double classProtection = data.PlayerClass == 1 ? 0.75 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
-			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.10 : 1.0;
+			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.15 : 1.0;
 		double perkProtection = 1.0 - data.PerkIronSkin * 0.03;
 		int totalDamageReduction = int((1.0 - (1.0 - min(75, data.Endurance) * 0.01) * classProtection * perkProtection) * 100.0 + 0.5);
 		string weaponName = "STANDARD WEAPON";
@@ -193,8 +211,9 @@ class TuinRPGCharacterMenuLegacy : OptionMenu
 
 		Screen.DrawText(f, Font.CR_GOLD, x, y, String.Format("LEVEL %d", data.PlayerLevel), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, x + int(105 * scale), y, String.Format("XP %d / %d", data.CurrentXP, TuinRPGHandler.XPRequired(data.PlayerLevel)), DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, data.PlayerClass > 0 ? Font.CR_GOLD : Font.CR_RED, x + int(300 * scale), y,
-			String.Format("CLASS: %s", TuinRPGHandler.PlayerClassName(data.PlayerClass)), DTA_ScaleX, scale, DTA_ScaleY, scale);
+		Screen.DrawText(f, Font.CR_GOLD, x + int(300 * scale), y,
+			classesEnabled ? String.Format("CLASS: %s", TuinRPGHandler.PlayerClassName(data.PlayerClass)) :
+			"DOOM MARINE", DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_WHITE, x + int(300 * scale), y + line,
 			String.Format("PERK POINTS: %d", data.UnspentSkillPoints), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 2, "ATTRIBUTES", DTA_ScaleX, scale, DTA_ScaleY, scale);
@@ -208,12 +227,15 @@ class TuinRPGCharacterMenuLegacy : OptionMenu
 			"PERKS: VITAL CORE %d | SCAVENGER %d | KILLER INSTINCT %d",
 			data.PerkVitalCore, data.PerkScavenger, data.PerkKillerInstinct),
 			DTA_ScaleX, scale, DTA_ScaleY, scale);
-		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 7, String.Format(
+		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 7, classesEnabled ? String.Format(
 			"IRON SKIN %d | BLOOD DRINKER %d | CLASS TRAINING %d | ULTIMATE %s",
 			data.PerkIronSkin, data.PerkBloodDrinker, data.PerkClassMastery,
-			data.PerkCapstone ? "YES" : "NO"), DTA_ScaleX, scale, DTA_ScaleY, scale);
+			data.PerkCapstone ? "YES" : "NO") : String.Format(
+			"IRON SKIN %d | BLOOD DRINKER %d | UNIVERSAL UPGRADES",
+			data.PerkIronSkin, data.PerkBloodDrinker), DTA_ScaleX, scale, DTA_ScaleY, scale);
 		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 8,
-			String.Format("GIANT SLAYER %d", data.PerkGiantSlayer),
+			String.Format("GIANT SLAYER %d | ARMOR PENETRATION %d",
+				data.PerkGiantSlayer, data.PerkArmorPenetration),
 			DTA_ScaleX, scale, DTA_ScaleY, scale);
 
 		Screen.DrawText(f, Font.CR_GOLD, x, y + line * 9, "CURRENT WEAPON", DTA_ScaleX, scale, DTA_ScaleY, scale);
@@ -278,9 +300,9 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.Dim(accent, selected ? 0.52 : 0.22, x, y, 8, height);
 		Screen.DrawLineFrame(selected ? accent : Color(26, 68, 105), x, y, width, height, selected ? 2 : 1);
 		Screen.DrawText(font, selected ? textColor : Font.CR_WHITE, x + 21, y + 10, heading,
-			DTA_ScaleX, 2.40, DTA_ScaleY, 2.40);
+			DTA_ScaleX, 2.88, DTA_ScaleY, 2.88);
 		Screen.DrawText(font, Font.CR_GRAY, x + 21, y + 31, detail,
-			DTA_ScaleX, 1.85, DTA_ScaleY, 1.85);
+			DTA_ScaleX, 2.22, DTA_ScaleY, 2.22);
 	}
 
 	void DrawAttributeCard(Font font, int itemIndex, int x, int y, int width, int height,
@@ -291,15 +313,15 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.Dim(accent, selected ? 0.48 : 0.20, x, y, 8, height);
 		Screen.DrawLineFrame(selected ? accent : Color(26, 68, 105), x, y, width, height, selected ? 2 : 1);
 		Screen.DrawText(font, selected ? textColor : Font.CR_WHITE, x + 22, y + 14, heading,
-			DTA_ScaleX, 2.70, DTA_ScaleY, 2.70);
+			DTA_ScaleX, 3.24, DTA_ScaleY, 3.24);
 		Screen.DrawText(font, textColor, x + width - 70, y + 14, String.Format("%d", value),
-			DTA_ScaleX, 2.70, DTA_ScaleY, 2.70);
+			DTA_ScaleX, 3.24, DTA_ScaleY, 3.24);
 		Screen.DrawText(font, Font.CR_WHITE, x + 22, y + 49, effect,
-			DTA_ScaleX, 2.0, DTA_ScaleY, 2.0);
+			DTA_ScaleX, 2.40, DTA_ScaleY, 2.40);
 		if (selected)
 			Screen.DrawText(font, unspent > 0 ? Font.CR_GOLD : Font.CR_GRAY, x + 22, y + height - 27,
 				unspent > 0 ? "ENTER OR CLICK: SPEND 1 POINT" : "NO STAT POINTS AVAILABLE",
-				DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
+				DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
 	}
 
 	void DrawInfoBox(Font font, int x, int y, int width, int height, string heading,
@@ -309,7 +331,7 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.Dim(accent, 0.30, x, y, 8, height);
 		Screen.DrawLineFrame(Color(27, 69, 106), x, y, width, height, 1);
 		Screen.DrawText(font, headingColor, x + 22, y + 15, heading,
-			DTA_ScaleX, 2.35, DTA_ScaleY, 2.35);
+			DTA_ScaleX, 2.82, DTA_ScaleY, 2.82);
 	}
 
 	override void Init(Menu parent, OptionMenuDescriptor desc)
@@ -318,10 +340,13 @@ class TuinRPGCharacterMenu : OptionMenu
 		for (int i = 0; i < mDesc.mItems.Size(); i++)
 		{
 			let item = mDesc.mItems[i];
-			if (item.mLabel ~== "CLASS AND PERKS")
-				mDesc.mItems[i] = new ('TuinRPGHiddenSubmenuItem').Init(item.mLabel, 'TuinRPGPerkHub');
+			if (item.mLabel ~== "CLASS AND PERKS" || item.mLabel ~== "GENERAL PERKS")
+				mDesc.mItems[i] = new ('TuinRPGHiddenSubmenuItem').Init(item.mLabel,
+					TuinRPGHandler.ClassesEnabled() ? 'TuinRPGPerkHub' : 'TuinRPGGeneralPerks');
 			else if (item.mLabel ~== "ARSENAL")
 				mDesc.mItems[i] = new ('TuinRPGHiddenSubmenuItem').Init(item.mLabel, 'TuinRPGArsenal');
+			else if (item.mLabel ~== "WEAPON PERKS")
+				mDesc.mItems[i] = new ('TuinRPGHiddenSubmenuItem').Init(item.mLabel, 'TuinRPGWeaponPerks');
 			else if (item.mLabel ~== "MENU TIME")
 				mDesc.mItems[i] = new ('TuinRPGMenuTimeItem').Init(item.mLabel, "");
 			else
@@ -360,15 +385,17 @@ class TuinRPGCharacterMenu : OptionMenu
 	{
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
-		int panelWidth = min(sw - 72, 1660);
-		int panelHeight = min(sh - 72, 800);
+		int panelWidth = min(sw - 48, 2100);
+		int panelHeight = min(sh - 48, 1000);
 		int panelX = (sw - panelWidth) / 2;
 		int panelY = (sh - panelHeight) / 2;
-		int leftWidth = clamp(int(panelWidth * 0.21), 310, 350);
-		int middleWidth = clamp(int(panelWidth * 0.27), 390, 450);
+		int leftWidth = clamp(int(panelWidth * 0.22), 310, 440);
+		int middleWidth = clamp(int(panelWidth * 0.26), 350, 520);
 		int navHeight = 52;
 		int navGap = 10;
-		int navStart = panelY + panelHeight - 3 * (navHeight + navGap) - 12;
+		bool classesEnabled = TuinRPGHandler.ClassesEnabled();
+		int navCount = classesEnabled ? 3 : 4;
+		int navStart = panelY + panelHeight - navCount * (navHeight + navGap) - 12;
 		int attrGap = 10;
 		int attrHeight = (panelHeight - 153 - attrGap * 4) / 5;
 		int middleX = panelX + leftWidth + 18;
@@ -377,7 +404,10 @@ class TuinRPGCharacterMenu : OptionMenu
 		{
 			if (y >= navStart && y < navStart + navHeight) hit = 0;
 			else if (y >= navStart + navHeight + navGap && y < navStart + navHeight * 2 + navGap) hit = 6;
-			else if (y >= navStart + (navHeight + navGap) * 2 && y < navStart + navHeight * 3 + navGap * 2) hit = 7;
+			else if (y >= navStart + (navHeight + navGap) * 2 && y < navStart + navHeight * 3 + navGap * 2)
+				hit = classesEnabled ? 7 : 7;
+			else if (!classesEnabled && y >= navStart + (navHeight + navGap) * 3 &&
+				y < navStart + navHeight * 4 + navGap * 3) hit = 8;
 		}
 		if (x >= middleX && x < middleX + middleWidth)
 			for (int i = 0; i < 5; i++)
@@ -405,12 +435,12 @@ class TuinRPGCharacterMenu : OptionMenu
 		Actor pawn = players[consoleplayer].mo;
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
-		int panelWidth = min(sw - 72, 1660);
-		int panelHeight = min(sh - 72, 800);
+		int panelWidth = min(sw - 48, 2100);
+		int panelHeight = min(sh - 48, 1000);
 		int panelX = (sw - panelWidth) / 2;
 		int panelY = (sh - panelHeight) / 2;
-		int leftWidth = clamp(int(panelWidth * 0.21), 310, 350);
-		int middleWidth = clamp(int(panelWidth * 0.27), 390, 450);
+		int leftWidth = clamp(int(panelWidth * 0.22), 310, 440);
+		int middleWidth = clamp(int(panelWidth * 0.26), 350, 520);
 		int middleX = panelX + leftWidth + 18;
 		int rightX = middleX + middleWidth + 18;
 		int rightWidth = panelX + panelWidth - 20 - rightX;
@@ -418,13 +448,14 @@ class TuinRPGCharacterMenu : OptionMenu
 		Screen.Dim(Color(3, 13, 31), 0.98, panelX, panelY, panelWidth, panelHeight);
 		Screen.DrawLineFrame(Color(1, 5, 13), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(36, 128, 210), panelX + 7, panelY + 7, panelWidth - 14, panelHeight - 14, 2);
-		Screen.DrawText(font, Font.CR_WHITE, panelX + 24, panelY + 22, "CHARACTER DASHBOARD",
-			DTA_ScaleX, 3.10, DTA_ScaleY, 3.10);
+		Screen.DrawText(font, Font.CR_WHITE, panelX + 24, panelY + 22, "CHARACTER",
+			DTA_ScaleX, 3.72, DTA_ScaleY, 3.72);
 		Screen.DrawText(font, Font.CR_LIGHTBLUE, middleX, panelY + 29, "ATTRIBUTES",
-			DTA_ScaleX, 2.55, DTA_ScaleY, 2.55);
-		Screen.DrawText(font, Font.CR_PURPLE, rightX, panelY + 29, "COMBAT BREAKDOWN",
-			DTA_ScaleX, 2.55, DTA_ScaleY, 2.55);
+			DTA_ScaleX, 3.06, DTA_ScaleY, 3.06);
+		Screen.DrawText(font, Font.CR_PURPLE, rightX, panelY + 29, "LOADOUT AND COMBAT",
+			DTA_ScaleX, 3.06, DTA_ScaleY, 3.06);
 
+		bool classesEnabled = TuinRPGHandler.ClassesEnabled();
 		int classIndex = clamp(data.PlayerClass - 1, 0, 5);
 		string portraitName = classIndex == 0 ? "graphics/TuinClassHeavy.png" : classIndex == 1 ? "graphics/TuinClassMedic.png" :
 			classIndex == 2 ? "graphics/TuinClassExecutioner.png" : classIndex == 3 ? "graphics/TuinClassDoomGuy.png" :
@@ -432,28 +463,92 @@ class TuinRPGCharacterMenu : OptionMenu
 		TextureID portrait = TexMan.CheckForTexture(portraitName, TexMan.Type_Any);
 		int navHeight = 52;
 		int navGap = 10;
-		int navStart = panelY + panelHeight - 3 * (navHeight + navGap) - 12;
+		int navCount = classesEnabled ? 3 : 4;
+		int navStart = panelY + panelHeight - navCount * (navHeight + navGap) - 12;
 		int artSize = min(leftWidth - 70, navStart - panelY - 140);
 		int artX = panelX + (leftWidth - artSize) / 2;
-		int artY = panelY + 72;
-		if (portrait.IsValid()) Screen.DrawTexture(portrait, false, artX, artY,
+		int artY = classesEnabled ? panelY + 72 : panelY + 270;
+		int artHeight = classesEnabled ? artSize : 190;
+		if (classesEnabled && portrait.IsValid()) Screen.DrawTexture(portrait, false, artX, artY,
 			DTA_DestWidth, artSize, DTA_DestHeight, artSize);
+		if (!classesEnabled)
+		{
+			int px = panelX + 20;
+			int pw = leftWidth - 34;
+			int ph = min(430, navStart - artY - 12);
+			int traits[7];
+			int candidates[7] = {0, 1, 3, 9, 12, 14, 15};
+			int total = 0;
+			for (int i = 0; i < 7; i++) if (TuinWeaponTraits.Strength(data, candidates[i])) traits[total++] = candidates[i];
+			int visible = total;
+			ph = min(ph, 92 + max(1, visible) * 84);
+			int rh = (ph - 92) / max(1, visible);
+			Screen.Dim(Color(5, 25, 49), 0.96, px, artY, pw, ph);
+			TuinWeaponTraits.FluidText(font, Font.CR_LIGHTBLUE, px + 16, artY + 15,
+				"PASSIVE BONUSES", 2.9, pw - 32, false, false);
+			if (visible == 0)
+				TuinWeaponTraits.FluidText(font, Font.CR_GRAY, px + 16, artY + 55,
+					"No passive bonuses yet.", 2.3, pw - 32, false, false);
+			for (int row = 0; row < visible; row++)
+			{
+				int trait = traits[row];
+				int kind = trait == 0 ? 0 : trait == 1 ? 1 : trait == 3 ? 2 : trait == 9 ? 3 : trait;
+				int tier = TuinWeaponTraits.Strength(data, trait);
+				string heading = kind == 0 ? "GUARD" : kind == 1 ? "MEDIC" : kind == 2 ? "SURVIVOR" : kind == 3 ? "FORTUNE" : trait == 12 ? "SECOND WIND" : trait == 14 ? "PROSPECTOR" : "QUARTERMASTER";
+				string status = tier == 0 ? "INACTIVE" : kind == 2 && data.TraitSurvivorUsed ? "USED" : trait == 12 && data.TraitWindCooldown > 0 ? String.Format("%ds", (data.TraitWindCooldown + 34) / 35) : "ACTIVE";
+				string effect = trait == 12 ? "Low HP: heal + move faster" : trait == 14 ? String.Format("+%d%% non-boss loot rarity", tier * 4) : trait == 15 ? "Idle ammo refill; 25% cap" : kind == 0 ? (tier ? String.Format("Restores armor to %d", tier * 10) : "Replenishes your armor") :
+					kind == 1 ? (tier ? String.Format("+1 health every %d seconds", 6 - tier) : "Regenerates your health") :
+					kind == 2 ? (tier ? (data.TraitSurvivorUsed ? "Recharges on the next map" : "Survive one fatal hit this map") : "Saves you from a fatal hit") :
+					(tier ? String.Format("+%d%% coins from pickups", tier * 10) : "Earn extra coins from pickups");
+				int ry = artY + 48 + row * rh;
+				int tint = tier == 0 ? Font.CR_GRAY : kind == 0 ? Font.CR_LIGHTBLUE : kind == 1 || trait == 12 || trait == 15 ? Font.CR_GREEN : Font.CR_GOLD;
+				Screen.Dim(tier ? Color(12, 43, 66) : Color(8, 20, 34), 0.96, px + 10, ry, pw - 20, rh - 5);
+				TuinWeaponTraits.FluidText(font, tint, px + 20, ry + 8,
+					heading, min(2.9, rh / 19.0), pw * 0.52, false, false);
+				double ss = min(1.85, rh / 24.0);
+				Screen.DrawText(font, tint, px + pw - 20 - font.StringWidth(status) * ss,
+					ry + 9, status, DTA_ScaleX, ss, DTA_ScaleY, ss);
+				TuinWeaponTraits.FluidText(font, tier ? Font.CR_WHITE : Font.CR_GRAY,
+					px + 20, ry + rh * 0.53, effect, min(2.3, rh / 23.0), pw - 40, false, false);
+			}
+			if (visible > 0)
+			{
+				TuinWeaponTraits.FluidText(font, Font.CR_GRAY, px + 16, artY + ph - 35,
+					"Always active.", 1.9, pw - 32, false, false);
+				TuinWeaponTraits.FluidText(font, Font.CR_GRAY, px + 16, artY + ph - 18,
+					"Strongest copy of each trait applies.", 1.7, pw - 32, false, false);
+			}
+		}
 		string className = TuinRPGHandler.PlayerClassName(data.PlayerClass);
-		int infoY = artY + artSize + 18;
+		int infoY = classesEnabled ? artY + artSize + 18 : panelY + 80;
 		Screen.DrawText(font, Font.CR_GOLD, panelX + 28, infoY, className,
-			DTA_ScaleX, 2.75, DTA_ScaleY, 2.75);
+			DTA_ScaleX, 3.30, DTA_ScaleY, 3.30);
 		Screen.DrawText(font, Font.CR_WHITE, panelX + 28, infoY + 34,
 			String.Format("LEVEL %d    XP %d / %d", data.PlayerLevel, data.CurrentXP, TuinRPGHandler.XPRequired(data.PlayerLevel)),
-			DTA_ScaleX, 2.0, DTA_ScaleY, 2.0);
+			DTA_ScaleX, 2.40, DTA_ScaleY, 2.40);
 		Screen.DrawText(font, data.UnspentStatPoints > 0 ? Font.CR_GOLD : Font.CR_GRAY, panelX + 28, infoY + 62,
-			String.Format("STAT POINTS: %d", data.UnspentStatPoints), DTA_ScaleX, 2.1, DTA_ScaleY, 2.1);
+			String.Format("STAT POINTS: %d", data.UnspentStatPoints), DTA_ScaleX, 2.52, DTA_ScaleY, 2.52);
 		Screen.DrawText(font, data.UnspentSkillPoints > 0 ? Font.CR_GOLD : Font.CR_GRAY, panelX + 28, infoY + 90,
-			String.Format("PERK POINTS: %d", data.UnspentSkillPoints), DTA_ScaleX, 2.1, DTA_ScaleY, 2.1);
+			String.Format("PERK POINTS: %d", data.UnspentSkillPoints), DTA_ScaleX, 2.52, DTA_ScaleY, 2.52);
+		if (!classesEnabled)
+			Screen.DrawText(font, data.UnspentWeaponPerkPoints > 0 ? Font.CR_GOLD : Font.CR_GRAY,
+				panelX + 28, infoY + 118,
+				String.Format("WEAPON PERK POINTS: %d", data.UnspentWeaponPerkPoints),
+				DTA_ScaleX, 2.28, DTA_ScaleY, 2.28);
 		int timeMode = CVar.FindCVar('tuin_menu_time_mode').GetInt();
 		string timeName = timeMode == 2 ? "DO NOT PAUSE" : "PAUSE GAME";
-		DrawNavCard(font, 0, panelX + 20, navStart, leftWidth - 34, navHeight, "CLASS AND PERKS", "OPEN BUILD DASHBOARD", Color(55, 153, 238), Font.CR_LIGHTBLUE);
+		DrawNavCard(font, 0, panelX + 20, navStart, leftWidth - 34, navHeight,
+			classesEnabled ? "CLASS AND PERKS" : "GENERAL PERKS",
+			classesEnabled ? "OPEN BUILD DASHBOARD" : "UNIVERSAL UPGRADES ONLY",
+			Color(55, 153, 238), Font.CR_LIGHTBLUE);
 		DrawNavCard(font, 6, panelX + 20, navStart + navHeight + navGap, leftWidth - 34, navHeight, "ARSENAL", "INSPECT WEAPON VARIANTS", Color(178, 94, 237), Font.CR_PURPLE);
-		DrawNavCard(font, 7, panelX + 20, navStart + (navHeight + navGap) * 2, leftWidth - 34, navHeight, "MENU TIME", timeName, Color(233, 179, 45), Font.CR_GOLD);
+		if (!classesEnabled)
+			DrawNavCard(font, 7, panelX + 20, navStart + (navHeight + navGap) * 2,
+				leftWidth - 34, navHeight, "WEAPON PERKS", "PERMANENT WEAPON UPGRADES",
+				Color(218, 73, 223), Font.CR_PURPLE);
+		DrawNavCard(font, classesEnabled ? 7 : 8, panelX + 20,
+			navStart + (navHeight + navGap) * (classesEnabled ? 2 : 3), leftWidth - 34,
+			navHeight, "MENU TIME", timeName, Color(233, 179, 45), Font.CR_GOLD);
 
 		int attrGap = 10;
 		int attrHeight = (panelHeight - 153 - attrGap * 4) / 5;
@@ -473,48 +568,92 @@ class TuinRPGCharacterMenu : OptionMenu
 		int weaponProsperity = variantIndex >= 0 ? data.VariantProsperityPercent[variantIndex] : 0;
 		int weaponCritical = variantIndex >= 0 ? TuinRPGHandler.WeaponCriticalPercent(data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex], data.VariantItemLevel[variantIndex]) : 0;
 		Weapon activeWeapon = players[consoleplayer].ReadyWeapon;
+		int activeWeaponFamily = !classesEnabled ? TuinRPGHandler.WeaponFamily(activeWeapon) : 0;
+		bool activeWeaponPerk = TuinRPGHandler.HasWeaponPerk(data, activeWeaponFamily);
 		double rogueCritical = TuinRPGHandler.RogueCriticalBonus(data, activeWeapon);
 		double classDamage = data.PlayerClass == 1 ? (data.TankOverdriveActive ? 1.25 : 1.00) : data.PlayerClass == 2 ? 0.75 :
 			data.PlayerClass == 3 ? 1.30 : data.PlayerClass == 4 ? 1.10 : data.PlayerClass == 6 ? 0.90 : 1.0;
+		if (activeWeaponPerk)
+		{
+			if (activeWeaponFamily == 1) classDamage *= 2.0;
+			else if (activeWeaponFamily == 2) classDamage *= 15.0;
+			else if (activeWeaponFamily == 3) classDamage *= 0.85;
+			else if (activeWeaponFamily == 4) classDamage *= 0.75;
+			else if (activeWeaponFamily == 5) classDamage *= 3.0;
+			else if (activeWeaponFamily == 7) classDamage *= 0.25;
+			else if (activeWeaponFamily == 8) classDamage *= 0.70;
+			else if (activeWeaponFamily == 10) classDamage *= 1.50;
+		}
 		double damageBonus = (classDamage * (1.0 + data.Strength * 0.02) * (1.0 + weaponPower * 0.01) - 1.0) * 100.0;
 		int firingSpeed = min(data.PlayerClass == 1 && data.TankOverdriveActive ? 200 : 75,
 			data.Agility * 2 + weaponHaste + (data.PlayerClass == 1 && data.TankOverdriveActive ? 150 : 0));
+		if (activeWeaponPerk && activeWeaponFamily == 1)
+			firingSpeed = int((100 + firingSpeed) * 0.5 - 100);
+		else if (activeWeaponPerk && activeWeaponFamily == 7)
+			firingSpeed = (100 + firingSpeed) * 4 - 100;
 		double criticalChance = TuinRPGHandler.TotalCriticalChance(data, variantIndex, activeWeapon);
 		double bonusXPChance = (1.0 - exp(log(0.97) * max(0, data.Luck))) * 100.0;
 		double classProtection = data.PlayerClass == 1 ? 0.75 * (1.0 - data.PerkClassMastery * 0.03) : data.PlayerClass == 3 ? 1.10 :
-			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.10 : 1.0;
+			data.PlayerClass == 4 ? 0.90 : data.PlayerClass == 5 ? 1.15 : 1.0;
 		int totalDR = int((1.0 - (1.0 - min(75, data.Endurance) * 0.01) * classProtection * (1.0 - data.PerkIronSkin * 0.03)) * 100.0 + 0.5);
 		string weaponName = activeWeapon ? TuinRPGHandler.WeaponBaseName((class<Weapon>)(activeWeapon.GetClass())) : "NO WEAPON READY";
 		int weaponColor = Font.CR_WHITE;
 		int weaponLevel = 0;
 		if (variantIndex >= 0)
 		{
-			weaponName = TuinRPGHandler.WeaponVariantName(data.VariantWeaponType[variantIndex], data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex], data.VariantID[variantIndex]);
+			weaponName = TuinWeaponTraits.DisplayName(data.VariantWeaponType[variantIndex], data.VariantAffixFlags[variantIndex], data.VariantQuality[variantIndex], data.VariantID[variantIndex]);
 			weaponColor = TuinRPGHandler.WeaponQualityFontColor(data.VariantQuality[variantIndex]);
 			weaponLevel = data.VariantItemLevel[variantIndex];
 		}
 		int boxY = panelY + 88;
-		DrawInfoBox(font, rightX, boxY, rightWidth, 112, "CURRENT WEAPON", Color(178, 94, 237), Font.CR_PURPLE);
-		Screen.DrawText(font, weaponColor, rightX + 22, boxY + 49, weaponName, DTA_ScaleX, 2.20, DTA_ScaleY, 2.20);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 76, variantIndex >= 0 ? String.Format("ITEM LEVEL %d", weaponLevel) : "STANDARD - NO AFFIXES", DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		boxY += 124;
-		DrawInfoBox(font, rightX, boxY, rightWidth, 118, "COMBINED TOTALS", Color(233, 179, 45), Font.CR_GOLD);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 51, String.Format("DAMAGE  \c[gold]+%.1f%%", damageBonus), DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 250, boxY + 51, String.Format("FIRE SPEED  \c[gold]+%d%% / 75%%", firingSpeed), DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 82, String.Format("CRITICAL  \c[gold]%.1f%% / 50%%", criticalChance), DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 250, boxY + 82, String.Format("DAMAGE REDUCTION  \c[green]%d%%", totalDR), DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
-		boxY += 130;
-		DrawInfoBox(font, rightX, boxY, rightWidth, 166, "FROM PLAYER", Color(49, 199, 219), Font.CR_CYAN);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 49, String.Format("MAX HEALTH  \c[green]%d\c[white]   VITALITY +%d   PERK +%d", pawn.GetMaxHealth(true), data.Vitality * 5, data.PerkVitalCore * 10), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 77, String.Format("DAMAGE +%d%%   FIRE SPEED +%d%%", data.Strength * 2, min(75, data.Agility * 2)), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 105, String.Format("CRITICAL %.1f%%   BASE 2 + LUCK %.1f + CLASS/PERKS %.1f", 2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 + rogueCritical, data.Luck * 0.5, data.PerkKillerInstinct * 2.0 + rogueCritical), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 133, String.Format("LEECH %d%%   BONUS XP %.1f%%", data.PerkBloodDrinker, bonusXPChance), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		boxY += 178;
-		DrawInfoBox(font, rightX, boxY, rightWidth, 172, "FROM WEAPON", Color(178, 94, 237), Font.CR_PURPLE);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 49, String.Format("DAMAGE +%d%%   LEVEL +%d   ROLL +%d", weaponPower, weaponLevelPower, weaponAffixPower), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 77, String.Format("FIRE SPEED +%d%%   CRITICAL +%d%%", weaponHaste, weaponCritical), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 105, String.Format("DAMAGE LEECH %d%%   EXECUTION +%d%%", weaponLeech, weaponExecution), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
-		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 133, String.Format("KILL XP +%d%%", weaponProsperity), DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
+		DrawInfoBox(font, rightX, boxY, rightWidth, classesEnabled ? 112 : 138,
+			"CURRENT WEAPON", Color(178, 94, 237), Font.CR_PURPLE);
+		TuinWeaponTraits.FluidText(font, weaponColor, rightX + 22, boxY + 49, weaponName,
+			2.45, rightWidth - 44, variantIndex >= 0 && data.VariantQuality[variantIndex] == 6,
+			variantIndex >= 0 && data.VariantQuality[variantIndex] >= 2,
+			variantIndex >= 0 && data.VariantQuality[variantIndex] == 5,
+			variantIndex >= 0 ? data.VariantQuality[variantIndex] : 0);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 76, variantIndex >= 0 ? String.Format("ITEM LEVEL %d", weaponLevel) : "STANDARD - NO AFFIXES", DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		if (!classesEnabled)
+			Screen.DrawText(font, activeWeaponPerk ? Font.CR_GREEN : Font.CR_GRAY,
+				rightX + 22, boxY + 103,
+				activeWeaponFamily > 0 ? String.Format("WEAPON PERK: %s%s",
+					TuinRPGHandler.WeaponPerkName(activeWeaponFamily), activeWeaponPerk ? "" : " - NOT CHOSEN") :
+					"WEAPON PERK: UNRECOGNIZED WEAPON FAMILY",
+				DTA_ScaleX, 2.10, DTA_ScaleY, 2.10);
+		boxY += classesEnabled ? 124 : 146;
+		DrawInfoBox(font, rightX, boxY, rightWidth, 118, "BASE COMBAT TOTALS", Color(233, 179, 45), Font.CR_GOLD);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 51, String.Format("DAMAGE  \c[gold]+%.1f%%", damageBonus), DTA_ScaleX, 2.46, DTA_ScaleY, 2.46);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + rightWidth / 2, boxY + 51, String.Format("FIRE SPEED  \c[gold]+%d%% / 75%%", firingSpeed), DTA_ScaleX, 2.46, DTA_ScaleY, 2.46);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 82, String.Format("CRITICAL  \c[gold]%.1f%% / 50%%", criticalChance), DTA_ScaleX, 2.46, DTA_ScaleY, 2.46);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + rightWidth / 2, boxY + 82, String.Format("DAMAGE REDUCTION  \c[green]%d%%", totalDR), DTA_ScaleX, 2.46, DTA_ScaleY, 2.46);
+		boxY += classesEnabled ? 130 : 126;
+		DrawInfoBox(font, rightX, boxY, rightWidth, 166, "PLAYER BONUSES", Color(49, 199, 219), Font.CR_CYAN);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 49, String.Format("MAX HEALTH  \c[green]%d\c[white]   VITALITY +%d   PERK +%d", pawn.GetMaxHealth(true), data.Vitality * 5, data.PerkVitalCore * 10), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 77, String.Format("DAMAGE +%d%%   FIRE SPEED +%d%%", data.Strength * 2, min(75, data.Agility * 2)), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 105, String.Format(
+			classesEnabled ? "CRITICAL %.1f%%   BASE 2 + LUCK %.1f + CLASS/PERKS %.1f" :
+			"CRITICAL %.1f%%   BASE 2 + LUCK %.1f + PERKS %.1f",
+			2.0 + data.Luck * 0.5 + data.PerkKillerInstinct * 2.0 + rogueCritical,
+			data.Luck * 0.5, data.PerkKillerInstinct * 2.0 + rogueCritical), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 133, String.Format("LEECH %d%%   BONUS XP %.1f%%", data.PerkBloodDrinker, bonusXPChance), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		boxY += classesEnabled ? 178 : 174;
+		DrawInfoBox(font, rightX, boxY, rightWidth, 172, "WEAPON ROLL BONUSES", Color(178, 94, 237), Font.CR_PURPLE);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 49, String.Format("DAMAGE +%d%%   LEVEL +%d   ROLL +%d", weaponPower, weaponLevelPower, weaponAffixPower), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 77, String.Format("FIRE SPEED +%d%%   CRITICAL +%d%%", weaponHaste, weaponCritical), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 105, String.Format("DAMAGE LEECH %d%%   EXECUTION +%d%%", weaponLeech, weaponExecution), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		Screen.DrawText(font, Font.CR_WHITE, rightX + 22, boxY + 133, String.Format("KILL XP +%d%%", weaponProsperity), DTA_ScaleX, 2.34, DTA_ScaleY, 2.34);
+		if (!classesEnabled)
+		{
+			boxY += 180;
+			DrawInfoBox(font, rightX, boxY, rightWidth, 76, "WEAPON SPECIALIZATION",
+				Color(218, 73, 223), Font.CR_PURPLE);
+			Screen.DrawText(font, activeWeaponPerk ? Font.CR_WHITE : Font.CR_GRAY,
+				rightX + 22, boxY + 45,
+				activeWeaponPerk ? TuinRPGHandler.WeaponPerkSummary(activeWeaponFamily) :
+					"NO SPECIALIZATION ACTIVE FOR THIS WEAPON",
+				DTA_ScaleX, 1.98, DTA_ScaleY, 1.98);
+		}
 		Super.Drawer();
 	}
 }
@@ -671,8 +810,8 @@ class TuinRPGArsenalMenu : OptionMenu
 		if (!data || data.WeaponVariantCount <= 0) return true;
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
-		int panelWidth = min(sw - 72, 1560);
-		int panelHeight = min(sh - 72, 780);
+		int panelWidth = min(sw - 72, 1840);
+		int panelHeight = min(sh - 72, 940);
 		int panelX = (sw - panelWidth) / 2;
 		int panelY = (sh - panelHeight) / 2;
 		int listWidth = clamp(int(panelWidth * 0.40), 520, 620);
@@ -702,8 +841,8 @@ class TuinRPGArsenalMenu : OptionMenu
 	{
 		int sw = Screen.GetWidth();
 		int sh = Screen.GetHeight();
-		int panelWidth = min(sw - 72, 1560);
-		int panelHeight = min(sh - 72, 780);
+		int panelWidth = min(sw - 72, 1840);
+		int panelHeight = min(sh - 72, 940);
 		int panelX = (sw - panelWidth) / 2;
 		int panelY = (sh - panelHeight) / 2;
 		int listWidth = clamp(int(panelWidth * 0.40), 520, 620);
@@ -743,44 +882,72 @@ class TuinRPGArsenalMenu : OptionMenu
 			int rowY = panelY + 86 + row * rowHeight;
 			bool selected = index == SelectedIndex;
 			int qualityColor = TuinRPGHandler.WeaponQualityFontColor(data.VariantQuality[index]);
-			Color rowAccent = data.VariantQuality[index] >= 6 ? Color(244, 193, 48) :
-				data.VariantQuality[index] >= 5 ? Color(181, 88, 236) : Color(44, 139, 217);
+            Color rowAccent = TuinWeaponDrop.QualityColor(data.VariantQuality[index]);
 			Screen.Dim(selected ? Color(12, 43, 76) : Color(5, 23, 43), 0.98,
 				panelX + 24, rowY, listWidth - 34, rowHeight - 5);
 			Screen.Dim(rowAccent, selected ? 0.50 : 0.20, panelX + 24, rowY, 8, rowHeight - 5);
 			Screen.DrawLineFrame(selected ? rowAccent : Color(25, 65, 100), panelX + 24, rowY, listWidth - 34, rowHeight - 5, selected ? 2 : 1);
-			string name = TuinRPGHandler.WeaponVariantName(data.VariantWeaponType[index], data.VariantAffixFlags[index], data.VariantQuality[index], data.VariantID[index]);
-			Screen.DrawText(font, qualityColor, panelX + 47, rowY + 9, name, DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
+			string name = TuinWeaponTraits.DisplayName(data.VariantWeaponType[index], data.VariantAffixFlags[index], data.VariantQuality[index], data.VariantID[index]);
+			TuinWeaponTraits.FluidText(font, qualityColor, panelX + 47, rowY + 9, name,
+				2.35, listWidth - 70, data.VariantQuality[index] == 6, data.VariantQuality[index] >= 2, data.VariantQuality[index] == 5, data.VariantQuality[index]);
 			Screen.DrawText(font, Font.CR_WHITE, panelX + 47, rowY + 31,
 				String.Format("LV %d   SCORE %d%s", data.VariantItemLevel[index], TuinRPGHandler.StoredWeaponVariantScore(data, index), data.VariantEquipped[index] ? "   ACTIVE" : ""),
-				DTA_ScaleX, 1.75, DTA_ScaleY, 1.75);
+				DTA_ScaleX, 2.0, DTA_ScaleY, 2.0);
 		}
 		int selected = SelectedIndex;
 		int qualityColor = TuinRPGHandler.WeaponQualityFontColor(data.VariantQuality[selected]);
-		string selectedName = TuinRPGHandler.WeaponVariantName(data.VariantWeaponType[selected], data.VariantAffixFlags[selected], data.VariantQuality[selected], data.VariantID[selected]);
+		string selectedName = TuinWeaponTraits.DisplayName(data.VariantWeaponType[selected], data.VariantAffixFlags[selected], data.VariantQuality[selected], data.VariantID[selected]);
 		int equippedIndex = data.FindEquippedVariant(data.VariantWeaponType[selected]);
 		int selectedScore = TuinRPGHandler.StoredWeaponVariantScore(data, selected);
 		int equippedScore = equippedIndex >= 0 ? TuinRPGHandler.StoredWeaponVariantScore(data, equippedIndex) : 0;
 		Screen.Dim(Color(5, 23, 43), 0.98, detailX, panelY + 82, detailWidth, 122);
-		Screen.DrawLineFrame(Color(75, 50, 111), detailX, panelY + 82, detailWidth, 122, 2);
-		Screen.DrawText(font, qualityColor, detailX + 24, panelY + 104, selectedName, DTA_ScaleX, 2.65, DTA_ScaleY, 2.65);
-		Screen.DrawText(font, qualityColor, detailX + 24, panelY + 143,
-			String.Format("%s   ITEM LEVEL %d", TuinRPGHandler.WeaponQualityName(data.VariantQuality[selected]), data.VariantItemLevel[selected]), DTA_ScaleX, 2.15, DTA_ScaleY, 2.15);
+        Screen.DrawLineFrame(TuinWeaponDrop.QualityColor(data.VariantQuality[selected]), detailX, panelY + 82, detailWidth, 122, 2);
+		TuinWeaponTraits.FluidText(font, qualityColor, detailX + 24, panelY + 104,
+			selectedName, 3.05, detailWidth - 48, data.VariantQuality[selected] == 6, data.VariantQuality[selected] >= 2, data.VariantQuality[selected] == 5, data.VariantQuality[selected]);
+		TuinWeaponTraits.FluidText(font, qualityColor, detailX + 24, panelY + 143,
+			String.Format("%s   ITEM LEVEL %d", TuinRPGHandler.WeaponQualityName(data.VariantQuality[selected]), data.VariantItemLevel[selected]),
+			2.45, detailWidth - 48, data.VariantQuality[selected] == 6, data.VariantQuality[selected] >= 2, data.VariantQuality[selected] == 5, data.VariantQuality[selected]);
 		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, panelY + 171,
 			String.Format("GEAR SCORE %d   %s%d VS EQUIPPED", selectedScore, selectedScore >= equippedScore ? "+" : "", selectedScore - equippedScore), DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
 		int statsY = panelY + 220;
-		Screen.Dim(Color(14, 5, 24), 0.72, detailX, statsY, detailWidth, 324);
-		Screen.DrawLineFrame(Color(105, 44, 137), detailX, statsY, detailWidth, 324, 1);
+		int statsHeight = TuinRPGHandler.ClassesEnabled() ? 324 : clamp(panelHeight - 440, 180, 300);
+		int statGap = (statsHeight - 76) / 7;
+		double statScale = min(2.4, statGap / 12.0);
+		Screen.Dim(Color(14, 5, 24), 0.72, detailX, statsY, detailWidth, statsHeight);
+		Screen.DrawLineFrame(Color(105, 44, 137), detailX, statsY, detailWidth, statsHeight, 1);
 		Screen.DrawText(font, Font.CR_PURPLE, detailX + 24, statsY + 18, "AFFIX AND POWER BREAKDOWN", DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
 		int statY = statsY + 61;
 		int levelPower = TuinRPGHandler.WeaponItemLevelPowerPercent(data.VariantItemLevel[selected]);
-		Screen.DrawText(font, Font.CR_GOLD, detailX + 24, statY, String.Format("ITEM-LEVEL DAMAGE          +%d%%", levelPower), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("POWER ROLL                +%d%%", data.VariantPowerPercent[selected]), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("FIRING SPEED              +%d%%", data.VariantHastePercent[selected]), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("CRITICAL CHANCE           +%d%%", TuinRPGHandler.WeaponCriticalPercent(data.VariantAffixFlags[selected], data.VariantQuality[selected], data.VariantItemLevel[selected])), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_GREEN, detailX + 24, statY, String.Format("DAMAGE LEECH               %d%%", data.VariantLeechPercent[selected]), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_RED, detailX + 24, statY, String.Format("EXECUTION DAMAGE          +%d%%", data.VariantExecutionPercent[selected]), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10); statY += 34;
-		Screen.DrawText(font, Font.CR_GOLD, detailX + 24, statY, String.Format("KILL XP                   +%d%%", data.VariantProsperityPercent[selected]), DTA_ScaleX, 2.10, DTA_ScaleY, 2.10);
+		Screen.DrawText(font, Font.CR_GOLD, detailX + 24, statY, String.Format("ITEM-LEVEL DAMAGE          +%d%%", levelPower), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("POWER ROLL                +%d%%", data.VariantPowerPercent[selected]), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("FIRING SPEED              +%d%%", data.VariantHastePercent[selected]), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_WHITE, detailX + 24, statY, String.Format("CRITICAL CHANCE           +%d%%", TuinRPGHandler.WeaponCriticalPercent(data.VariantAffixFlags[selected], data.VariantQuality[selected], data.VariantItemLevel[selected])), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_GREEN, detailX + 24, statY, String.Format("DAMAGE LEECH               %d%%", data.VariantLeechPercent[selected]), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_RED, detailX + 24, statY, String.Format("EXECUTION DAMAGE          +%d%%", data.VariantExecutionPercent[selected]), DTA_ScaleX, statScale, DTA_ScaleY, statScale); statY += statGap;
+		Screen.DrawText(font, Font.CR_GOLD, detailX + 24, statY, String.Format("KILL XP                   +%d%%", data.VariantProsperityPercent[selected]), DTA_ScaleX, statScale, DTA_ScaleY, statScale);
+		if (!TuinRPGHandler.ClassesEnabled())
+		{
+			int traitY = statsY + statsHeight + 10;
+			for (int row = 0; row < 3; row++)
+			{
+				int trait = TuinWeaponTraits.Nth(data.VariantAffixFlags[selected], row);
+				if (trait < 0) break;
+				string title = TuinWeaponTraits.NameOf(trait);
+				string effect = TuinWeaponTraits.Description(trait, data.VariantQuality[selected]);
+				if (trait == 13 && selected == TuinRPGHandler.ActiveWeaponVariantIndex(consoleplayer, data))
+					effect = String.Format("CURRENT +%d%% | ", data.TraitMomentumStacks * 2) .. effect;
+				int traitColor = trait == 0 || trait == 11 ? Font.CR_LIGHTBLUE :
+					trait == 1 || trait == 6 || trait == 12 || trait == 15 ? Font.CR_GREEN : trait == 2 || trait == 7 || trait == 13 ? Font.CR_CYAN :
+					trait == 3 || trait == 9 || trait == 14 ? Font.CR_GOLD : trait == 5 ? Font.CR_PURPLE : Font.CR_RED;
+				TuinWeaponTraits.FluidText(font, traitColor, detailX + 24, traitY, title, 2.1, detailWidth - 48);
+				Screen.DrawText(font, Font.CR_WHITE, detailX + 24 + font.StringWidth(title) * 2.1, traitY,
+					TuinWeaponTraits.Passive(trait) ? "  [PASSIVE]" : "  [EQUIPPED]", DTA_ScaleX, 2.0, DTA_ScaleY, 2.0);
+				double traitScale = min(1.95, double(detailWidth - 48) / max(1, font.StringWidth(effect)));
+				Screen.DrawText(font, Font.CR_WHITE, detailX + 24, traitY + 21, effect,
+					DTA_ScaleX, traitScale, DTA_ScaleY, traitScale);
+				traitY += 47;
+			}
+		}
 		int buttonY = panelY + panelHeight - 68;
 		Screen.Dim(data.VariantEquipped[selected] ? Color(34, 93, 58) : Color(67, 31, 91), 0.94, detailX, buttonY, detailWidth, 38);
 		Screen.DrawLineFrame(data.VariantEquipped[selected] ? Color(79, 211, 119) : Color(180, 91, 237), detailX, buttonY, detailWidth, 38, 2);
@@ -846,17 +1013,17 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 			role = "SLAYER";
 			bonuses = "+10% DAMAGE | 10% RESIST | REGEN | QUAD SHOTGUN";
 			tradeoff = "NO MAJOR DRAWBACKS";
-			ability = "HOLD V TO READY BLOOD PUNCH - RELEASE TO STRIKE";
+			ability = "V: FATALITY AT 10% HP | OTHERWISE HOLD FOR BLOOD PUNCH";
 			training = "BLOOD PUNCH CHARGE +10% / +20% / +30%";
 			ultimate = "+45% CHARGE | HEAL 30% DAMAGE, MAX 110 HP";
 		}
 		else if (mLabel ~== "ROGUE")
 		{
 			role = "AMBUSHER";
-			bonuses = "+5% ROGUE WEAPON CRIT | BLEED + VENOM";
-			tradeoff = "-20% MAX HP | +10% DAMAGE TAKEN | -50% MAX AMMO";
-			ability = "V: SHADOW VEIL - ATTACK FROM STEALTH TO AMBUSH";
-			training = "ROGUE WEAPON +2% CRIT | KNIFE +25% SPEED / +20% REACH";
+			bonuses = "+5% ROGUE WEAPON CRIT | NEAR-INSTANT SWITCH | BLEED + VENOM";
+			tradeoff = "-30% MAX HP | +15% DAMAGE TAKEN | -30% MAX AMMO";
+			ability = "V: SHADOW VEIL | B: KNIFE CHAIN | HOLD C, RELEASE: 3-SHOT BURST";
+			training = "ROGUE WEAPON +5% CRIT | KNIFE +25% SPEED / +20% REACH";
 			ultimate = "AMBUSH: X6 RANGED DAMAGE / X16 KNIFE DAMAGE";
 		}
 		else
@@ -961,6 +1128,8 @@ class TuinRPGClassChoiceItem : OptionMenuItemCommand
 
 class TuinRPGClassChoiceMenu : OptionMenu
 {
+	int InputGuardTics;
+
 	override void Init(Menu parent, OptionMenuDescriptor desc)
 	{
 		Super.Init(parent, desc);
@@ -979,10 +1148,22 @@ class TuinRPGClassChoiceMenu : OptionMenu
 		}
 		mDesc.mSelectedItem = 0;
 		mDesc.CalcIndent();
+		// The automatic map-start opening can inherit a movement/menu key that
+		// was already held. Ignore its initial repeat burst instead of scrolling.
+		InputGuardTics = 12;
+	}
+
+	override void Ticker()
+	{
+		Super.Ticker();
+		if (InputGuardTics > 0) InputGuardTics--;
 	}
 
 	override bool MenuEvent(int mkey, bool fromcontroller)
 	{
+		if (InputGuardTics > 0 && (mkey == MKEY_Up || mkey == MKEY_Down ||
+			mkey == MKEY_Left || mkey == MKEY_Right || mkey == MKEY_PageUp ||
+			mkey == MKEY_PageDown)) return true;
 		if (mkey == MKEY_Left) return Super.MenuEvent(MKEY_Up, fromcontroller);
 		if (mkey == MKEY_Right) return Super.MenuEvent(MKEY_Down, fromcontroller);
 		if (mkey == MKEY_Back)
@@ -1367,6 +1548,7 @@ class TuinRPGHelpMenu : OptionMenu
 		int contentWidth = panelWidth - leftWidth - 47;
 		int topic = clamp(mDesc.mSelectedItem, 0, 4);
 		Font deltaFont = "TINYBABY";
+		bool classesEnabled = TuinRPGHandler.ClassesEnabled();
 		Screen.Dim(Color(3, 13, 31), 0.98, panelX, panelY, panelWidth, panelHeight);
 		Screen.DrawLineFrame(Color(1, 5, 13), panelX, panelY, panelWidth, panelHeight, 7);
 		Screen.DrawLineFrame(Color(36, 128, 210), panelX + 7, panelY + 7, panelWidth - 14, panelHeight - 14, 2);
@@ -1384,7 +1566,8 @@ class TuinRPGHelpMenu : OptionMenu
 			"CHOOSE A SECTION", DTA_ScaleX, 2.20, DTA_ScaleY, 2.20);
 
 		string pageTitle = topic == 0 ? "WELCOME TO TUIN RPG" : topic == 1 ? "PROGRESSION GUIDE" :
-			topic == 2 ? "CLASSES AND PERKS" : topic == 3 ? "LOOT AND ENEMIES" : "MULTIPLAYER GUIDE";
+			topic == 2 ? (classesEnabled ? "CLASSES AND PERKS" : "UNIVERSAL PERKS") :
+			topic == 3 ? "LOOT AND ENEMIES" : "MULTIPLAYER GUIDE";
 		int pageColor = topic == 0 ? Font.CR_RED : topic == 1 ? Font.CR_LIGHTBLUE :
 			topic == 2 ? Font.CR_GREEN : topic == 3 ? Font.CR_GOLD : Font.CR_PURPLE;
 		Screen.DrawText(deltaFont, pageColor, contentX, panelY + 27, pageTitle,
@@ -1396,27 +1579,39 @@ class TuinRPGHelpMenu : OptionMenu
 		{
 			DrawGuideBlock(deltaFont, Font.CR_RED, Color(211, 61, 49), contentX, panelY + 94, contentWidth,
 				"THE CORE LOOP", "KILL DEMONS TO EARN XP, LEVELS, STATS AND REWARDS.",
-				"BUILD A PERMANENT CLASS AROUND ITS ABILITY AND WEAPONS.",
+				classesEnabled ? "BUILD A PERMANENT CLASS AROUND ITS ABILITY AND WEAPONS." :
+				"USE THE COMPLETE ARSENAL FROM YOUR LOADED WEAPON MOD.",
 				"HUNT UPGRADED MONSTERS FOR STRONGER RANDOMIZED GEAR.", "GROW STRONGER - THEN FIGHT STRONGER HELLSPAWN.");
 			DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 270, contentWidth,
 				"YOUR RUN", "THE RPG PROGRESSION FOLLOWS YOU THROUGH THE CAMPAIGN.",
 				"THE MINIMAP TRACKS THE LEVEL, TARGETS AND DISCOVERED LOOT.",
-				"JOHN'S END-LEVEL SHOP SELLS RECOVERY, AMMO AND WEAPONS.", "OPEN CLASS AND PERKS TO PLAN YOUR BUILD.");
+				"JOHN'S END-LEVEL SHOP SELLS RECOVERY, AMMO AND WEAPONS.",
+				classesEnabled ? "OPEN CLASS AND PERKS TO PLAN YOUR BUILD." : "OPEN GENERAL PERKS TO PLAN YOUR BUILD.");
 			DrawGuideBlock(deltaFont, Font.CR_GOLD, Color(233, 179, 45), contentX, panelY + 446, contentWidth,
-				"QUICK CONTROLS", "V: USE OR READY YOUR MAIN CLASS ABILITY.",
+				"QUICK CONTROLS", classesEnabled ? "V: USE OR READY YOUR MAIN CLASS ABILITY." :
+				"K: OPEN THE RPG SCREEN. L: INSPECT YOUR ARSENAL.",
 				"N: TOGGLE THE MINIMAP. USE: INSPECT AND EQUIP WEAPON DROPS.",
-				"HEAVY ALSO USES B TO CALL RADIO MARINES WHEN CHARGED.", "ESC OR BACK RETURNS TO THE PREVIOUS PAGE.");
+				classesEnabled ? "B: HEAVY RADIO/ROGUE CHAIN. HOLD/RELEASE C: PISTOL BURST." :
+				"F: TOGGLE THE FLASHLIGHT. Q: OPEN THE WEAPON WHEEL.",
+				"ESC OR BACK RETURNS TO THE PREVIOUS PAGE.");
 		}
 		else if (topic == 1)
 		{
 			DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 94, contentWidth,
 				"LEVELS AND STATS", "MONSTER KILLS AWARD XP; HARDER TARGETS ARE WORTH MORE.",
 				"LEVELS GRANT STAT POINTS FOR STRENGTH, AGILITY AND ENDURANCE.",
-				"STRENGTH ALSO GRANTS HEAVY +5 MAX HEALTH PER POINT.", "YOUR HUD SHOWS LEVEL, XP, STATS AND AVAILABLE POINTS.");
+				classesEnabled ? "STRENGTH ALSO GRANTS HEAVY +5 MAX HEALTH PER POINT." :
+				"VITALITY, LUCK AND ENDURANCE ROUND OUT YOUR MARINE'S BUILD.",
+				"YOUR HUD SHOWS LEVEL, XP, STATS AND AVAILABLE POINTS.");
 			DrawGuideBlock(deltaFont, Font.CR_GREEN, Color(82, 207, 124), contentX, panelY + 270, contentWidth,
-				"PERK MILESTONES", "MILESTONES AWARD 23 TOTAL PERK POINTS BY LEVEL 30.",
-				"GENERAL AND CLASS TRAINING PERKS EACH HAVE THREE RANKS.",
-				"CLASS ULTIMATES COST ONE POINT AND REQUIRE LEVEL 20.", "ULTIMATES ALSO REQUIRE CLASS TRAINING RANK 2.");
+				"PERK MILESTONES", classesEnabled ? "MILESTONES AWARD 26 TOTAL PERK POINTS BY LEVEL 30." :
+				"MILESTONES AWARD 21 UNIVERSAL PERK POINTS BY LEVEL 30.",
+				classesEnabled ? "GENERAL AND CLASS TRAINING PERKS EACH HAVE THREE RANKS." :
+				"ALL SEVEN UNIVERSAL PERKS CAN REACH THEIR THIRD RANK.",
+				classesEnabled ? "CLASS ULTIMATES COST ONE POINT AND REQUIRE LEVEL 20." :
+				"EVERY 5 LEVELS ALSO GRANTS ONE PERMANENT WEAPON PERK.",
+				classesEnabled ? "ULTIMATES ALSO REQUIRE CLASS TRAINING RANK 2." :
+				"LEVEL 30 GIVES 6 POINTS, SO CHOOSE 6 OF THE 8 WEAPON PERKS.");
 			DrawGuideBlock(deltaFont, Font.CR_PURPLE, Color(178, 94, 237), contentX, panelY + 446, contentWidth,
 				"LATE-START CATCH-UP", "STARTING ON A LATER MAP RAISES YOU TO A SUITABLE LEVEL.",
 				"YOU RECEIVE THE CORRESPONDING STAT AND PERK PROGRESSION.",
@@ -1424,18 +1619,32 @@ class TuinRPGHelpMenu : OptionMenu
 		}
 		else if (topic == 2)
 		{
-			DrawGuideBlock(deltaFont, Font.CR_GREEN, Color(82, 207, 124), contentX, panelY + 94, contentWidth,
+			if (classesEnabled) DrawGuideBlock(deltaFont, Font.CR_GREEN, Color(82, 207, 124), contentX, panelY + 94, contentWidth,
 				"PERMANENT CLASS", "CHOOSE HEAVY, HEALER, EXECUTIONER, DOOM GUY, ROGUE OR ENGINEER.",
 				"EACH CLASS HAS CORE BONUSES, A TRADEOFF AND AN ACTIVE ABILITY.",
 				"THE CHOICE LASTS FOR THAT CHARACTER'S RPG PROGRESSION.", "CLASS WEAPONS REWARD PLAYING TO YOUR ROLE.");
-			DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 270, contentWidth,
+			else DrawGuideBlock(deltaFont, Font.CR_GREEN, Color(82, 207, 124), contentX, panelY + 94, contentWidth,
+				"OPEN ARSENAL", "TUIN RPG DOES NOT REPLACE OR GRANT ANY PLAYER WEAPON.",
+				"YOUR LOADED WEAPON MOD CONTROLS PICKUPS, SLOTS AND ANIMATIONS.",
+				"RPG WEAPON VARIANTS USE THE WEAPONS THAT MOD PROVIDES.", "LOAD TUIN RPG AFTER THE WEAPON MOD.");
+			if (classesEnabled) DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 270, contentWidth,
 				"TRAINING", "CLASS TRAINING HAS THREE RANKS AND COSTS ONE POINT EACH.",
 				"IT IMPROVES YOUR CHOSEN CLASS'S DEFINING MECHANIC.",
 				"OTHER CLASSES' TRAINING BONUSES ARE NOT APPLIED TO YOU.", "RANK 2 OPENS THE ULTIMATE ONCE YOU REACH LEVEL 20.");
-			DrawGuideBlock(deltaFont, Font.CR_GOLD, Color(233, 179, 45), contentX, panelY + 446, contentWidth,
+			else DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 270, contentWidth,
+				"UNIVERSAL PERKS", "VITAL CORE RAISES HEALTH; IRON SKIN REDUCES DAMAGE.",
+				"KILLER INSTINCT RAISES CRITS; BLOOD DRINKER ADDS LEECH.",
+				"SCAVENGER IMPROVES AMMO; GIANT SLAYER HURTS TOUGH TARGETS.",
+				"ARMOR PENETRATION BYPASSES 15% OF ARMORED REDUCTION PER RANK.");
+			if (classesEnabled) DrawGuideBlock(deltaFont, Font.CR_GOLD, Color(233, 179, 45), contentX, panelY + 446, contentWidth,
 				"ROLE SNAPSHOT", "HEAVY DEFENDS; HEALER SUPPORTS; EXECUTIONER HUNTS PRIORITIES.",
 				"DOOM GUY BRAWLS; ROGUE AMBUSHES; ENGINEER CONTROLS SPACE.",
-				"V ACTIVATES EACH ROLE'S MAIN ABILITY OR READIES ITS ATTACK.", "COMBINE ROLES IN COOP FOR STRONGER TEAMS.");
+				"ROGUE KNIFE KILLS STORE UP TO 9 B-KEY BLINK STRIKES.", "COMBINE ROLES IN COOP FOR STRONGER TEAMS.");
+			else DrawGuideBlock(deltaFont, Font.CR_GOLD, Color(233, 179, 45), contentX, panelY + 446, contentWidth,
+				"WEAPON PERKS", "OPEN K, THEN WEAPON PERKS, TO CHOOSE A SPECIALIZATION.",
+				"EACH CHOICE HAS A POWERFUL BENEFIT AND A REAL TRADEOFF.",
+				"THE CHOICE IS PERMANENT AND FOLLOWS YOUR RPG CHARACTER.",
+				"FAMILIES: FIST, PISTOL, SHOTGUN, SSG, CHAINGUN, PLASMA, BFG, ROCKET.");
 		}
 		else if (topic == 3)
 		{
@@ -1444,15 +1653,21 @@ class TuinRPGHelpMenu : OptionMenu
 				"MYTHIC AND GODLY WEAPONS ARE THE HIGHEST STANDARD QUALITIES.",
 				"QUALITY, ITEM LEVEL AND AFFIXES ALL SHAPE A WEAPON'S POWER.", "MOVE CLOSE TO A DROP TO INSPECT AND EQUIP IT.");
 			DrawGuideBlock(deltaFont, Font.CR_PURPLE, Color(178, 94, 237), contentX, panelY + 270, contentWidth,
-				"AFFIXES", "WEAPONS CAN ROLL HASTE, POWER, LEECH, EXECUTION AND PROSPERITY.",
-				"HIGHER QUALITY ADDS MORE AND STRONGER RANDOM AFFIXES.",
-				"REPLACING AN EQUIPPED VARIANT DROPS THE OLD ONE NEARBY.", "YOUR ARSENAL MENU TRACKS COLLECTED WEAPON VARIANTS.");
+				classesEnabled ? "AFFIXES" : "SPECIAL WEAPON TRAITS",
+				classesEnabled ? "WEAPONS CAN ROLL HASTE, POWER, LEECH, EXECUTION AND PROSPERITY." :
+				"RARE / EPIC: 1 TRAIT. LEGENDARY / MYTHIC: 2. GODLY: 3.",
+				classesEnabled ? "HIGHER QUALITY ADDS MORE AND STRONGER RANDOM AFFIXES." :
+				"PASSIVES WORK HOLSTERED; ONLY THE STRONGEST COPY COUNTS.",
+				classesEnabled ? "REPLACING AN EQUIPPED VARIANT DROPS THE OLD ONE NEARBY." :
+				"EQUIPPED TRAITS APPLY TO THAT WEAPON. HIGHER RARITY IS STRONGER.",
+				classesEnabled ? "YOUR ARSENAL MENU TRACKS COLLECTED WEAPON VARIANTS." :
+				"L: READ EXACT TRAIT EFFECTS. K: CHECK YOUR PASSIVE BONUSES.");
 			DrawGuideBlock(deltaFont, Font.CR_ORANGE, Color(244, 112, 35), contentX, panelY + 446, contentWidth,
 				"UPGRADED MONSTERS", "RARE-AND-HIGHER ENEMIES GAIN HEALTH, DAMAGE AND TRAITS.",
 				"HELL KNIGHT-OR-STRONGER MONSTERS RECEIVE HIGH-LEVEL PRIORITY.",
 				"VERY HIGH-HP TARGETS HAVE IMPROVED MYTHIC OR GODLY REWARDS.", "A VOLATILE ICON WARNS THAT DEATH WILL CAUSE AN EXPLOSION.");
 		}
-		else
+		else if (classesEnabled)
 		{
 			DrawGuideBlock(deltaFont, Font.CR_PURPLE, Color(178, 94, 237), contentX, panelY + 94, contentWidth,
 				"PER-PLAYER PROGRESSION", "EACH PLAYER OWNS THEIR CLASS, XP, STATS, PERKS AND LIVES.",
@@ -1467,9 +1682,167 @@ class TuinRPGHelpMenu : OptionMenu
 				"THE RADIO COOLDOWN RECHARGES ONLY WHEN THE HEAVY DEALS DAMAGE.",
 				"CLASS-MATCHED REWARDS USE THE RECEIVING PLAYER'S OWN CLASS.", "COMMUNICATE BEFORE CLAIMING SHARED MAP PICKUPS.");
 		}
+		else
+		{
+			DrawGuideBlock(deltaFont, Font.CR_PURPLE, Color(178, 94, 237), contentX, panelY + 94, contentWidth,
+				"PER-PLAYER PROGRESSION", "EACH PLAYER OWNS THEIR XP, STATS, PERKS AND LIVES.",
+				"WEAPON VARIANTS AND PERSONAL REWARDS TRACK SEPARATELY.",
+				"LATE JOINERS RECEIVE MAP-APPROPRIATE CATCH-UP PROGRESSION.", "EVERY PLAYER CAN BUILD DIFFERENT UNIVERSAL STATS.");
+			DrawGuideBlock(deltaFont, Font.CR_GREEN, Color(82, 207, 124), contentX, panelY + 270, contentWidth,
+				"WEAPON MODS", "EVERY PLAYER USES THE ARSENAL PROVIDED BY THE SERVER.",
+				"TUIN RPG DOES NOT ADD A SECOND FIST, PISTOL OR CHAINSAW.",
+				"CUSTOM AMMUNITION IS INCLUDED IN RPG CAPACITY SCALING.", "SHARED MAP PICKUPS STILL FOLLOW THE GAME'S COOP RULES.");
+			DrawGuideBlock(deltaFont, Font.CR_LIGHTBLUE, Color(55, 153, 238), contentX, panelY + 446, contentWidth,
+				"TEAM PLAY", "MONSTER LEVELS AND RARITIES ARE SHARED WORLD THREATS.",
+				"PERSONAL DAMAGE, XP, COINS AND WEAPON ROLLS KEEP THEIR OWNER.",
+				"JOHN'S SHOP REMAINS AVAILABLE AT THE END OF A LEVEL.", "COMMUNICATE BEFORE CLAIMING SHARED MAP PICKUPS.");
+		}
 		Screen.DrawText(deltaFont, Font.CR_GRAY, contentX, panelY + panelHeight - 25,
 			"UP / DOWN, LEFT / RIGHT OR CLICK: CHANGE SECTION     ESC: RETURN",
 			DTA_ScaleX, 2.05, DTA_ScaleY, 2.05);
+		Super.Drawer();
+	}
+}
+
+class TuinRPGWeaponPerkItem : OptionMenuItemCommand
+{
+	override int Draw(OptionMenuDescriptor desc, int y, int indent, bool selected)
+	{
+		int family = mLabel ~== "PISTOL" ? 1 : mLabel ~== "FIST" ? 2 :
+			mLabel ~== "SHOTGUN" ? 3 : mLabel ~== "SUPER SHOTGUN" ? 4 :
+			mLabel ~== "CHAINGUN" ? 5 : mLabel ~== "PLASMA" ? 6 : mLabel ~== "BFG" ? 7 :
+			mLabel ~== "INCINERATOR" ? 9 : mLabel ~== "CALAMITY BLADE" ? 10 : 8;
+		int sw = Screen.GetWidth();
+		int sh = Screen.GetHeight();
+		int panelWidth = min(sw - 72, 1840);
+		int panelHeight = min(sh - 72, 940);
+		int panelX = (sw - panelWidth) / 2;
+		int panelY = (sh - panelHeight) / 2;
+		int gap = 16;
+		int cardWidth = (panelWidth - 74 - gap) / 2;
+		int cardHeight = max(38, (panelHeight - 150 - gap * 4) / 5);
+		int index = family - 1;
+		int cardX = panelX + 29 + (index % 2) * (cardWidth + gap);
+		int cardY = panelY + 102 + (index / 2) * (cardHeight + gap);
+		Color accent = family == 1 ? Color(242, 196, 53) : family == 2 ? Color(232, 64, 49) :
+			family == 3 ? Color(255, 116, 32) : family == 4 ? Color(82, 214, 235) :
+			family == 5 ? Color(194, 85, 237) : family == 6 ? Color(75, 210, 108) : Color(96, 126, 255);
+		int accentText = family == 1 ? Font.CR_GOLD : family == 2 ? Font.CR_RED :
+			family == 3 ? Font.CR_ORANGE : family == 4 ? Font.CR_CYAN :
+			family == 5 ? Font.CR_PURPLE : family == 6 ? Font.CR_GREEN : Font.CR_BLUE;
+		bool owned;
+		int points;
+		if (consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo)
+		{
+			let data = TuinRPGHandler.GetPlayerData(players[consoleplayer].mo);
+			if (data)
+			{
+				owned = TuinRPGHandler.HasWeaponPerk(data, family);
+				points = data.UnspentWeaponPerkPoints;
+			}
+		}
+		Font font = "TINYBABY";
+		Screen.Dim(owned ? Color(10, 48, 41) : selected ? Color(11, 43, 76) : Color(5, 23, 43),
+			0.98, cardX, cardY, cardWidth, cardHeight);
+		Screen.Dim(accent, selected ? 0.50 : owned ? 0.36 : 0.20, cardX, cardY, 9, cardHeight);
+		Screen.DrawLineFrame(selected || owned ? accent : Color(25, 67, 104),
+			cardX, cardY, cardWidth, cardHeight, selected ? 3 : owned ? 2 : 1);
+		TuinWeaponTraits.FluidText(font, selected || owned ? accentText : Font.CR_WHITE,
+			cardX + 27, cardY + 5, TuinRPGHandler.WeaponPerkName(family),
+			min(3.05, cardHeight / 25.0), cardWidth - 54, false, selected);
+		string summary = TuinRPGHandler.WeaponPerkSummary(family);
+		double summaryScale = min(min(2.15, cardHeight / 34.0), double(cardWidth - 54) / max(1, font.StringWidth(summary)));
+		Screen.DrawText(font, Font.CR_WHITE, cardX + 27, cardY + cardHeight * 0.42,
+			summary, DTA_ScaleX, summaryScale, DTA_ScaleY, summaryScale);
+		string state = family >= 9 && !TuinRustSupport.Available(family) ? "REQUIRES LEGACY OF RUST RESOURCES" : owned ? "PERMANENTLY ACTIVE" : points > 0 ?
+			"ENTER OR CLICK: SPEND 1 WEAPON POINT" : "NO WEAPON PERK POINTS";
+		TuinWeaponTraits.FluidText(font, owned ? Font.CR_GREEN : points > 0 ? Font.CR_GOLD : Font.CR_GRAY,
+			cardX + 27, cardY + cardHeight * 0.73, state,
+			min(1.95, cardHeight / 34.0), cardWidth - 54, false, false);
+		return -1;
+	}
+}
+
+class TuinRPGWeaponPerkMenu : OptionMenu
+{
+	override void Init(Menu parent, OptionMenuDescriptor desc)
+	{
+		Super.Init(parent, desc);
+		for (int i = 0; i < mDesc.mItems.Size(); i++)
+		{
+			let item = mDesc.mItems[i];
+			mDesc.mItems[i] = new ('TuinRPGWeaponPerkItem').Init(item.mLabel,
+				String.Format("netevent tuin_buy_weapon_perk %d", i + 1));
+		}
+		mDesc.mSelectedItem = 0;
+		mDesc.CalcIndent();
+	}
+
+	override bool MouseEvent(int type, int x, int y)
+	{
+		int sw = Screen.GetWidth();
+		int sh = Screen.GetHeight();
+		int panelWidth = min(sw - 72, 1840);
+		int panelHeight = min(sh - 72, 940);
+		int panelX = (sw - panelWidth) / 2;
+		int panelY = (sh - panelHeight) / 2;
+		int gap = 16;
+		int cardWidth = (panelWidth - 74 - gap) / 2;
+		int cardHeight = max(38, (panelHeight - 150 - gap * 4) / 5);
+		for (int i = 0; i < 10; i++)
+		{
+			int cardX = panelX + 29 + (i % 2) * (cardWidth + gap);
+			int cardY = panelY + 102 + (i / 2) * (cardHeight + gap);
+			if (x < cardX || x >= cardX + cardWidth || y < cardY || y >= cardY + cardHeight) continue;
+			if (mDesc.mSelectedItem != i) { mDesc.mSelectedItem = i; MenuSound("menu/cursor"); }
+			if (type == MOUSE_Release) return MenuEvent(MKEY_Enter, true);
+			return true;
+		}
+		return true;
+	}
+
+	override bool MenuEvent(int mkey, bool fromcontroller)
+	{
+		int old = mDesc.mSelectedItem;
+		if (mkey == MKEY_Left && (old % 2) == 1) mDesc.mSelectedItem--;
+		else if (mkey == MKEY_Right && (old % 2) == 0 && old + 1 < 10) mDesc.mSelectedItem++;
+		else if (mkey == MKEY_Up) mDesc.mSelectedItem = old >= 2 ? old - 2 : old + 8;
+		else if (mkey == MKEY_Down) mDesc.mSelectedItem = old + 2 < 10 ? old + 2 : old % 2;
+		else return Super.MenuEvent(mkey, fromcontroller);
+		if (old != mDesc.mSelectedItem) MenuSound("menu/cursor");
+		return true;
+	}
+
+	override void Drawer()
+	{
+		int sw = Screen.GetWidth();
+		int sh = Screen.GetHeight();
+		int panelWidth = min(sw - 72, 1840);
+		int panelHeight = min(sh - 72, 940);
+		int panelX = (sw - panelWidth) / 2;
+		int panelY = (sh - panelHeight) / 2;
+		Font font = "TINYBABY";
+		Screen.Dim(Color(3, 13, 31), 0.98, panelX, panelY, panelWidth, panelHeight);
+		Screen.DrawLineFrame(Color(1, 5, 13), panelX, panelY, panelWidth, panelHeight, 7);
+		Screen.DrawLineFrame(Color(178, 94, 237), panelX + 7, panelY + 7, panelWidth - 14, panelHeight - 14, 2);
+		Screen.DrawText(font, Font.CR_PURPLE, panelX + 28, panelY + 22, "WEAPON PERKS",
+			DTA_ScaleX, 3.25, DTA_ScaleY, 3.25);
+		int points;
+		int level = 1;
+		if (consoleplayer >= 0 && playerInGame[consoleplayer] && players[consoleplayer].mo)
+		{
+			let data = TuinRPGHandler.GetPlayerData(players[consoleplayer].mo);
+			if (data) { points = data.UnspentWeaponPerkPoints; level = data.PlayerLevel; }
+		}
+		Screen.DrawText(font, points > 0 ? Font.CR_GOLD : Font.CR_GRAY,
+			panelX + panelWidth - 390, panelY + 24,
+			String.Format("AVAILABLE: %d", points), DTA_ScaleX, 2.45, DTA_ScaleY, 2.45);
+		Screen.DrawText(font, Font.CR_WHITE, panelX + 29, panelY + 65,
+			String.Format("ONE PERMANENT CHOICE EVERY 5 LEVELS - LEVEL %d - SIX POINTS BY LEVEL 30", level),
+			DTA_ScaleX, 1.95, DTA_ScaleY, 1.95);
+		Screen.DrawText(font, Font.CR_RED, panelX + 29, panelY + panelHeight - 31,
+			"CHOICES CANNOT BE UNDONE - EACH SPECIALIZATION HAS A POWERFUL TRADEOFF",
+			DTA_ScaleX, 1.85, DTA_ScaleY, 1.85);
 		Super.Drawer();
 	}
 }
@@ -1482,25 +1855,27 @@ class TuinRPGGeneralPerkItem : OptionMenuItemCommand
 			mLabel.IndexOf("IRON SKIN") == 0 ? 1 :
 			mLabel.IndexOf("KILLER INSTINCT") == 0 ? 2 :
 			mLabel.IndexOf("BLOOD DRINKER") == 0 ? 3 :
-			mLabel.IndexOf("SCAVENGER") == 0 ? 4 : 5;
+			mLabel.IndexOf("SCAVENGER") == 0 ? 4 :
+			mLabel.IndexOf("GIANT SLAYER") == 0 ? 5 : 6;
 		string perkName = itemIndex == 0 ? "VITAL CORE" : itemIndex == 1 ? "IRON SKIN" :
 			itemIndex == 2 ? "KILLER INSTINCT" : itemIndex == 3 ? "BLOOD DRINKER" :
-			itemIndex == 4 ? "SCAVENGER" : "GIANT SLAYER";
+			itemIndex == 4 ? "SCAVENGER" : itemIndex == 5 ? "GIANT SLAYER" : "ARMOR PENETRATION";
 		string description = itemIndex == 0 ? "+10 MAXIMUM HEALTH PER RANK" :
 			itemIndex == 1 ? "3% LESS DAMAGE TAKEN PER RANK" :
 			itemIndex == 2 ? "+2% CRITICAL CHANCE PER RANK" :
 			itemIndex == 3 ? "LEECH 1% OF DAMAGE PER RANK" :
 			itemIndex == 4 ? "+10% AMMUNITION GAINED PER RANK" :
-			"+0.5% TARGET MAX HP DAMAGE PER RANK VS 2500+ HP";
+			itemIndex == 5 ? "+0.5% TARGET MAX HP DAMAGE PER RANK VS 2500+ HP" :
+			"IGNORE 15% OF ARMORED REDUCTION PER RANK";
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
-		int panelWidth = min(width - 72, 1560);
-		int panelHeight = min(height - 72, 780);
+		int panelWidth = min(width - 72, 1840);
+		int panelHeight = min(height - 72, 940);
 		int panelX = (width - panelWidth) / 2;
 		int panelY = (height - panelHeight) / 2;
 		int gap = 16;
 		int cardWidth = (panelWidth - 74 - gap) / 2;
-		int cardHeight = clamp((panelHeight - 176 - gap * 2) / 3, 125, 176);
+		int cardHeight = clamp((panelHeight - 176 - gap * 3) / 4, 104, 178);
 		int column = itemIndex % 2;
 		int row = itemIndex / 2;
 		int cardX = panelX + 29 + column * (cardWidth + gap);
@@ -1508,10 +1883,10 @@ class TuinRPGGeneralPerkItem : OptionMenuItemCommand
 		Color accent = itemIndex == 0 ? Color(73, 211, 106) :
 			itemIndex == 1 ? Color(58, 153, 241) : itemIndex == 2 ? Color(239, 71, 58) :
 			itemIndex == 3 ? Color(184, 94, 255) : itemIndex == 4 ? Color(232, 184, 48) :
-			Color(255, 123, 35);
+			itemIndex == 5 ? Color(255, 123, 35) : Color(72, 205, 224);
 		int accentText = itemIndex == 0 ? Font.CR_GREEN : itemIndex == 1 ? Font.CR_LIGHTBLUE :
 			itemIndex == 2 ? Font.CR_RED : itemIndex == 3 ? Font.CR_PURPLE :
-			itemIndex == 4 ? Font.CR_GOLD : Font.CR_ORANGE;
+			itemIndex == 4 ? Font.CR_GOLD : itemIndex == 5 ? Font.CR_ORANGE : Font.CR_CYAN;
 		int rank = 0;
 		int playerLevel = 1;
 		int points = 0;
@@ -1524,7 +1899,8 @@ class TuinRPGGeneralPerkItem : OptionMenuItemCommand
 				points = data.UnspentSkillPoints;
 				rank = itemIndex == 0 ? data.PerkVitalCore : itemIndex == 1 ? data.PerkIronSkin :
 					itemIndex == 2 ? data.PerkKillerInstinct : itemIndex == 3 ? data.PerkBloodDrinker :
-					itemIndex == 4 ? data.PerkScavenger : data.PerkGiantSlayer;
+					itemIndex == 4 ? data.PerkScavenger : itemIndex == 5 ? data.PerkGiantSlayer :
+					data.PerkArmorPenetration;
 			}
 		}
 		bool levelLocked = itemIndex == 5 && playerLevel < 20;
@@ -1535,10 +1911,11 @@ class TuinRPGGeneralPerkItem : OptionMenuItemCommand
 		Screen.Dim(accent, selected ? 0.50 : 0.22, cardX, cardY, 9, cardHeight);
 		Screen.DrawLineFrame(selected ? accent : Color(25, 67, 104),
 			cardX, cardY, cardWidth, cardHeight, selected ? 3 : 1);
-		Screen.DrawText(deltaFont, selected ? accentText : Font.CR_WHITE,
-			cardX + 27, cardY + 22, perkName, DTA_ScaleX, 3.0, DTA_ScaleY, 3.0);
+		TuinWeaponTraits.FluidText(deltaFont, selected ? accentText : Font.CR_WHITE,
+			cardX + 27, cardY + 22, perkName, 3.4, cardWidth - 54, false, selected);
+		double descriptionScale = min(2.45, double(cardWidth - 54) / max(1, deltaFont.StringWidth(description)));
 		Screen.DrawText(deltaFont, levelLocked ? Font.CR_DARKGRAY : Font.CR_WHITE,
-			cardX + 27, cardY + 62, description, DTA_ScaleX, 2.15, DTA_ScaleY, 2.15);
+			cardX + 27, cardY + 62, description, DTA_ScaleX, descriptionScale, DTA_ScaleY, descriptionScale);
 		for (int rankSlot = 0; rankSlot < 3; rankSlot++)
 		{
 			int slotX = cardX + 27 + rankSlot * 34;
@@ -1570,7 +1947,8 @@ class TuinRPGGeneralPerkMenu : OptionMenu
 				item.mLabel.IndexOf("KILLER INSTINCT") == 0 ? "netevent tuin_buy_perk 3" :
 				item.mLabel.IndexOf("BLOOD DRINKER") == 0 ? "netevent tuin_buy_perk 5" :
 				item.mLabel.IndexOf("SCAVENGER") == 0 ? "netevent tuin_buy_perk 2" :
-				"netevent tuin_buy_perk 8";
+				item.mLabel.IndexOf("GIANT SLAYER") == 0 ? "netevent tuin_buy_perk 8" :
+				"netevent tuin_buy_perk 9";
 			mDesc.mItems[i] = new ('TuinRPGGeneralPerkItem').Init(item.mLabel, command);
 		}
 		mDesc.mSelectedItem = 0;
@@ -1581,14 +1959,14 @@ class TuinRPGGeneralPerkMenu : OptionMenu
 	{
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
-		int panelWidth = min(width - 72, 1560);
-		int panelHeight = min(height - 72, 780);
+		int panelWidth = min(width - 72, 1840);
+		int panelHeight = min(height - 72, 940);
 		int panelX = (width - panelWidth) / 2;
 		int panelY = (height - panelHeight) / 2;
 		int gap = 16;
 		int cardWidth = (panelWidth - 74 - gap) / 2;
-		int cardHeight = clamp((panelHeight - 176 - gap * 2) / 3, 125, 176);
-		for (int i = 0; i < 6; i++)
+		int cardHeight = clamp((panelHeight - 176 - gap * 3) / 4, 104, 178);
+		for (int i = 0; i < 7; i++)
 		{
 			int cardX = panelX + 29 + (i % 2) * (cardWidth + gap);
 			int cardY = panelY + 91 + (i / 2) * (cardHeight + gap);
@@ -1613,14 +1991,17 @@ class TuinRPGGeneralPerkMenu : OptionMenu
 		{
 			mDesc.mSelectedItem--;
 		}
-		else if (mkey == MKEY_Right && (mDesc.mSelectedItem % 2) == 0)
+		else if (mkey == MKEY_Right && (mDesc.mSelectedItem % 2) == 0 &&
+			mDesc.mSelectedItem + 1 < 7)
 		{
 			mDesc.mSelectedItem++;
 		}
 		else if (mkey == MKEY_Up)
-			mDesc.mSelectedItem = mDesc.mSelectedItem >= 2 ? mDesc.mSelectedItem - 2 : mDesc.mSelectedItem + 4;
+			mDesc.mSelectedItem = mDesc.mSelectedItem >= 2 ? mDesc.mSelectedItem - 2 :
+				(mDesc.mSelectedItem == 0 ? 6 : 5);
 		else if (mkey == MKEY_Down)
-			mDesc.mSelectedItem = mDesc.mSelectedItem <= 3 ? mDesc.mSelectedItem + 2 : mDesc.mSelectedItem - 4;
+			mDesc.mSelectedItem = mDesc.mSelectedItem + 2 < 7 ? mDesc.mSelectedItem + 2 :
+				(mDesc.mSelectedItem % 2);
 		else return Super.MenuEvent(mkey, fromcontroller);
 		if (mDesc.mSelectedItem != oldSelection) MenuSound("menu/cursor");
 		return true;
@@ -1630,8 +2011,8 @@ class TuinRPGGeneralPerkMenu : OptionMenu
 	{
 		int width = Screen.GetWidth();
 		int height = Screen.GetHeight();
-		int panelWidth = min(width - 72, 1560);
-		int panelHeight = min(height - 72, 780);
+		int panelWidth = min(width - 72, 1840);
+		int panelHeight = min(height - 72, 940);
 		int panelX = (width - panelWidth) / 2;
 		int panelY = (height - panelHeight) / 2;
 		Font deltaFont = "TINYBABY";
@@ -1651,7 +2032,9 @@ class TuinRPGGeneralPerkMenu : OptionMenu
 				Screen.Dim(Color(7, 29, 56), 0.94, panelX + 22, panelY + panelHeight - 48,
 					panelWidth - 44, 28);
 				Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + 36, panelY + panelHeight - 40,
-					String.Format("%s - LEVEL %d", TuinRPGHandler.PlayerClassName(data.PlayerClass), data.PlayerLevel),
+					TuinRPGHandler.ClassesEnabled() ? String.Format("%s - LEVEL %d",
+						TuinRPGHandler.PlayerClassName(data.PlayerClass), data.PlayerLevel) :
+						String.Format("DOOM MARINE - LEVEL %d", data.PlayerLevel),
 					DTA_ScaleX, 2.25, DTA_ScaleY, 2.25);
 				Screen.DrawText(deltaFont, data.UnspentSkillPoints > 0 ? Font.CR_GOLD : Font.CR_GRAY,
 					panelX + panelWidth - 285, panelY + panelHeight - 40,
@@ -1781,7 +2164,7 @@ class TuinRPGClassUpgradeMenuBase : OptionMenu
 				classIndex == 1 ? "+1 HEALTH TO EVERY HEALING PULSE PER RANK" :
 				classIndex == 2 ? "+10% JUDGMENT CHARGE RATE PER RANK" :
 				classIndex == 3 ? "+10% BLOOD PUNCH CHARGE RATE PER RANK" :
-				classIndex == 4 ? "+2% ROGUE WEAPON CRITICAL CHANCE PER RANK" :
+				classIndex == 4 ? "+5% ROGUE WEAPON CRITICAL CHANCE PER RANK" :
 				"+10% TURRET DAMAGE PER RANK";
 			line2 = classIndex == 0 ? "RADIO RECHARGE NEEDS 10% LESS DAMAGE PER RANK" :
 				classIndex == 4 ? "KNIFE GAINS +25% SPEED AND +20% REACH PER RANK" :
@@ -1969,8 +2352,11 @@ class TuinRPGPerkMenu : OptionMenu
 			if (data)
 			{
 				Font deltaFont = "TINYBABY";
-				string status = String.Format("CLASS: %s     LEVEL: %d     AVAILABLE PERK POINTS: %d",
-					TuinRPGHandler.PlayerClassName(data.PlayerClass), data.PlayerLevel, data.UnspentSkillPoints);
+				string status = TuinRPGHandler.ClassesEnabled() ?
+					String.Format("CLASS: %s     LEVEL: %d     AVAILABLE PERK POINTS: %d",
+						TuinRPGHandler.PlayerClassName(data.PlayerClass), data.PlayerLevel, data.UnspentSkillPoints) :
+					String.Format("DOOM MARINE     LEVEL: %d     AVAILABLE PERK POINTS: %d",
+						data.PlayerLevel, data.UnspentSkillPoints);
 				Screen.Dim(Color(7, 29, 56), 0.92, panelX + 20, panelY + panelHeight - 43,
 					panelWidth - 40, 27);
 				Screen.DrawText(deltaFont, Font.CR_WHITE, panelX + 32, panelY + panelHeight - 36,
@@ -2080,6 +2466,10 @@ class TuinRPGJohnShopMenu : OptionMenu
 
 class TuinRPGWeaponWheelMenu : OptionMenu
 {
+	double OpenMS, FrameMS;
+	Array<double> Highlight;
+	Array<int> GridOrder, WeaponFamilies;
+	int HoverIndex;
 	Array<class<Weapon> > WeaponTypes;
 	Array<string> WeaponNames;
 	Array<int> WeaponQualities;
@@ -2107,6 +2497,14 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 		menuactive = Menu.On;
 		CurrentIndex = -1;
 		BuildWeaponList();
+		OpenMS = MSTimeF();
+		FrameMS = OpenMS;
+		for(int i=0;i<WeaponTypes.Size();i++) Highlight.Push(0);
+		for(int i=0;i<WeaponTypes.Size();i++) GridOrder.Push(i);
+		for(int i=1;i<GridOrder.Size();i++)
+			for(int j=i;j>0 && WeaponFamilies[GridOrder[j]]<WeaponFamilies[GridOrder[j-1]];j--)
+			{ int swap=GridOrder[j]; GridOrder[j]=GridOrder[j-1]; GridOrder[j-1]=swap; }
+		HoverIndex=-1;
 		SelectedIndex = CurrentIndex >= 0 ? CurrentIndex : 0;
 		double initialAngle = WeaponTypes.Size() > 0 ? -90.0 + SelectedIndex * (360.0 / WeaponTypes.Size()) : -90.0;
 		WheelCursorX = cos(initialAngle) * 96.0;
@@ -2129,6 +2527,8 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 			int entry = WeaponTypes.Size();
 			class<Weapon> weaponType = (class<Weapon>)(weapon.GetClass());
 			WeaponTypes.Push(weaponType);
+			int family=TuinRPGHandler.WeaponFamily(weapon);
+			WeaponFamilies.Push(family>0?family:100+entry);
 			int variantIndex = data ? data.FindEquippedVariant(weaponType) : -1;
 			if (variantIndex >= 0)
 			{
@@ -2180,8 +2580,16 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 	{
 		MouseX = mx;
 		MouseY = my;
+		if(!TuinRPGHandler.ClassesEnabled())
+		{
+			HoverIndex=GridHit(mx,my);
+			if(HoverIndex>=0) SelectedIndex=HoverIndex;
+			return;
+		}
 		int count = WeaponTypes.Size();
 		if (count <= 0) return;
+		int pageStart = !TuinRPGHandler.ClassesEnabled() ? (SelectedIndex / 8) * 8 : 0;
+		if (!TuinRPGHandler.ClassesEnabled()) count = min(8, count - pageStart);
 		double dx = mx - Screen.GetWidth() * 0.5;
 		double dy = my - Screen.GetHeight() * 0.5;
 		if (dx * dx + dy * dy < 1600.0) return;
@@ -2189,7 +2597,7 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 		while (angle < 0.0) angle += 360.0;
 		while (angle >= 360.0) angle -= 360.0;
 		double step = 360.0 / count;
-		SelectedIndex = int((angle + step * 0.5) / step) % count;
+		SelectedIndex = pageStart + int((angle + step * 0.5) / step) % count;
 	}
 
 	void ApplyRelativeMouse(int mx, int my)
@@ -2206,8 +2614,15 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 		LastMouseX = mx;
 		LastMouseY = my;
 		if (abs(deltaX) + abs(deltaY) < 2) return;
-		WheelCursorX += deltaX * 2.2;
-		WheelCursorY += deltaY * 2.2;
+		WheelCursorX += deltaX * (TuinRPGHandler.ClassesEnabled()?2.2:1.0);
+		WheelCursorY += deltaY * (TuinRPGHandler.ClassesEnabled()?2.2:1.0);
+		if(!TuinRPGHandler.ClassesEnabled())
+		{
+			WheelCursorX=clamp(WheelCursorX,-Screen.GetWidth()*.5,Screen.GetWidth()*.5-1);
+			WheelCursorY=clamp(WheelCursorY,-Screen.GetHeight()*.5,Screen.GetHeight()*.5-1);
+			UpdateMouseSelection(Screen.GetWidth()/2+int(WheelCursorX),Screen.GetHeight()/2+int(WheelCursorY));
+			return;
+		}
 		double maximum = min(Screen.GetWidth(), Screen.GetHeight()) * 0.38;
 		double length = sqrt(WheelCursorX * WheelCursorX + WheelCursorY * WheelCursorY);
 		if (length > maximum)
@@ -2245,11 +2660,17 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 		}
 		if (ev.Type == UiEvent.Type_MouseMove)
 		{
-			ApplyRelativeMouse(ev.MouseX, ev.MouseY);
+			if(!TuinRPGHandler.ClassesEnabled()) { HaveMouseSample=true; UpdateMouseSelection(ev.MouseX,ev.MouseY); }
+			else ApplyRelativeMouse(ev.MouseX, ev.MouseY);
 			return true;
 		}
 		if (ev.Type == UiEvent.Type_LButtonDown)
 		{
+			if(!TuinRPGHandler.ClassesEnabled())
+			{
+				UpdateMouseSelection(ev.MouseX,ev.MouseY);
+				if(HoverIndex<0) return true;
+			}
 			FinishSelection(true);
 			return true;
 		}
@@ -2269,6 +2690,15 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 	override bool MenuEvent(int mkey, bool fromcontroller)
 	{
 		int count = WeaponTypes.Size();
+		if (!TuinRPGHandler.ClassesEnabled() && count>0 &&
+			(mkey==MKEY_Left || mkey==MKEY_Right || mkey==MKEY_Up || mkey==MKEY_Down))
+		{
+			int cell=0;
+			for(int i=0;i<count;i++) if(GridOrder[i]==SelectedIndex) cell=i;
+			int step=mkey==MKEY_Left?-1:mkey==MKEY_Right?1:mkey==MKEY_Up?-GridColumns():GridColumns();
+			SelectedIndex=GridOrder[(cell+step+count*2)%count];
+			return true;
+		}
 		if (mkey == MKEY_Left && count > 0)
 		{
 			SelectedIndex = (SelectedIndex + count - 1) % count;
@@ -2310,6 +2740,7 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 
 	override void Drawer()
 	{
+		if (!TuinRPGHandler.ClassesEnabled()) { DrawModernWheel(); return; }
 		HasDrawn = true;
 		int count = WeaponTypes.Size();
 		int width = Screen.GetWidth();
@@ -2401,6 +2832,108 @@ class TuinRPGWeaponWheelMenu : OptionMenu
 
 	}
 
+	void WheelText(string value,int color,double x,double y,double size,double maxWidth,double alpha=1)
+	{
+		Font font="TINYBABY";
+		size=min(size,maxWidth/max(1,font.StringWidth(value)));
+		Screen.DrawText(font,color,x,y,value,DTA_ScaleX,size,DTA_ScaleY,size,DTA_Alpha,alpha);
+	}
+	Color RarityAccent(int quality)
+	{
+		return TuinWeaponDrop.QualityColor(quality);
+	}
+	int GridColumns()
+	{
+		return max(3,int(ceil(sqrt(max(1,WeaponTypes.Size())))));
+	}
+	int GridHit(double x,double y)
+	{
+		int columns=GridColumns(),rows=max(1,(WeaponTypes.Size()+columns-1)/columns);
+		double left=Screen.GetWidth()*.055,top=Screen.GetHeight()*.19;
+		double cw=Screen.GetWidth()*.55/columns,ch=Screen.GetHeight()*.64/rows;
+		if(x<left || y<top || x>=left+cw*columns || y>=top+ch*rows) return -1;
+		int col=int((x-left)/cw),row=int((y-top)/ch);
+		if(x-left-col*cw>cw*.94 || y-top-row*ch>ch*.92) return -1;
+		int cell=row*columns+col;
+		return cell<GridOrder.Size()?GridOrder[cell]:-1;
+	}
+	void DrawModernWheel()
+	{
+		HasDrawn=true;
+		int count=WeaponTypes.Size(),width=Screen.GetWidth(),height=Screen.GetHeight();
+		double s=min(width/1280.,height/800.);
+		double now=MSTimeF(),dt=clamp((now-FrameMS)/1000.,0.,.1);
+		FrameMS=now;
+		double enter=clamp((now-OpenMS)/280.,0.,1.),ease=1-(1-enter)*(1-enter)*(1-enter);
+		Screen.Dim(Color(2,6,13),.88*ease,0,0,width,height);
+		Font font="TINYBABY";
+		WheelText("QUICK ARSENAL",Font.CR_WHITE,width*.055,height*.085,2.5*s,width*.5,ease);
+		WheelText("ALL WEAPONS / POINT TO INSPECT / CLICK TO EQUIP",Font.CR_GRAY,width*.055,height*.13,1.2*s,width*.88,ease);
+		if(count<=0) { WheelText("NO WEAPONS AVAILABLE",Font.CR_GRAY,width*.1,height*.5,1.5*s,width*.8); return; }
+		SelectedIndex=clamp(SelectedIndex,0,count-1);
+		int columns=GridColumns(),rows=max(1,(count+columns-1)/columns);
+		double cw=width*.55/columns,ch=height*.64/rows;
+		for(int cell=0;cell<count;cell++)
+		{
+			int i=GridOrder[cell],q=WeaponQualities[i];
+			bool selected=i==SelectedIndex;
+			Highlight[i]+=((selected?1.:0.)-Highlight[i])*(1-exp(-14*dt));
+			double focus=Highlight[i];
+			double left=width*.055+(cell%columns)*cw,top=height*.19+(cell/columns)*ch+12*s*(1-ease);
+			double bw=cw*.94,bh=ch*.92;
+			Color accent=RarityAccent(q);
+			Screen.Dim(Color(7,19,34),.98*ease,int(left),int(top),int(bw),int(bh));
+			Screen.Dim(accent,.12*focus*ease,int(left),int(top),int(bw),int(bh));
+			Screen.DrawLineFrame(selected?accent:Color(36,55,72),int(left),int(top),int(bw),int(bh),selected?3:1);
+			double textScale=min(1.65*s,bh/40.);
+			WheelText(TuinRPGHandler.WeaponBaseName(WeaponTypes[i]),Font.CR_WHITE,left+10*s,top+bh*.15,textScale,bw-20*s,ease);
+			string rarity=(q>0?TuinRPGHandler.WeaponQualityName(q):"STANDARD")..(i==CurrentIndex?" / HELD":"");
+			TuinWeaponTraits.FluidText(font,TuinRPGHandler.WeaponQualityFontColor(q),left+10*s,top+bh*.42,rarity,
+				min(1.15*s,bh/55.),bw-20*s,q==6,q>=2,q==5,q,ease);
+			double ratio=AmmoMaximum[i]>0?clamp(double(AmmoCurrent[i])/AmmoMaximum[i],0.,1.):1.;
+			string ammo=AmmoMaximum[i]>0?String.Format("AMMO %d / %d",AmmoCurrent[i],AmmoMaximum[i]):"NO AMMO NEEDED";
+			WheelText(ammo,AmmoMaximum[i]>0?AmmoFontColor(ratio):Font.CR_GRAY,left+10*s,top+bh*.68,min(1.05*s,bh/60.),bw-20*s,ease);
+			Screen.Dim(Color(24,34,45),ease,int(left+10*s),int(top+bh-9*s),int(bw-20*s),max(1,int(3*s)));
+			if(ratio>0) Screen.Dim(AmmoMaximum[i]>0?AmmoBarColor(ratio):accent,ease,int(left+10*s),int(top+bh-9*s),
+				int((bw-20*s)*ratio),max(1,int(3*s)));
+		}
+		// Full variant details live in the hub; short weapon-family labels keep the ring legible.
+		int q=WeaponQualities[SelectedIndex];
+		int tint=TuinRPGHandler.WeaponQualityFontColor(q);
+		double left=Screen.GetWidth()*.64,top=Screen.GetHeight()*.27;
+		Screen.Dim(Color(4,12,23),.97*ease,int(left),int(top),int(306*s),int(224*s));
+		Screen.DrawLineFrame(RarityAccent(q),int(left),int(top),int(306*s),int(224*s),2);
+		WheelText("WEAPON DETAILS",Font.CR_GRAY,left+14*s,top+13*s,1.1*s,278*s,ease);
+		TuinWeaponTraits.FluidText(font,tint,left+14*s,top+36*s,WeaponNames[SelectedIndex],1.9*s,278*s,
+			q==6,q>=2,q==5,q,ease);
+		let data=TuinRPGHandler.GetPlayerData(players[consoleplayer].mo);
+		int v=data?data.FindEquippedVariant(WeaponTypes[SelectedIndex]):-1;
+		string itemInfo=q>0?TuinRPGHandler.WeaponQualityName(q):"STANDARD";
+		if(v>=0) itemInfo=itemInfo..String.Format(" / LV %d / SCORE %d",data.VariantItemLevel[v],TuinRPGHandler.StoredWeaponVariantScore(data,v));
+		WheelText(itemInfo,tint,left+14*s,top+63*s,1.15*s,278*s,ease);
+		if(v>=0)
+		{
+			WheelText(String.Format("DAMAGE +%d%%    SPEED +%d%%",TuinRPGHandler.WeaponTotalPowerPercent(data.VariantItemLevel[v],
+				data.VariantPowerPercent[v]),data.VariantHastePercent[v]),Font.CR_WHITE,left+14*s,top+89*s,1.2*s,278*s,ease);
+			WheelText(String.Format("CRIT +%d%%    LEECH %d%%",TuinRPGHandler.WeaponCriticalPercent(data.VariantAffixFlags[v],q,
+				data.VariantItemLevel[v]),data.VariantLeechPercent[v]),Font.CR_WHITE,left+14*s,top+108*s,1.2*s,278*s,ease);
+			for(int k=0;k<3;k++)
+			{
+				int trait=TuinWeaponTraits.Nth(data.VariantAffixFlags[v],k);
+				if(trait<0) break;
+				WheelText(TuinWeaponTraits.NameOf(trait)..(TuinWeaponTraits.Passive(trait)?" / ALWAYS ACTIVE":" / EQUIPPED"),
+				Font.CR_LIGHTBLUE,left+14*s,top+(136+k*17)*s,1.05*s,278*s,ease);
+			}
+		}
+		else WheelText("STANDARD WEAPON / NO RPG BONUSES",Font.CR_GRAY,left+14*s,top+100*s,1.2*s,278*s,ease);
+		WheelText(SelectedIndex==CurrentIndex?"CURRENTLY HELD":"READY TO EQUIP",SelectedIndex==CurrentIndex?Font.CR_CYAN:Font.CR_GOLD,
+			left+14*s,top+198*s,1.2*s,278*s,ease);
+
+		WheelText("ARROWS: SELECT   ENTER: EQUIP   ESC / RIGHT CLICK: CANCEL",Font.CR_GRAY,width*.055,height*.9,1.2*s,width*.88,ease);
+		// A visible virtual pointer shares the exact coordinates used for card hit testing.
+		Screen.DrawThickLine(MouseX-5*s,MouseY,MouseX+5*s,MouseY,2*s,Color(225,247,255),255);
+		Screen.DrawThickLine(MouseX,MouseY-5*s,MouseX,MouseY+5*s,2*s,Color(225,247,255),255);
+	}
 	override void OnDestroy()
 	{
 		RestoreTimeScale();

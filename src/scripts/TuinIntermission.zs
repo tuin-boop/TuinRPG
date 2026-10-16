@@ -1,5 +1,6 @@
 class TuinRPGStatusScreen : DoomStatusScreen
 {
+    double GambitReportStart;
 	int ResultPercent(int current, int maximum)
 	{
 		if (current < 0) return 0;
@@ -103,6 +104,18 @@ class TuinRPGStatusScreen : DoomStatusScreen
 
 	override void drawStats()
 	{
+		if(TuinRun.Active())
+		{
+			let runData=TuinRPGHandler.GetPlayerData(players[consoleplayer].mo);
+			if(runData && runData.RunActive && !runData.RunEnded)
+			{
+				if(GambitReportStart==0)GambitReportStart=MSTimeF();
+				// WorldUnloaded has already committed this clear before drawStats.
+				TuinRunArt.ClearPopup(runData.RunScore,runData.RunStages,(MSTimeF()-GambitReportStart)/1000.,true);
+				DrawCentered(SmallFont,Font.CR_TAN,Screen.GetWidth()*.5,Screen.GetHeight()*.73,"PRESS USE TO CONTINUE",Screen.GetHeight()/900.);
+				return;
+			}
+		}
 		int sw = screen.GetWidth();
 		int sh = screen.GetHeight();
 		double scale = clamp(min(sw / 960.0, sh / 600.0), 0.80, 2.50);
@@ -129,8 +142,11 @@ class TuinRPGStatusScreen : DoomStatusScreen
 		let coinItem = pawn ? Inventory(pawn.FindInventory('TuinCoinPickup')) : null;
 		if (rpgData)
 		{
-			string heroLine = String.Format("LEVEL %d    %s    %d COINS    %d LIVES", rpgData.PlayerLevel,
-				TuinRPGHandler.PlayerClassName(rpgData.PlayerClass), coinItem ? coinItem.Amount : 0, rpgData.Lives);
+			string heroLine = TuinRPGHandler.ClassesEnabled() ?
+				String.Format("LEVEL %d    %s    %d COINS    %d LIVES", rpgData.PlayerLevel,
+					TuinRPGHandler.PlayerClassName(rpgData.PlayerClass), coinItem ? coinItem.Amount : 0, rpgData.Lives) :
+				String.Format("LEVEL %d    UNIVERSAL BUILD    %d COINS    %d LIVES", rpgData.PlayerLevel,
+					coinItem ? coinItem.Amount : 0, rpgData.Lives);
 			DrawCentered(bodyFont, Font.CR_GRAY, centerX, panelY + 72 * scale, heroLine, scale);
 		}
 

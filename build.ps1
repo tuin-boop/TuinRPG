@@ -1,4 +1,13 @@
-param([string]$Output = (Join-Path $PSScriptRoot 'TuinRPG.pk3'))
+param([string]$Output = (Join-Path $PSScriptRoot 'TuinRPG.pk3'), [switch]$LegacyClasses)
+
+# The weapon-mod-compatible edition is now the main TuinRPG distribution.
+if (-not $LegacyClasses) {
+    & (Join-Path $PSScriptRoot 'build-noclasses.ps1') -Output $Output
+    exit $LASTEXITCODE
+}
+if (-not $PSBoundParameters.ContainsKey('Output')) {
+    $Output = Join-Path $PSScriptRoot 'TuinRPG_LegacyClasses.pk3'
+}
 
 $ErrorActionPreference = 'Stop'
 $source = Join-Path $PSScriptRoot 'src'

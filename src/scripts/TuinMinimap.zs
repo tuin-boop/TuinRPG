@@ -364,16 +364,17 @@ class TuinMinimapHandler : EventHandler
 
 		if (MapInt('tuin_minimap_show_stats', 1))
 		{
+			Font mapFont = "TINYBABY";
 			string statistics = HuntModeUnlocked ?
 				String.Format("K %d/%d   HUNT   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
 					level.found_items, level.total_items, level.found_secrets, level.total_secrets) :
 				String.Format("K %d/%d   I %d/%d   S %d/%d", level.killed_monsters, level.total_monsters,
 					level.found_items, level.total_items, level.found_secrets, level.total_secrets);
-			double statisticsScale = min(1.60,
-				double(size - 12) / max(1, SmallFont.StringWidth(statistics)));
+			double statisticsScale = min(2.15,
+				double(size - 12) / max(1, mapFont.StringWidth(statistics)));
 			int statisticsY = top + size + 5;
-			Screen.Dim(Color(3, 5, 9), min(0.96, opacity + 0.18), left, statisticsY - 4, size, 23);
-			Screen.DrawText(SmallFont, Font.CR_WHITE, left + 6, statisticsY, statistics,
+			Screen.Dim(Color(3, 5, 9), min(0.96, opacity + 0.18), left, statisticsY - 4, size, 27);
+			Screen.DrawText(mapFont, Font.CR_WHITE, left + 6, statisticsY, statistics,
 				DTA_ScaleX, statisticsScale, DTA_ScaleY, statisticsScale);
 		}
 	}

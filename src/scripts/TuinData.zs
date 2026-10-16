@@ -63,10 +63,13 @@ class TuinMonsterData : Inventory
 	int XPValue;
 	int UniqueID;
 	int LastPlayerNumber;
+	int LastRogueKnifePlayer;
+	int LastRogueKnifeDamageTime;
 	int AffixFlags;
 	int RegenClock;
 	int SwiftClock;
 	int GlowClock;
+	int RarityAuraClock;
 	int AppliedGlowRarity;
 	int AppliedGlowRadius;
 	Actor VolatileMarkerVisual;
@@ -105,6 +108,74 @@ class TuinMonsterData : Inventory
 	bool HealthDisplayInitialized;
 	double PreviousDisplayHealth;
 	double DisplayHealth;
+	Actor DoomFatalityReservedBy;
+	Actor DoomFatalityStoredTarget;
+	int DoomFatalityStoredReactionTime;
+	int DoomFatalityWindowTics;
+	bool DoomFatalityExpired;
+
+	void BeginDoomFatalityReservation(Actor playerPawn)
+	{
+		if (!Owner || !playerPawn || DoomFatalityExpired || DoomFatalityReservedBy) return;
+		DoomFatalityReservedBy = playerPawn;
+		DoomFatalityStoredTarget = Owner.Target;
+		DoomFatalityStoredReactionTime = Owner.reactiontime;
+		DoomFatalityWindowTics = 15 * 35;
+		Owner.reactiontime = max(Owner.reactiontime, DoomFatalityWindowTics);
+		Owner.Vel = (0, 0, 0);
+		Owner.Target = null;
+		let painState = Owner.FindState('Pain');
+		if (painState) Owner.SetState(painState);
+		Owner.A_AttachLight('TuinFatalityStunGlow', DynamicLight.PulseLight,
+			Color(255, 18, 8), 34, 88, 0, (0, 0, Owner.Height * 0.5), 0.65);
+	}
+
+	void EndDoomFatalityReservation(bool expired = false)
+	{
+		if (Owner)
+		{
+			Owner.A_RemoveLight('TuinFatalityStunGlow');
+			Owner.reactiontime = DoomFatalityStoredReactionTime;
+			if (!Owner.Target && DoomFatalityStoredTarget && DoomFatalityStoredTarget.Health > 0)
+				Owner.Target = DoomFatalityStoredTarget;
+		}
+		DoomFatalityReservedBy = null;
+		DoomFatalityStoredTarget = null;
+		DoomFatalityStoredReactionTime = 0;
+		DoomFatalityWindowTics = 0;
+		if (expired) DoomFatalityExpired = true;
+	}
+
+	void UpdateDoomFatalityReservation()
+	{
+		if (!DoomFatalityReservedBy) return;
+		if (!Owner || Owner.Health <= 0 || DoomFatalityReservedBy.Health <= 0)
+		{
+			EndDoomFatalityReservation(false);
+			return;
+		}
+		if (DoomFatalityWindowTics <= 0)
+		{
+			EndDoomFatalityReservation(true);
+			return;
+		}
+		DoomFatalityWindowTics--;
+		Owner.Vel = (0, 0, 0);
+		Owner.Target = null;
+		Owner.reactiontime = max(Owner.reactiontime, DoomFatalityWindowTics + 2);
+		if ((DoomFatalityWindowTics & 1) == 0)
+		{
+			double angle = FRandom[TuinRPGCritical](0.0, 360.0);
+			double radius = FRandom[TuinRPGCritical](Owner.Radius * 0.35, max(Owner.Radius, 12.0));
+			Owner.A_SpawnParticle(Color(255, 20, 8), SPF_FULLBRIGHT | SPF_FACECAMERA,
+				18, FRandom[TuinRPGCritical](2.0, 3.5), angle,
+				cos(angle) * radius, sin(angle) * radius,
+				FRandom[TuinRPGCritical](4.0, max(8.0, Owner.Height * 0.9)),
+				-cos(angle) * 0.10, -sin(angle) * 0.10,
+				FRandom[TuinRPGCritical](0.12, 0.42), 0, 0, -0.015,
+				0.82, 0.045, -0.07);
+		}
+	}
 
 	void ResetSignatureAttack()
 	{
@@ -303,12 +374,81 @@ class TuinMonsterData : Inventory
 			(sin((level.Time + UniqueID * 5) * 9.0) + 1.0) * 0.06;
 	}
 
+	Color RarityAuraColor()
+	{
+		if (MonsterRarity == 2) return Color(40, 180, 255);
+		if (MonsterRarity == 3) return Color(255, 104, 24);
+		if (MonsterRarity == 4) return Color(255, 170, 32);
+		if (MonsterRarity == 5) return Color(190, 40, 255);
+		return Color(255, 24, 64);
+	}
+
+	void UpdateRarityAura()
+	{
+		RarityAuraClock++;
+		let enabledCV = CVar.FindCVar('tuin_rarity_aura_enabled');
+		bool enabled = enabledCV ? enabledCV.GetBool() : true;
+		bool visible = enabled && Owner && Owner.Health > 0 && MonsterRarity >= 2 && Owner.Alpha > 0.0;
+		if (!visible) return;
+
+		Color auraColor = RarityAuraColor();
+		double ringRadius = clamp(Owner.Radius + 7.0, 15.0, 96.0);
+		int ringInterval = MonsterRarity >= 5 ? 2 : 3;
+		if ((RarityAuraClock % ringInterval) == 0)
+		{
+			int points = MonsterRarity >= 4 ? 4 : 3;
+			double phase = (RarityAuraClock * (MonsterRarity >= 5 ? 11.0 : 7.0) + UniqueID * 29) % 360;
+			for (int point = 0; point < points; point++)
+			{
+				double particleAngle = phase + point * 360.0 / points;
+				Owner.A_SpawnParticle(auraColor, SPF_FULLBRIGHT | SPF_FACECAMERA,
+					15, MonsterRarity >= 5 ? 3.0 : 2.4, particleAngle,
+					cos(particleAngle) * ringRadius, sin(particleAngle) * ringRadius, 2.0,
+					cos(particleAngle) * 0.04, sin(particleAngle) * 0.04, 0.04,
+					0, 0, 0, 0.66, 0.045, -0.07);
+			}
+		}
+
+		// Sparse upward motes make upper tiers feel more energized without
+		// obscuring their animation or filling combat with particle noise.
+		int moteInterval = max(3, 10 - MonsterRarity);
+		if ((RarityAuraClock % moteInterval) == 0)
+		{
+			double moteAngle = FRandom[TuinRarityAura](0.0, 360.0);
+			double moteRadius = FRandom[TuinRarityAura](ringRadius * 0.25, ringRadius * 0.85);
+			Owner.A_SpawnParticle(auraColor, SPF_FULLBRIGHT | SPF_FACECAMERA,
+				20, MonsterRarity >= 5 ? 3.2 : 2.5, moteAngle,
+				cos(moteAngle) * moteRadius, sin(moteAngle) * moteRadius,
+				FRandom[TuinRarityAura](4.0, max(6.0, Owner.Height * 0.55)),
+				0, 0, FRandom[TuinRarityAura](0.18, 0.48),
+				0, 0, 0.006, 0.58, 0.032, -0.055);
+		}
+	}
+
+	int TraitKillFlags;
+	int TraitKillTier;
+	class<Weapon> TraitKillWeapon;
+	Actor TraitKillSource;
+	int TraitKillTime;
+	Name TraitKillDamageType;
+	int TraitHunterHitTime[8];
+
 	override void ModifyDamage(int damage, Name damageType, out int newdamage, bool passive, Actor inflictor, Actor source, int flags)
 	{
-		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && Owner &&
-			(Owner is 'Cyberdemon' || Owner is 'SpiderMastermind') &&
-			TuinRPGHandler.IsBFGDamage(inflictor, source, damageType))
-			newdamage = max(1, int(newdamage * 0.25 + 0.5));
+		if (passive && newdamage > 0)
+			newdamage = TuinWeaponTraits.Attack(self, source, inflictor, damageType, newdamage);
+		// A stunned execution target is reserved for Doom Guy. Incidental fire,
+		// companions, monsters and damage-over-time cannot steal the brief window;
+		// even the reserving player can only reduce it to one HP without executing.
+		if (passive && newdamage > 0 && DoomFatalityReservedBy && Owner &&
+			damageType != 'TuinDoomFatality')
+		{
+			if (source == DoomFatalityReservedBy)
+				newdamage = min(newdamage, max(0, Owner.Health - 1));
+			else newdamage = 0;
+		}
+		if (passive && newdamage > 0 && !(flags & DMG_FORCED))
+			newdamage = max(1, int(newdamage * TuinRPGHandler.NativeBossResistance(Owner, inflictor, source, damageType) + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && (AffixFlags & AFFIX_ARMORED))
 		{
 			let cv = CVar.FindCVar('tuin_affix_armored_reduction');
@@ -320,7 +460,18 @@ class TuinMonsterData : Inventory
 				let bossCV = CVar.FindCVar('tuin_boss_armored_reduction');
 				reduction = clamp(bossCV ? bossCV.GetFloat() : 0.25, 0.0, 0.50);
 			}
-			newdamage = max(1, int(newdamage * (1.0 - reduction) + 0.5));
+			// Armor Penetration ignores 15% of the remaining Armored reduction per
+			// rank. At rank III, 45% of the affix's protection is bypassed without
+			// deleting the identity of heavily armored enemies.
+			let attackerData = source && source.player ?
+				TuinPlayerData(source.FindInventory('TuinPlayerData')) : null;
+			int penetrationRank = attackerData ? clamp(attackerData.PerkArmorPenetration, 0, 3) : 0;
+			reduction *= 1.0 - penetrationRank * 0.15;
+			bool superShotgunBypass = attackerData && !TuinRPGHandler.ClassesEnabled() &&
+				TuinRPGHandler.HasWeaponPerk(attackerData, 4) && source && source.player &&
+				TuinRPGHandler.WeaponFamily(source.player.ReadyWeapon) == 4;
+			if (!superShotgunBypass)
+				newdamage = max(1, int(newdamage * (1.0 - reduction) + 0.5));
 		}
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED) && WardTics > 0)
 		{
@@ -391,6 +542,8 @@ class TuinMonsterData : Inventory
 			UpdateRarityGlow();
 		}
 		UpdateVolatileMarker();
+		UpdateRarityAura();
+		UpdateDoomFatalityReservation();
 		if (Owner.Health <= 0)
 		{
 			if (SignatureWindup > 0) Owner.A_RemoveLight('TuinSignatureTell');
@@ -492,8 +645,44 @@ class TuinExecutionerSkullMarker : Actor
 	}
 }
 
+class TuinDoomFatalitySkullMarker : Actor
+{
+	Default
+	{
+		Radius 0;
+		Height 0;
+		Scale 0.036;
+		Alpha 0.98;
+		RenderStyle "Translucent";
+		+NOINTERACTION
+		+NOGRAVITY
+		+FORCEXYBILLBOARD
+		+BRIGHT
+	}
+
+	override void PostBeginPlay()
+	{
+		Super.PostBeginPlay();
+		A_AttachLight('TuinFatalitySkullGlow', DynamicLight.PulseLight,
+			Color(255, 18, 4), 34, 72, DynamicLight.LF_ATTENUATE,
+			(0, 0, 0), 0.28);
+	}
+
+	States
+	{
+	Spawn:
+		DFAT A -1 Bright;
+		Stop;
+	}
+}
+
 class TuinPlayerData : Inventory
 {
+    bool RunActive, RunEnded, RunLoadoutGiven;
+    int RunClearTics;
+    int RunStages, RunScore, RunID, RunVisited, RunTicks;
+    String RunNextMap;
+    int AmmoPressureCheckRemaining;
 	class<Weapon> VariantWeaponType[64];
 	int VariantID[64];
 	int VariantItemLevel[64];
@@ -516,6 +705,8 @@ class TuinPlayerData : Inventory
 	int LevelDamageTaken;
 	int LevelXPEarned;
 	int LevelCoinsEarned;
+	int MilestoneCoinsEarned;
+	bool MilestoneCoinsInitialized;
 	int LevelEliteKills;
 	int LevelBossKills;
 	int LevelCriticalHits;
@@ -536,8 +727,13 @@ class TuinPlayerData : Inventory
 	double LifeEssenceOverhealth;
 	int AppliedLifeEssenceOverhealth;
 	int LifeEssenceDecayClock;
+	int LifeEssenceDecayAgeTics;
 	Actor LifeEssenceHealthOwner;
 	int PlayerClass;
+	// The compatibility build temporarily parks an existing class here instead
+	// of erasing it, so returning to the normal package restores the same save.
+	int NoClassStoredPlayerClass;
+	bool NoClassModeActive;
 	bool FreeClassChoiceRefunded;
 	int ClassHealClock;
 	int HealerSupplyCooldownTics;
@@ -561,6 +757,34 @@ class TuinPlayerData : Inventory
 	int PerkIronSkin;
 	int PerkBloodDrinker;
 	int PerkGiantSlayer;
+	int PerkArmorPenetration;
+	bool ArmorPenetrationScheduleMigrated;
+	int WeaponPerkFlags;
+	int TraitGuardArmor;
+	int TraitGuardCap;
+	int TraitWindCooldown;
+	int TraitWindTime;
+	int TraitWindHeal;
+	int TraitMomentumStacks;
+	int TraitMomentumTime;
+	int TraitQuarterClock;
+	int RustFuelRemainder;
+	int TraitHurtDelay;
+	int TraitMedicClock;
+	bool TraitSurvivorUsed;
+	int TraitGrace;
+	int TraitAvenger;
+	int TraitAvengerBurst;
+	int TraitStill;
+	Vector3 TraitPosition;
+	int TraitActiveID;
+	Actor TraitDuelTarget;
+	int TraitDuelStacks;
+	int TraitDuelTime;
+	int TraitCoinRemainder;
+	int UnspentWeaponPerkPoints;
+	int WeaponPerkMilestonesAwarded;
+	bool WeaponPerkScheduleInitialized;
 	double LeechHealingRemainder;
 	int PerkClassMastery;
 	bool PerkCapstone;
@@ -579,6 +803,21 @@ class TuinPlayerData : Inventory
 	bool RogueVeiled;
 	Actor RogueVeilOwner;
 	Actor RogueVeilDecoy;
+	int RogueChainCharges;
+	bool RogueChainActive;
+	int RogueChainTics;
+	int RogueChainHitsRemaining;
+	int RogueChainStartCount;
+	int RogueChainVisitedCount;
+	Actor RogueChainVisited[32];
+	Vector3 RogueChainStartPosition;
+	double RogueChainStartAngle;
+	bool RogueChainReturnValid;
+	int RoguePistolBurstCooldownTics;
+	int RoguePistolBurstTics;
+	int RoguePistolBurstShotsRemaining;
+	bool RoguePistolBurstWeaponShown;
+	bool RoguePistolBurstHolding;
 	int TankOverdriveCharge;
 	double TankOverdriveChargeRemainder;
 	bool TankChargeInitialized;
@@ -615,6 +854,17 @@ class TuinPlayerData : Inventory
 	int DoomBloodPunchFistRaiseTics;
 	int DoomBloodPunchAttackTics;
 	double DoomBloodPunchWeaponStartY;
+	Actor DoomFatalityOwner;
+	Actor DoomFatalityTarget;
+	Actor DoomFatalityCandidate;
+	Actor DoomFatalityMarker;
+	Actor DoomFatalityMarkerTarget;
+	int DoomFatalityTics;
+	bool DoomFatalityImpactDone;
+	bool DoomFatalityWasFrozen;
+	bool DoomFatalityWeaponHidden;
+	int DoomFatalityTargetReactionTime;
+	int DoomFatalityCooldownTics;
 	bool DoomQuadInitialized;
 	class<Ammo> ClassAmmoType[32];
 	int ClassAmmoLastAmount[32];
@@ -823,7 +1073,7 @@ class TuinPlayerData : Inventory
 		// Rogue is deliberately high-risk: every incoming damage source is amplified,
 		// before Endurance and defensive perks apply their normal reductions.
 		if (passive && PlayerClass == 5 && newdamage > 0)
-			newdamage = max(1, int(newdamage * 1.10 + 0.5));
+			newdamage = max(1, int(newdamage * 1.15 + 0.5));
 		if (passive && newdamage > 0 && !(flags & DMG_FORCED))
 		{
 			double multiplier = 1.0;
@@ -850,11 +1100,12 @@ class TuinPlayerData : Inventory
 		}
 		if (passive && Owner && Owner.player && newdamage > 0)
 		{
+			newdamage = TuinWeaponTraits.Defend(self, newdamage, damageType, flags);
 			if (LifeRevivePending || LifeGraceTics > 0)
 			{
 				newdamage = 0;
 			}
-			else if (Lives > 0 && Owner.Health > 0 && newdamage >= Owner.Health)
+			else if (!RunActive && Lives > 0 && Owner.Health > 0 && newdamage >= Owner.Health)
 			{
 				Lives--;
 				LevelLivesUsed++;
