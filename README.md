@@ -1,253 +1,140 @@
 # TuinRPG for Doom
 
-## Current release: v0.8.0
+<p align="center"><img src="src/graphics/TuinMenuTitle.png" alt="TuinRPG for Doom" width="720"></p>
 
-**The former No Classes edition is now the main TuinRPG.** Download
-[TuinRPG.pk3](https://github.com/tuin-boop/TuinRPG/releases/latest/download/TuinRPG.pk3).
-It supports external weapon mods, with player progression, weapon traits and perks,
-rarity effects, the blue animated UI, improved boss bars, and Hell's Gambit runs.
-Tested with UZDoom 5.0.3. Load after your weapon mod, and load only one TuinRPG package.
-`TuinRPG_NoClasses.pk3` is the same edition under its previous filename; do not load both.
+**v0.8.0 is the current main edition.** Formerly called No Classes, TuinRPG adds
+loot-driven RPG progression to Doom without a starting class choice. Build around
+attributes, universal perks, permanent weapon specializations and weapon traits.
 
-All [older releases](https://github.com/tuin-boop/TuinRPG/releases) remain available.
-`TuinRPG_LegacyClasses.pk3` preserves the previous local class-based build.
-Back up saves before upgrading; class-edition saves are not guaranteed compatible.
-Build the current edition with `./build.ps1`; build legacy classes explicitly with
-`./build.ps1 -LegacyClasses`. See [current edition notes](NO_CLASSES_README.txt).
+[Download TuinRPG.pk3](https://github.com/tuin-boop/TuinRPG/releases/latest/download/TuinRPG.pk3)
+• [Quick Guide](QUICK_GUIDE.md) • [Older releases](https://github.com/tuin-boop/TuinRPG/releases)
 
-The documentation below includes historical class-edition features; references to
-bundled ProjectSIDE weapons and starting classes do **not** apply to v0.8.0.
+## Installation
 
-<p align="center">
-  <img src="src/graphics/TuinMenuTitle.png" alt="TuinRPG for Doom" width="720">
-</p>
+1. Use a recent GZDoom or UZDoom engine; this release was tested with **UZDoom 5.0.3**.
+2. Supply your own Doom IWAD. Map packs and optional weapon mods are separate.
+3. Load maps/content and your weapon mod, then **TuinRPG.pk3**.
+4. Choose TuinRPG or Hell's Gambit under New Game.
 
-TuinRPG is an RPG conversion for **GZDoom and UZDoom**. It adds player levels, classes, perks, rare monsters, affixes, weapon loot, finale bosses, a minimap and an end-level merchant. The release now includes the ProjectSIDE weapon/effects compatibility edition, providing its complete animated weapon set and quick grenades without a separate companion PK3. Monsters, maps and the player class remain untouched.
+```powershell
+uzdoom.exe -iwad doom2.wad -file mymaps.wad myweaponmod.pk3 TuinRPG.pk3
+```
 
-Rare and stronger living monsters can be recognized by a restrained rarity-colored particle aura: a rotating ring at their feet with sparse rising motes that become richer at the upper tiers. It does not replace the monster sprite or voxel, while the existing rarity-colored ambient light continues to illuminate the monster and its surroundings. The particle aura and ambient lighting have independent toggles under **Tuin RPG Options > Rarity and Affixes**, allowing either effect or both together.
+No external weapon mod is required. Load only one TuinRPG package:
+`TuinRPG_NoClasses.pk3` is the same edition under its earlier filename, not an addon.
+Do not load the legacy class package alongside it.
 
-The ready-to-play `TuinRPG.pk3` is included in this repository and on the [GitHub Releases page](https://github.com/tuin-boop/TuinRPG/releases). For a compact introduction, see the [Quick Guide](QUICK_GUIDE.md).
+## Features
 
-`TuinRPG_NoClasses.pk3` is the alternate weapon-mod compatibility build. It removes the starting class choice, all class bonuses and penalties, class abilities, class training/ultimates, automatic class-weapon grants, quick-grenade/loadout handling, and the complete ProjectSIDE weapon/effect replacement layer. It does not replace the fist, chainsaw, guns, projectiles, impact puffs, or weapon sounds, while retaining monster progression, rarity and affixes, player levels and attributes, universal perks, custom-weapon-aware loot, bosses, minimap, lives, coins and shops. This edition also has its own permanent weapon-perk system: one point every five levels and six points by level 30, used to specialize six of eight weapon families with major benefits and tradeoffs. Load exactly one TuinRPG package, normally after the weapon mod. Existing class data is parked rather than erased and returns when the normal build is loaded again.
-
-## Quick start
-
-The no-classes edition also rolls sixteen special weapon traits, including regenerating armor, healing, opening-hit damage and a once-per-map fatal-hit rescue. Rare/Epic weapons have one trait, Legendary/Mythic two, and Godly three. Press **L** for animated trait labels and exact effects, or **K** for passive status. See `NO_CLASSES_README.txt` for the complete rules and rarity scaling.
-
-1. Install a recent GZDoom or UZDoom build. Development is tested with **UZDoom 4.14.3**.
-2. Download `TuinRPG.pk3` from the latest release.
-3. Load it after your maps and visual/content mods. Do not also load `ProjectSIDE_WeaponsEffects_Compat.pk3`; it is already included:
-
-   ```powershell
-   uzdoom.exe -file mymap.wad myvisualmod.pk3 TuinRPG.pk3
-   ```
-
-4. Start a game and press `K` for the character screen. TuinRPG settings are also available directly from the Escape menu.
-
-## Contents
-
-- [Controls](#controls)
-- [Classes and perks](#classes-and-perks)
-- [Core features](#core-features)
-- [Difficulty and monster progression](#level-modes)
-- [Rarity and affixes](#rarity-and-affixes)
-- [Weapon variants](#weapon-variants)
-- [Minimap, finale bosses and John](#minimap-finale-bosses-and-john)
-- [Compatibility](#compatibility-notes)
-- [Building from source](#building-from-source)
+- XP, character levels, five attributes and universal perks.
+- Permanent weapon perks with benefits and tradeoffs, earned every five levels through level 30.
+- Weapon variants with item levels, gear scores, damage, speed, critical, leech and other bonuses.
+- Sixteen special traits, including Guard, Medic, Hunter, Survivor, Duelist, Momentum,
+  Second Wind, Prospector and Quartermaster.
+- Uncommon, Rare, Elite, Legendary, Mythic and Godly weapon rarities with distinct animated effects.
+- Monster levels, rarity, affixes, signature attacks and an adaptive director that can promote threats.
+- Finale bosses, boss chests, coins and John Romero's shop and conversations.
+- Blue animated menus, character dashboard, arsenal and single-page quick weapon grid.
+- Tilted current-weapon inspection and comparison panels for dropped weapons.
+- Three-second hold-to-pick-up interaction, so a normal Use tap can still open doors.
+- Improved boss bars with exact health, percentages, damage trails and resistance/trait labels.
+- Animated notices for important combat, loot, key, progression and completion events.
+- A face HUD, key display, flashlight, minimap and late-map Hunt for remaining enemies.
+- Limited lives and revival in the normal campaign, plus end-level mission reports.
+- Hell's Gambit: escalating single-life runs with a local high-score table.
 
 ## Controls
 
-| Key | Action |
+| Default key | Action |
 | --- | --- |
-| `K` | Character screen, attributes, classes and perks |
-| `L` | Arsenal and equipped weapon variants |
-| `Q` | Open/close the mouse-controlled weapon wheel |
-| `N` | Toggle the minimap |
-| `F` | Toggle the flashlight |
-| `G` | Throw a quick grenade; Engineers throw an arming proximity mine instead |
-| `V` | Activate the selected class ability |
-| `E` / Use | Equip nearby loot or interact with John |
+| K | Character screen, attributes and perks |
+| L | Arsenal and weapon traits |
+| Q | Quick arsenal: select a weapon square and confirm/click to equip |
+| I | Inspect your current weapon outside menus |
+| N | Toggle minimap |
+| F | Toggle flashlight |
+| Hold E / Use for 3 seconds | Collect a nearby weapon drop |
+| Tap E / Use | Normal interactions, doors and John |
 
-All bindings can be changed under **Customize Controls > Tuin RPG**.
+Change bindings under **Customize Controls > Tuin RPG**. Existing bindings may override
+defaults. The Escape menu's TuinRPG hub links to settings, help, modes and high scores.
+The locator is a developer tool, not a normal gameplay feature.
 
-## Classes and perks
+## Character and loot
 
-Every new character begins with a free permanent class choice. Five-level milestones then award increasing perk-point bundles: 1 at level 5, 3 at level 10, 4 at level 15, and 5 each at levels 20, 25, and 30. This supplies exactly 23 upgrade points by level 30, enough for every perk available to that build:
+Spend stat points on Vitality, Strength, Luck, Agility or Endurance.
+General perks and permanent weapon perks use separate points. Read each weapon
+specialization's tradeoff before choosing; there are six weapon-perk points by level 30.
 
-| Class | Core role |
-| --- | --- |
-| **Heavy** | 175 base health, 25% less damage taken, full weapon damage, 20% slower movement, triple bullet capacity, an exclusive Minigun with explosive alt-fire, damage-powered Overdrive, and Radio Support |
-| **Healer** | Heals the team for 5 HP every two seconds, deals 25% less damage, gains 25% more ammunition, and throws Field Supplies |
-| **Executioner** | Deals 30% more damage, has 25% less maximum health, and spends damage-powered Judgment to sentence priority targets |
-| **Doom Guy** | Deals 10% more damage, takes 10% less damage, regenerates health, carries a class-exclusive Quad Shotgun, and charges a healing cone-shaped Blood Punch |
-| **Rogue** | Has 30% less maximum health, takes 15% more damage, carries 30% less ammunition, switches weapons at roughly five times stock speed, gains extra native critical chance only with Rogue weapons, uses Shadow Veil for powerful ambushes, and earns Chain Assassination with knife kills |
-| **Engineer** | Has 15% less maximum health and 10% less weapon damage, but manages a persistent, recoverable 400-HP auto-turret with 250 physical tracer rounds |
+Rare/Elite items roll one special trait, Legendary/Mythic two and Godly three.
+Higher rarity strengthens traits. **Always active** effects work from the selected
+variant of a weapon you own even while holstered; only the strongest copy of each
+passive applies. **Equipped** effects apply to the relevant weapon.
 
-Later points buy three ranks of **Vital Core**, **Scavenger**, **Killer Instinct**, **Iron Skin**, **Blood Drinker** and class-specific training. A permanent **Class Ultimate** becomes available at level 20 after Class Training II. Heavy Class Training adds 3% resistance and reduces the damage needed to recharge Radio Support by 10% per rank. Executioner Class Training builds Judgment 10% faster per rank. Doom Guy Class Training builds Blood Punch 10% faster per rank; its Ultimate increases that to 45% and strengthens its healing. Rogue Class Training gives Rogue weapons +5% critical chance, adds 25% Rogue Knife attack speed and 20% knife reach, extends Shadow Veil by six seconds, and grants 15% more Shadow Charge from direct weapon damage per rank. The Rogue's ambush deals x4 ranged damage or x11 knife damage. Engineer Class Training adds 10% sentry damage and 10% more Fabrication per rank. Its **Twin Sentries** Ultimate unlocks a second independently maintained turret slot.
+Look toward a drop to compare bonuses, then move close and hold Use for three seconds.
+A replacement puts your previous variant on the floor. Drops have no automatic timed
+despawn on the current map. Compare individual bonuses, not just gear score.
 
-## Core features
+## Game modes
 
-- Generic hostile-monster detection (`ISMONSTER`, shootable, alive, not friendly)
-- Integrated ProjectSIDE animated fist, chainsaw, pistol, rifle, shotgun, super shotgun, chaingun, rocket launcher, plasma rifle and BFG replacements with their firing effects, sounds, casings and projectiles
-- Integrated quick explosives on `G`: two starting charges, five maximum (eight with a backpack), physical pickups/drops, first-person throw animations and a multi-band blast. Other classes throw the timed grenade; Engineers instead throw a mine that settles on the ground, arms after about one second, and detonates when a visible hostile enters its 130-unit trigger radius. Its owning Engineer can face an armed mine and press Use to disarm it and recover the explosive charge when reserve space is available.
-- Progressive or fully random monster levels with configurable bounds/variance
-- Hybrid progressive scaling that keeps map progression primary while letting monsters partially catch up when the player is far ahead; higher rarities and occasional surge rolls create threatening outliers
-- An optional Hell Director that evaluates damage taken at 25%, 50% and 75% kills and can awaken an Elite, Legendary or Mythic threat. From player level 15 onward, ordinary awakenings scan the complete living roster and prefer the high-threat group: Barons/1000+ monsters first, followed by Revenants, Pain Elementals, Hell Knights, Mancubi, Arachnotrons, Arch-viles and other 500+ monsters. Cacodemons, Demons, Imps and weaker monsters are used only when no eligible high-threat candidate exists. Dormant and unseen monsters still count as available. Rare successful checks can still send a specially announced translucent Assassin Imp to an older player trail position. At the same checkpoints, critically low reserves can silently upgrade one untouched, out-of-sight Clip, Shell, Rocket or Cell pickup into its large-box equivalent. The reserve threshold scales from 40% on enemy-heavy maps down to 15% with fewer than ten monsters remaining, and shuts off below four survivors.
-- Configurable monster health and outgoing-damage scaling
-- A five-second last-hit display beneath the minimap and in the classic top bar, showing the most recent monster personally damaged by the player with its name, level, health, rarity, and affixes; continued hits refresh it while autonomous turret and damage-over-time ticks cannot steal focus
-- Optional world-space monster bars with live HP, rarity colors, level/name and compact affix labels
-- A custom end-level **Mission Report** with animated completion bars, mission/par time, a pace bonus, a weighted 0-1000 score, E-through-S rating, RPG combat/progression statistics, and a rating-aware verdict from John. Kills are worth 300 points, items 150, secrets 150, pace 100, and preserving lives 300. Full kills and perfect pace with no deaths reach C when items and secrets are ignored.
-- At every 10% kill milestone, John has a 50% chance to appear immediately left of the minimap with one of 50 tactical tips, class reminders, or comments about the run. His floating revival portrait is reused with a compact dialogue panel and one of three randomized notification sounds, and **John's combat tips** can be disabled in the HUD options.
-- A limited-lives system starts each player with three lives. Lethal damage spends one life and begins a protected 4.2-second revival scene with a red pulse, particles, a drifting John portrait, and one of his encouragement lines. The same player then returns to the map start at full health with three seconds of protection, preserving inventory and map progress. Rare and stronger enemies can drop a compact floating extra-life heart, with higher tiers receiving better chances. The default maximum is nine lives.
-- Every counted monster has a configurable 10% chance to drop a handmade floating and spinning **Life Essence** voxel. Each pickup immediately grants 30 stackable temporary current and maximum health. Untouched temporary health initially fades at one point per second, then accelerates every five seconds through 2, 4, 8, and finally 16 points per second after 20 seconds. Collecting another orb enlarges the pool and refreshes the complete stack to the gentle opening stage. Incoming damage consumes temporary health first and is not removed a second time by the timer. Its five randomized sounds use a dedicated channel so simultaneous item pickups cannot silence them. There is deliberately no collection counter or 50-essence reward.
-- Lost Souls always carry **Fodder** and take 50% more player damage. Any monster packed into a local crowd of at least eleven living hostiles within 512 map units receives the same visible debuff, easing ammunition pressure in slaughter encounters.
-- Player XP, nonlinear levels, XP popups, and one stat point per level
-- Optional Doom late-start/warp catch-up with matching levels/points and three Rare-or-better, weapon-mod-aware starting drops
-- Vitality (+5 max HP), Strength (+2% outgoing damage, plus 5 max HP per point for Heavy), Luck (+0.5% critical chance plus a diminishing bonus-XP proc), Agility (+2% firing speed), and Endurance (-1% damage taken, capped at 75%); combined firing speed is capped at +75% and total critical chance at 50%
-- Every class raises and lowers weapons 100% faster than stock, giving the full roster quick, doubled-speed weapon changes. Rogue instead switches at roughly five times stock speed for near-instant swaps. Neither bonus alters firing or reload speed.
-- A permanent first-perk class choice: Heavy (175 base HP, +5 max HP per Strength, 25% protection, full weapon damage, 20% slower movement, triple bullet capacity, an exclusive Minigun, Overdrive, and Radio Support), Healer (team-wide 5 HP healing every two seconds, -25% damage, +25% ammo, and a V-key Field Supply toss), Executioner (+30% damage, -25% maximum health, Judgment and Death Sentence), Doom Guy (+10% damage, 10% protection, regeneration, a Quad Shotgun, Blood Punch, and close-range Fatalities), Rogue (30% lower maximum health, 15% more incoming damage, 30% lower maximum ammo, Shadow Veil, and a knife-powered Chain Assassination), or Engineer (a deployable physical-tracer auto-turret). The choice costs one perk point.
-- The Rogue Knife, Silenced Pistol and Venom Bow receive +5% native critical chance; other weapons do not receive this class bonus. Rogue Class Training adds another +5% per rank only while a native Rogue weapon is equipped. The Silenced Pistol deals a steady 10 damage per shot, retains its forced opening critical against an unaware target, and can roll ordinary Rogue criticals during the rest of the fight. Rogue critical hits, including forced Ambush criticals, inflict eight seconds of bleeding that repeats the triggering critical hit's total damage over eight ticks, capped at 24% of the target's RPG-scaled maximum health. Ordinary critical Bleeding cannot refresh or stack, and the monster resists it for 12 seconds after it ends. Every Rogue Knife hit is the exception: its Bleed accumulates and refreshes, adding twice the hit's damage normally or four times its damage from a Shadow Veil ambush, with respective 24% and 36% health ceilings. On iconic episode-end bosses, those stackable knife ceilings are reduced to 10% normally and 15% from stealth. The knife reaches 80 units before training; each training rank adds 20% reach and 25% attack speed. Its Shadow Veil hit deals x11 damage, or x16 with the ultimate. Critical hits still deal normal critical damage during these states. Bleeding appears on the target display and overhead health bar, with red floating damage numbers.
-- The Rogue-exclusive **Venom Bow** occupies slot 3 and uses a scarce one-shot magazine with no alt-fire. Its health strike deals 10% of scaled maximum health through the first 10,000 HP plus 3% of health above that soft threshold; iconic finale bosses receive half those rates. Each direct bolt also adds poison equal to 50% of that hit and refreshes a six-second stack, up to 15% of normal enemy maximum health, 8% for RPG bosses, or 4% for iconic finale bosses. Green damage numbers distinguish poison ticks. Once a Rogue owns the bow, killed monsters have a small rarity-scaled chance to drop a two-bolt bundle that non-Rogues cannot consume.
-- Press the configurable **Class Ability** key (`V` by default) for the Heavy's Overdrive, Healer's Field Supply, Executioner's Death Sentence, Doom Guy's Blood Punch, Rogue's Shadow Veil, or Engineer's auto-turret. Heavy Overdrive charges from damage dealt plus four times health actually lost; its threshold is `1040 + 65 × player level`. At full charge, `V` grants +25% weapon damage and +150% firing speed for ten seconds with a red glow. It cannot recharge while active and empties when it ends. The configurable **Secondary Class Ability** key (`B` by default) calls Heavy Radio Support or activates the Rogue's stored Chain Assassination. Rogue also receives a configurable **Third Class Ability** (`C` by default), available only while the Rogue Knife is equipped: hold `C` to raise the visible Silenced Pistol and display its precision crosshair, then release `C` to fire a three-shot burst and return to the knife. Every bullet is guaranteed to critically hit. It costs three bullets, inherits the pistol's damage, Bleed, and equipped-variant bonuses, and begins a ten-second cooldown when fired. Radio Support uses the original slow call sequence and deploys two or three invulnerable allied marines for 30 seconds. They use clean gray, brown, red or blue player colors, randomly receive a Shotgun, Super Shotgun, Chaingun, Rocket Launcher, or Plasma Rifle, and move with FriendJohn-style close following, smooth lateral motion and teleport catch-up. After use, Radio Support requires 4,095 actual monster damage to recharge and receives no progress merely from waiting; Class Training lowers the damage requirement by 10% per rank. Each multiplayer Heavy owns an independent recharge and personal allied squad. Field Supply throws one Health Bonus, Stimpack, or Medikit forward every 20 seconds, with a 2% Soulsphere chance and a visible cooldown timer. Normal combined firing-speed bonuses remain capped at +75%, while Overdrive safely raises that combined cap to +200%.
+### TuinRPG
 
-- Engineer places its sentry 64 units ahead. It automatically acquires visible hostile monsters within 1,280 units and fires a physical 3D tracer round about every five tics before Haste, until destroyed or its 250-round magazine is empty. Press `V` within 112 units of a healthy sentry to pack it; its exact health and ammunition are preserved for its next deployment. A destroyed or empty slot must be rebuilt through **Fabrication**, earned from kills and ammo pickups. Stronger kills give more progress, while bullets, shells, rockets, cells, and custom ammo are weighted by their practical value. Twin Sentries allows two simultaneous turrets, but each slot has its own state and rebuild requirement.
+Play the loaded campaign with Ultra-Violence engine skill and adjustable RPG difficulty.
+Changing RPG difficulty asks for confirmation and rebalances/rerolls living RPG monsters.
+Advanced tuning is developer-password gated; normal players do not need it.
 
-- Turret damage scales from 8 at level 1 by +1 every five player levels, then receives Engineer Class Training. On every deployment it snapshots 50% of the currently held weapon variant's item-level Power, Power affix, Haste, and critical bonus. This snapshot remains fixed while deployed, so later weapon switching cannot alter a turret remotely. Leech, Execution, Prosperity, elemental effects, and unique weapon behavior remain personal to the held weapon. Turret damage and kills still count toward the Engineer's RPG record and rewards. Use `netevent tuin_test_engineer_turret` to select Engineer and deploy one instantly for testing.
-- Executioner weapon damage fills Judgment, requiring `500 + 50 × player level` damage before Class Training bonuses. At full charge, press `V` once to arm Judgment; the next ordinary weapon hit sentences the monster it strikes and up to two nearby visible hostiles within 384 units. Missing or hitting scenery does not spend the charge, and secondary damage such as grenades, bleeding, rocket burn, plasma arcs and Final Verdict cannot trigger it. Death Sentence lasts ten seconds, and a custom blood-red skull bobs above every sentenced monster. Marked targets take 25% more damage, reduced to 10% against Boss-tier monsters. Killing any of them while marked triggers Final Verdict, which uses the quick grenade's explosion visuals and damages other visible hostiles within 160 units for 18% of the executed monster's scaled maximum health. Final Verdict damage is clamped from 40 to 400. The **No Appeals** Class Ultimate extends the sentence to twelve seconds, raises the bonuses to 35% and 15%, expands Final Verdict to 224 units at 25% health with a 60-600 clamp, and refunds 25% Judgment once per cast after the first successful execution.
-- Doom Guy's ordinary damage fills Blood Punch, requiring `500 + 40 × player level` damage for a full charge before training bonuses. Class Training builds charge 10% faster per rank. Hold `V` to lower the equipped weapon normally and bring up the ProjectSIDE fists; they remain ready for as long as the key is held. Release `V` to play the complete normal-speed punch. Its normal impact sound, crimson pulse, 110-degree cone and damage occur together on the contact frame. The cone reaches 240 units, deals `140 + 14 × player level` base damage (maximum 650) to every visible hostile, and heals Doom Guy for 20% of actual damage dealt, capped at 75 HP per punch. The Class Ultimate raises charge speed to 45% and healing to 30% of damage, capped at 110 HP. The previous weapon then raises normally. Blood Punch cannot crit, inherit weapon-affix damage, or recharge itself. A visible hostile in front of Doom Guy and at 10% of its RPG-scaled maximum health or lower enters a 15-second execution state, marked by the supplied friendly white pixel skull and a restrained red energy effect. During this window it is stunned and protected from companions, monsters, damage-over-time, and accidental lethal player damage. If unused, the state expires and that monster returns to combat without immediately becoming eligible again. The skull is the only Fatality prompt, keeping the HUD free of extra instructions. Once Doom Guy is within 224 units, pressing `V` overrides Blood Punch with a short cinematic rush: input is briefly locked, Doom Guy closes to a safe striking distance, the first-person fists perform the finisher, the target is forcibly killed in a blood burst, and Doom Guy heals for 10% of his maximum health. A successful Fatality starts a 180-second cooldown, and every subsequent non-Fatality kill removes five seconds. The implementation is generic and works with ordinary or custom monsters without depending on Project Brutality's monster-specific execution actors.
-- Doom Guy also receives the class-exclusive **Quad Shotgun** in slot 3, including Complex Doom's original first-person artwork and `QSGP` world pickup sprite. Its persistent chamber holds four shells: primary fire spends all four on a 52-pellet blast, while secondary fire spends two shells on a 20-pellet barrel-pair blast and can be held to fire both pairs, reload, and continue. Firing/recovery is approximately 25% faster than the source sequence and the break-open reload is approximately 40% faster. Wall impacts use the same particles and decals as TuinRPG's other shotguns. Project Brutality supplies the quieter dedicated quad audio, with a four-barrel primary blast, randomized two-barrel secondary blasts, and matching reload sounds. Existing Doom Guy saves receive the weapon automatically, its RPG variants can drop normally once owned, and other classes see a **DOOM GUY CLASS ONLY** warning instead of consuming one.
-- Overdrive firing speed uses the engine's universal weapon-state accelerator, so slow launchers and one-tic custom weapon animations receive the boost consistently. Thrown grenades are tracked through contact, fuse, death animation, and custom cleanup; reaching, exploding near, or disappearing within 192 units of a Cyberdemon or Spider Mastermind adds a controlled boss-impact component of 2% scaled health (minimum 128, maximum 500 raw damage).
-- Rogue Shadow Veil makes the Rogue half translucent and untargetable for eighteen seconds. Monsters actively hunting that Rogue are handed an invisible dead decoy, so their native Doom AI concludes that its target died and stops naturally. Monsters fighting another player are unaffected. Attacking, taking damage, expiry, or pressing the ability again ends it. Its ambush attack deals x4 ranged damage or x11 knife damage, raised to x6 and x16 by the Class Ultimate. Fists, knuckles and other melee weapons receive no special Ambush multiplier. Iconic finale bosses use reduced x2 ranged and x5.5 knife multipliers, raised to x3 and x8 by the Ultimate. Shadow Veil begins ready, but after use it can only be restored by direct weapon damage. A full charge requires `400 + 60 × player level` damage, before Class Training bonuses. Grenades, Ambush bonus damage, Bleeding, poison, rocket burning, and plasma arcs do not refill the ability, preventing immediate loops, but sustained direct weapon damage to a boss can earn another Veil during that fight. Waiting provides no charge. Each Class Training rank adds six seconds of duration and 15% more charge from weapon damage.
-- Every direct Rogue Knife kill stores one **Chain Assassination** strike, up to nine. Press `B` to vanish and reappear in a burst of black shadow smoke beside the nearest visible monster, delivering a guaranteed knife critical and repeating rapidly for as many different monsters as the stored charge allows before returning to the exact position and facing direction where the chain began. Each search reaches 1,024 units from the Rogue's current position, allowing the chain to move through a group. The move tries several safe positions around every target and skips blocked destinations instead of placing the player inside geometry. If no reachable target is found before the first strike, every charge is preserved; if fewer targets exist, the chain simply ends after hitting those available. Kills caused by the chain do not recharge it.
-- Later perk points purchase three ranks of Vital Core (+10 HP/rank), Scavenger (+10% ammo/rank), Killer Instinct (+2% critical chance/rank), Iron Skin (-3% incoming damage/rank), Blood Drinker (1% damage leech/rank), Armor Penetration (bypass 15% of an Armored enemy's damage reduction/rank), and a class-specific specialty. At level 20, **Giant Slayer** becomes available: its three ranks add 0.5%, 1%, or 1.5% of a qualifying enemy's RPG-scaled maximum health to attacks against enemies with at least 2,500 HP. A half-second per-player target window groups pellets, BFG tracers, and rapid fire into one percentage strike, while sustained attacks can trigger it repeatedly. Follow-up Bleed, venom, rocket burn and plasma arcs do not trigger separate strikes. Blood Drinker and weapon leech count every damaging hit, carrying fractional healing between low-damage bullets and pellets instead of losing it to rounding. A level-20 Class Ultimate requires Class Training II.
-- Floating combat damage numbers rise and curl away from hit monsters; rapid pellet hits merge into a readable total, critical hits appear larger and gold, and bleed damage appears separately in red.
-- Mouse-operable character menu with pause, 10% slow motion, or no-pause mode
-- Progress stored on the individual player as an inventory token, including in normal saves and across map transitions
-- A full `Tuin RPG Options` page added to GZDoom's Options menu
-- Scalable HUD text and a substantially larger targeted-monster health bar
-- Configurable Normal, Uncommon, Rare, Elite, Legendary, and Mythic monsters
-- Generated names, tier-colored HUD presentation, rarity health/damage scaling, and rarity XP bonuses
-- Warm gold Legendary glows and stronger pulsing violet Mythic glows, with enable/radius options
-- Archetype-aware Legendary/Mythic signature attacks with visible warning flashes and configurable cooldowns
-- Rare, leveled weapon variants for weapons already owned, with colored/glowing drops, comparison HUD, Use-key pickup, and a persistent Arsenal
-- Modular Swift, Armored, Regenerating, Berserker, Explosive, Vampiric, Poisonous, Healer, and Warding affixes
-- Optional rotating minimap with explored geometry, rarity-monster tracking, weapon-drop diamonds and level statistics
-- A configurable once-per-map level Boss tier above Mythic, with a 5% Godly chance by default
-- Iconic E1M8, E2M8 and E3M8 episode Bosses with a guaranteed Godly weapon reward
-- Four overall difficulty profiles: Easy, Normal, Hard and Crazy. Hard preserves the original balance; Normal halves health gained from monster levels. Profiles also tune damage growth, special-monster frequency and power, Boss scaling, and maximum affixes (2/3/5/8). Changing difficulty automatically rebalances living monsters when gameplay resumes and prints the effective values.
-- Direct **Tuin RPG Options** access from the first Escape menu as well as the full Options menu.
-- Boss-sourced Godly named weapons with stronger rolls and a distinct icy-white glow
+### Hell's Gambit
 
-Individual weapon XP/levelling, a codex and achievements are not included in this release.
+- Draws from the currently loaded MAP01–MAP29 pool, skipping missing maps.
+- Not tied to Hellbound; requires Doom II-style map names.
+- Starts with three distinct random Mythic-or-Godly weapons, full ammo and one life.
+- Uses Hard RPG difficulty and Ultra-Violence engine skill.
+- Randomizes supported monster groups while respecting size and boss restrictions.
+- Each cleared map increases monster level, health/damage scaling and rarity pressure.
+- Death finishes the run. Stage reports show score and the next stage's escalation.
+- Your ten best finished runs are stored locally in the engine configuration.
 
-## Building from source
+## Enemies and exploration
 
-PowerShell creates the distributable `TuinRPG.pk3` directly from `src`:
+Enemy rarities run from ordinary to Mythic, with a separate Boss tier.
+Affixes can add armor, regeneration, speed and other threats. Read target traits
+and resistance labels, and watch announcements when the director promotes enemies.
+
+The minimap shows explored geometry and RPG markers. Late-map Hunt reveals survivors.
+Boss rewards and John's shop provide end-of-map goals. Normal campaign play has
+limited lives and revival; Hell's Gambit ends on death.
+
+## Compatibility and saves
+
+This edition does not activate bundled ProjectSIDE weapon replacements, class abilities
+or the class quick-grenade system. External weapon mods retain their own weapons,
+animations and sounds; TuinRPG adds progression on top.
+
+Compatibility is best-effort, not a promise for every mod or total conversion.
+Unusual weapon families, ammunition systems or scripted damage may need special support.
+Single-player is the primary tested setup.
+
+Incinerator and Calamity Blade support requires native ID24 support and appropriate
+resources supplied by the player. Commercial weapon resources are not bundled.
+
+Back up saves before upgrading. Start a fresh game when switching from the legacy class
+edition; cross-edition saves are not guaranteed compatible. Keep your mod load order stable.
+
+## Build and legacy versions
 
 ```powershell
-.\build.ps1
+./build.ps1
 ```
 
-Build the separate classless compatibility package with:
+Builds the current `TuinRPG.pk3`. `build-noclasses.ps1` builds the same edition under
+the old filename. Unused packaged assets are pruned while source assets are retained.
 
-```powershell
-.\build-noclasses.ps1
-```
+Older releases remain on GitHub. The previous local class build is preserved as
+`TuinRPG_LegacyClasses.pk3`; `./build.ps1 -LegacyClasses` builds that source variant.
+Legacy classes are not part of the current gameplay guide.
 
-For balance testing, open the console and enter `netevent tuin_give_levels 10` to grant ten player levels. The command accepts 1-100 levels at a time and awards the same stat points and milestone perk bundles as ordinary leveling. Open the character screen with `K`, then choose **Class and Perks** to select a permanent class and spend later points.
+## Credits
 
-To test Blood Punch instantly, enter `netevent tuin_test_blood_punch`. This testing command selects Doom Guy and fills Blood Punch; hold and release `V` to use it, then repeat the command whenever another full charge is needed. New installations bind **Class Ability** correctly, while version 0.6.32 safely translates the old one-shot `V` binding into press/release input without changing the player's configuration at runtime.
-
-To test a Fatality, stand in a clear area and enter `netevent tuin_test_fatality`. This selects Doom Guy and places a Demon at exactly 10% health in front of the player; face it and press `V`.
-
-To test Death Sentence instantly, enter `netevent tuin_test_death_sentence`. This selects Executioner and fills Judgment; press `V` once, then shoot a monster to sentence it and up to two nearby visible enemies.
-
-For predictable load order, put TuinRPG after maps and visual/content packs. The separate `ProjectSIDE_WeaponsEffects_Compat.pk3` must not be loaded with this version because its complete contents are already bundled. Other weapon/gameplay replacements may override or conflict with the integrated ProjectSIDE weapons and are no longer part of the primary supported configuration.
-
-## Level modes
-
-- **Progressive:** uses the map's numeric level number where available, falling back to maps visited, then applies the configured random variance.
-- **Random:** every detected monster rolls independently between the configured minimum and maximum.
-
-Changing scaling settings affects newly initialized monsters. Existing monsters retain the values saved with them so loading a save cannot scale them twice.
-
-Visible monsters within the configured overhead-bar range receive a compact display above their actor: name and level, a live rarity-colored health bar, exact HP, and short affix labels such as `SWIFT`, `ARMOR`, `REGEN`, `RAGE`, `BOOM`, and `LEECH`. The HUD options control their range and scale, how many nearby monsters may display one simultaneously, and whether the presentation uses the classic targeted bar, overhead bars, both styles, or neither.
-
-With **Late-start/warp catch-up** enabled, beginning a new Doom game on a later map or making a non-sequential map jump raises an under-levelled player above that map's progressive base tier (three bonus levels by default). It preserves existing stats, awards only the missing stat/skill points, and spawns three distinct Rare-or-better weapon choices nearby. Accepting a newly granted catch-up weapon also refills 25% of each carried ammo type. Normal sequential map progression does not trigger it, and weapon classes are resolved through active replacements for compatibility with conventional weapon mods.
-
-Ammo now grows with the campaign's tougher enemies. By default, every progression level after the first adds 2% to carried-ammo capacity (up to 2x) and 1.5% to ammo-pickup quantities (up to 1.75x), using whichever is higher between the player's level and map progression. Backpacks stack with the capacity bonus, and the system discovers custom ammunition classes used by weapon mods automatically. Rogue maximum ammunition is always 70% of the equivalent normal level-scaled and backpack-adjusted capacity. All progression values can be adjusted or disabled under **Tuin RPG Options > Ammo progression**, while the Rogue class penalty remains active.
-
-The Hell Director also watches for complete stock-ammo exhaustion. Once per map for each of bullets, shells, rockets, and cells, reaching zero while at least four monsters remain allows one emergency rescue independently of the normal 25%, 50%, and 75% kill checks. The rescue never adds ammo directly: it quietly upgrades one untouched, unseen matching pickup to its large-box version. Visible, collected, player-dropped, grenade, and unknown custom-ammo pickups remain untouched; if no eligible pickup is currently hidden, the Director keeps the allowance and tries again later.
-
-## Rarity and affixes
-
-The default chances follow a descending curve: 15% Uncommon, 7% Rare, 2.5% Elite, 1% Legendary, and 0.5% Mythic. Each chance and the maximum affix count can be changed from **Tuin RPG Options**. Higher tiers gain health, damage, XP, additional affixes, generated names, and distinct HUD colors. Mythics may naturally roll four or five affixes; ordinary late-game finale Bosses can reach higher configurable counts, while the iconic episode encounters retain their smaller hand-balanced limits.
-
-Rare, Elite, Legendary and Mythic enemies whose base health is below a Hell Knight normally reserve one trait slot for Armored. Their remaining traits are random. From player level 15 onward, enemies with at least a Cacodemon's 400 base health cannot roll Armored at all, because their scaled health pools already provide enough durability. Normal and Uncommon fodder do not receive the low-health guarantee.
-
-Chance values are literal percentages: `1.0` is 1%, while `100` guarantees that tier when higher-priority tier chances are zero. Manual changes normally affect newly spawned monsters, so use **Reroll living monsters now** to update the current map. **Testing preset: all Mythic** and **Reset rarity defaults** both reroll living monsters automatically.
-
-- **Swift:** uses additional `A_FastChase` calls while chasing, reacts immediately, searches for players more frequently, and retains a chosen player target longer.
-- **Armored:** reduces incoming damage.
-- **Regenerating:** restores a percentage of maximum health each second.
-- **Berserker:** deals increased damage below 40% health.
-- **Explosive:** creates a visible grenade-style, level-scaled death explosion that damages nearby players and hostile monsters with distance falloff.
-- **Vampiric:** heals when damaging a player.
-- **Poisonous:** applies a level-scaled damage-over-time effect to players.
-- **Healer:** restores `5 + monster level` health per second to visible nearby allies. It self-heals for only 25% of that amount, and taking damage disables its self-healing for two seconds.
-- **Warding:** grants visible nearby allies temporary damage reduction, but never protects the Warding monster itself.
-
-Rogue Bleeding halves all monster healing while it remains active, including Healer, Regenerating, and Vampiric recovery.
-
-TuinRPG's added player damage uses diminishing overflow during half-second bursts against stronger enemies. Base weapon damage is never reduced. Rare-through-Mythic monsters receive the first 25% of maximum health in RPG bonus damage normally and only 25% of overflow; ordinary RPG bosses use a 15% threshold with 20% overflow, while iconic finale bosses use an 8% threshold with 15% overflow. Grouping damage into a short burst prevents BFG tracers, shotgun pellets, and rapid attacks from receiving a fresh threshold for every individual hit.
-
-Cyberdemons and Spider Masterminds have 75% BFG resistance as an innate species trait. Direct BFG projectiles, tracer/splash damage, and recognizable replacement BFG weapons deal 25% damage to them. Other weapons remain fully effective, encouraging a broader arsenal without making any weapon mandatory.
-
-Affix effect strengths have their own tuning submenu. Forced/scripted damage bypasses Armored and player Endurance so telefrags and mandatory map logic remain reliable.
-
-## Signature attacks
-
-Legendary monsters gain a gold-telegraphed signature attack; Mythic monsters use stronger patterns more often after a violet warning flash. Attacks follow the monster's combat identity: hitscanners fire appropriate bullets, Doom projectile monsters use their native projectile family, and melee monsters charge. Unknown custom ranged monsters repeat their own missile state, while unknown melee monsters receive only a physical charge. Bosses, Archviles, Pain Elementals, and Lost Souls are excluded to avoid disrupting scripted encounters and monster-summoning logic.
-
-## Weapon variants
-
-Every defeated monster has a small chance to drop a variant of a weapon already owned by the killing player. The default base chance is 1.5%; monster rarity and player Luck improve it. Normal enemies can still produce every quality through Mythic, but high-end results remain exceptionally rare. Enemies with at least 5,000 RPG-scaled maximum health gain a health-scaled weapon-drop floor from 10% toward 50% and a 15%-50% chance for a successful non-Godly roll to become Mythic. At 20,000 scaled maximum health, the weapon drop is guaranteed Godly and class-relevant: Heavy receives a Minigun, while Doom Guy and Rogue use their exclusive arsenals; classes without a signature weapon receive an owned compatible weapon. In multiplayer this reward follows the killing player, although the physical drop remains available under its normal class pickup rules. Red Boss-tier monsters instead leave a glowing chest (front-facing pixel sprite by default, optional animated 3D Minecraft model): press Use on it to open the lid and launch the rolled weapon reward out after a brief pause. The chest pushes nearby corpses away to remain visible. Finale Bosses guarantee a Godly weapon inside, while native/custom actors carrying the engine's `BOSS` flag receive a separate 5% direct Godly chance. Item level is based on the defeated monster's level (plus a small variance) and improves the rolled affix strengths. Test the chest directly with `netevent tuin_test_boss_chest`.
-
-Choose the Boss chest appearance under **Options > Tuin RPG Options > Weapon loot tuning**. The Minecraft option plays a real 3D lid-opening animation, converted from the user-supplied Sketchfab GLB; the setting applies to newly spawned chests. The model is **Minecraft Chest** by Blender3D, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); its source and modification details are in `src/models/boss_chest_minecraft/ATTRIBUTION.txt`.
-
-From player level 15 onward, natural Rare-or-higher monster rolls are assigned across the complete starting roster with a high-threat preference. The one-time pass waits ten opening tics so the player catch-up level and dormant/active map roster are fully initialized before assignment. Barons and other 1000+ base-HP monsters are considered first; Revenants, Pain Elementals, Hell Knights, Mancubi, Arachnotrons, Arch-viles and other 500+ monsters form the next group. Cacodemons or lower retain surplus rolls only when those groups are exhausted. This preserves the original number and grades of random rarity rolls and is separate from the Hell Director's mid-level promotions.
-
-Promotion testing commands are `netevent tuin_test_promote_heavy` (normal Baron/Hell Knight priority), `netevent tuin_test_promote_hellknight` (force a living Hell Knight), and `netevent tuin_test_promote_baron` (force a living Baron of Hell). A successful command immediately raises one eligible target to Mythic; otherwise the console explains that the requested monster is unavailable.
-
-Weapon variants can roll firing speed, damage, damage leech, execution damage, kill XP, or critical chance. Every item level after level 1 also grants +2% inherent damage, capped at +60%, so later drops can compete with exceptional early-game equipment. Critical hits deal double damage; grenade damage cannot critically hit. The player begins with 2% critical chance, Luck adds 0.5% per point, and a Keen Godly weapon can add up to 16% at item level 40. A maximum-level Godly roll can reach roughly +42% firing speed, +42% rolled damage, +60% item-level damage, +43% execution damage, +42% kill XP, or 14% leech depending on its four selected affixes. Equipping a Godly variant also creates an icy-white first-person pulse without replacing the underlying weapon actor.
-
-Rockets add a four-second incendiary burn to every monster damaged by their explosion. The direct impact target burns for 32% of its final hit damage, while surrounding victims burn for 16% of the explosion damage they individually received. Plasma Rifle shots arc 20% of their final impact damage to other visible monsters within 192 map units. Armor and Warding still mitigate these secondary hits; they cannot critically hit or recursively produce more elemental damage. Floating burn numbers are orange and plasma-arc numbers are bright plasma blue.
-
-Shotgun variant rolls can occasionally become special weapon frames. By default, a Shotgun roll has an 8% chance to become the **Riot Shotgun**: five pellets rather than seven, wider spread, one shell per shot, no magazine reload, a complete 28-tic pump-and-recovery sequence, and one shot per trigger pull. The **Minigun** is instead exclusive to Heavy: it has an eight-tic spin-up, fires one three-damage round every two tics, drains ammunition at roughly twice the regular rate, winds down on release, and reloads its internal 100-round belt while still using ordinary bullets. Its slower automatic alt-fire launches a fast explosive tracer every seven tics, each consuming three bullets and three belt rounds. Direct hits deal 20 combined impact/blast damage, nearby monsters receive up to 50% of that damage, and every affected monster also receives a four-second incendiary burn. The splash radius and effects are one quarter the size of a grenade explosion. This mode has dedicated Gauss firing and compact explosion sounds. Non-Heavy players cannot collect Miniguns in multiplayer. Both special weapons retain normal item levels, qualities and affixes, use distinct artwork and sounds, and can subsequently receive upgraded variants of their own. The Riot conversion chance and direct test drops are under **Tuin RPG Options > Weapon Loot**.
-
-Look near a drop to see its quality, item level, gear score, and a row-by-row comparison of every stat against the current variant—including bonuses that would be lost. Drops within 80 map units can be inspected from either visible side without aiming at the actor's hidden origin; inspection out to 256 units requires facing the drop, and the card briefly persists when aim moves away. Both distances are configurable. Move within 128 map units and press Use (`E` by default) to equip it. The Arsenal stores only one variant for each weapon class: accepting a replacement immediately places the previous variant on the floor. Press `L` to inspect the persistent Arsenal with Up/Down. The weapon-loot options include a complete reset that clears collected variants and floor drops and restores normal drop settings. The underlying weapon actor is never replaced: TuinRPG applies the active variant's bonuses as an RPG layer for compatibility with custom weapons.
-
-Press `Q` once to open the paused weapon wheel. Move the mouse toward an owned weapon, then press `Q` again, left-click or Enter to equip it; Escape or right-click cancels. Each segment displays the actual active weapon-replacement name and its combined ammunition. Ammo bars transition continuously from red when nearly empty, through yellow, to green when well supplied. Ammo-free melee and infinite-ammo weapons are identified separately.
-
-## Minimap, finale bosses and John
-
-John's partial refill restores 25% of every carried ammo type for 100 coins. The separate 10-coin cache restores only a small amount of one random carried ammo type.
-
-Ordinary promoted bosses reach at least player level +1. A boss originating below Hell Knight base health calculates its health from a 200-HP minimum and reserves one affix slot for full ordinary Armor, reducing damage by 50% by default. Hell Knights and stronger candidates do not receive forced Armor; if they randomly roll it, their Boss Armor defaults to 25% reduction.
-
-Defeating an ordinary promoted level Boss plays one of two randomized victory cues. Iconic episode finales retain their separate John sequence.
-
-The optional minimap draws explored level geometry, player direction, exits, locked doors and kill/item/secret totals. Once a special monster has been seen, its last-known position remains marked with a rarity-colored circle. Legendary, Mythic and Boss threats receive stronger pulsing indicators, while weapon drops appear immediately as quality-colored diamonds and remain marked until collected or expired. Reaching 85% kills permanently activates Hunt for that map and reveals every surviving hostile. Ordinary enemies use bright yellow pulsing markers while special enemies retain their rarity colors, and distant survivors clamp to the minimap edge.
-
-On maps containing at least eight monsters, reaching 85% kills promotes one eligible survivor into a finale **BOSS**, a sixth tier above Mythic. The classic Doom episode finales use their intended encounters instead: both Barons on E1M8, the Cyberdemon on E2M8 and the Spider Mastermind on E3M8 begin as Boss-tier enemies, with no unrelated extra promotion on those maps. These already-tough native bosses use gentler health and damage multipliers than ordinary promoted monsters. E1M8 divides its encounter budget across two Barons and gives each two offensive/mobility affixes; E2M8 and E3M8 receive three. The iconic encounters do not roll Armored or Regenerating, avoiding excessive effective-health combinations. E2M8's Cyberdemon and E3M8's Spider Mastermind are replaced only on those maps by identical TuinRPG finale subclasses, preventing their stock death frame from ending the episode automatically.
-
-Once an iconic encounter is defeated, John remains available for shopping and conversation. Both **So... what now?** and **What comes next?** contain four story parts. Select either question repeatedly to advance its conversation; every part uses multiple lines and restarts the classic RPG letter by letter reveal. E1M8, E2M8, E3M8 and Doom II's MAP06, MAP11 and MAP20 have dedicated conversations. John also offers general four part post battle conversations after other finale Bosses. Choose the gold **Reach out and hold John Romero's hand (Go to next level)** entry when ready. This moves from E1M8 to E2M1, E2M8 to E3M1 or E3M8 to E4M1 while preserving health, inventory, weapons and Tuin RPG progression. E4M8 remains the true ending. Doom II continues from MAP06, MAP11 and MAP20 to MAP07, MAP12 and MAP21 only after John's conversation, retaining the original story intermission. John transitions never grant late-start levels, talent points or three catch-up weapons on the destination map. Other scripted bosses, dormant actors and monster-summoners are excluded. A promoted monster is fully healed with Boss-tier health, damage, XP and affixes, announced to the player, and permanently marked on the minimap. Defeating it guarantees a named Godly variant of an owned weapon. Godly weapons have four stronger affixes, an icy-white pulsing glow and a persistent special name. Native/custom BOSS actors instead have a separate 5% Godly chance.
-
-Monsters can also drop physical Tuin coins. Uncollected coins within 320 map units accelerate toward the nearest living player when there is clear line of sight, so nearby rewards are pulled in without passing through walls. After the finale Boss dies, John appears nearby; face him and press Use (`E`) to open his shop. Arrow keys browse and Enter purchases health, ammo, armor, a backpack, or a 150-coin random variant of one of your currently owned weapons. The gamble always produces Uncommon or better and has a 20% total chance for Rare or better; Godly weapons remain Boss-exclusive. John also offers randomized conversation and gameplay tips. Coin frequency and John's shop can be adjusted or disabled in **Finale Boss Options**. For testing, `netevent tuin_test_john_shop` spawns John and grants 500 coins.
-
-The `K` character screen is intentionally limited to progression, the Arsenal and total combat statistics; balance/configuration controls remain in the normal **Options > Tuin RPG Options** menu.
-
-## Compatibility notes
-
-The mod works automatically with custom actors that correctly identify as hostile monsters using GZDoom's standard monster/shootable flags. Actors that intentionally omit `ISMONSTER`, script all damage outside `DamageMobj`, or clear player inventory during a forced transition may require a future compatibility definition. The integrated ProjectSIDE edition replaces Doom's weapon actors but not monsters, maps, or DoomPlayer. Original ProjectSIDE contributor attribution and the compatibility-edition notes are packaged under `third_party/ProjectSIDE/` and retained in the source tree. The Riot Shotgun and Minigun artwork and sounds are adapted from **Lippeth Generic Weapons / Weapons of Saturn**, supplied with permission to reuse resources; detailed upstream attribution is retained under `third_party/LippethGenericWeapons/`. The Engineer mine is a standalone adaptation of the supplied **Doom Deluxe** slot-0 mine, with its detailed resource credits retained under `third_party/DoomDeluxeMine/`. Single-player remains the primary tested configuration; data ownership and stat-spending commands are already per-player for later co-op work.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and source-tree attribution files.
+Optional weapon, voxel, monster and gore mods are separate projects. Doom belongs
+to its respective rights holders.

@@ -1,77 +1,82 @@
-# TuinRPG Quick Guide
+# TuinRPG v0.8.0 — Quick Guide
 
-TuinRPG adds RPG progression, rare monsters, weapon variants, bosses, loot and a merchant to Doom. Its release includes the complete ProjectSIDE compatibility-edition weapon/effect set and quick grenades, while leaving maps, monsters and the player class intact.
+The current edition is classless. There is no class selection, class ability key,
+or bundled quick-grenade system.
 
-Press **F1** at any time to open the illustrated Tuin Doom RPG help page.
+## Start playing
 
-## Controls
+Load **TuinRPG.pk3** after your maps and optional weapon mod. Do not also load
+TuinRPG_NoClasses.pk3 or TuinRPG_LegacyClasses.pk3. Tested with UZDoom 5.0.3.
 
-- **K:** Character screen and stat spending
-- **L:** Arsenal and equipped weapon variants
-- **F:** Flashlight
-- **N:** Minimap
-- **Tap E / Use:** Inspect and equip nearby weapon drops or talk to John
-- **Q:** Open the weapon wheel; move the mouse, then press Q, click or Enter to equip
-- **G:** Throw a quick grenade
-- **V:** Use the selected class ability; Doom Guy holds it to ready Blood Punch and releases it to strike
+Choose **TuinRPG** for a normal campaign, or **Hell's Gambit** for a one-life run
+with random loaded MAP01–MAP29 maps, three Mythic-or-Godly starting weapons and full ammo.
+Gambit locks RPG difficulty to Hard and becomes harder after each map.
+Both modes use Ultra-Violence engine skill.
 
-The keys can be changed under **Customize Controls > Tuin RPG**.
+## Essential controls
 
-## Levelling and stats
+| Key | Action |
+| --- | --- |
+| K | Character, stats and perks |
+| L | Arsenal and weapon traits |
+| Q | Single-page quick arsenal; select a square and confirm/click to equip |
+| I | Animated current-weapon inspection |
+| N | Minimap |
+| F | Flashlight |
+| Hold E / Use for 3 seconds | Collect nearby weapon loot |
+| Tap E / Use | Doors and normal interactions, including John |
 
-Killing monsters awards XP. Every level grants one stat point:
+Rebind under **Customize Controls > Tuin RPG**. Open the TuinRPG hub from Escape
+for settings, help, game modes and Gambit scores.
 
-- **Vitality:** +5 maximum health
-- **Strength:** +2% damage
-- **Luck:** Better bonus-XP and weapon-drop chances, plus +0.5% critical chance per point
-- **Agility:** +2% firing speed; Agility plus weapon speed is capped at +75%
-- **Endurance:** 1% less damage taken, up to 75%
+## Spend points
 
-Monsters also scale with the map and can appear as **Uncommon, Rare, Elite, Legendary, Mythic**, or the special **Boss** tier. Higher rarities have more health, damage, XP and affixes. Legendary and Mythic enemies may use special attacks, so watch for their warning glow.
+Kills grant XP. Open K to spend earned stat points:
 
-Five-level milestones award increasing perk bundles, reaching 26 total points at level 30—enough to complete every perk available to one build. The first point permanently chooses Heavy, Healer, Executioner, Doom Guy, Rogue, or Engineer under **K > Class and Perks**. Later points buy ranked health, ammunition, critical, protection, leech, Giant Slayer, Armor Penetration, and class perks. Armor Penetration bypasses 15% of an Armored enemy's damage reduction per rank. Class Ultimates and Giant Slayer unlock at level 20.
+- Vitality: maximum health.
+- Strength: weapon damage.
+- Luck: critical chance and bonus XP.
+- Agility: firing speed.
+- Endurance: damage reduction.
 
-The separate **No Classes** build replaces class progression with external-weapon compatibility. It also awards one permanent weapon-perk point every five levels. Open **K > Weapon Perks** to specialize a fist, pistol, shotgun, super shotgun, chaingun, plasma rifle, BFG, or rocket launcher. Only six points are available by level 30, so two of the eight paths must remain unchosen. Hellfire Rockets trade 30% damage for a 25% critical chance; critical hits apply stackable burns worth 50% of their damage over five seconds. These weapon perks do not appear or activate in the normal class-based build.
+General perks and weapon perks use different points. One permanent weapon-perk point
+is awarded every five levels through level 30. Specializations have tradeoffs:
+the chaingun perk increases damage and capacity, but also ammo consumption.
+Read the in-game descriptions for exact values.
 
-Each class has a distinct V ability. Heavy charges Overdrive by dealing and taking damage; `B` separately performs a slow radio call for two or three invulnerable allied marines that fight for 30 seconds. The full Overdrive threshold is now `1040 + 65 × player level`. After each radio call, only actual monster damage restores it: it needs 4,095 damage before training, while simply waiting gives nothing. The marines aggressively scan for visible enemies, closely follow their Heavy with smooth FriendJohn-style lateral movement, and teleport to catch up without vertical hopping. Heavy starts with 175 base maximum health and a Minigun, deals full weapon damage, has triple bullet capacity, moves 20% slower, and gains 5 extra maximum health per Strength point. Healer throws Field Supplies. Executioner arms Death Sentence and judges up to three targets with the next weapon hit. Doom Guy receives a class-exclusive Quad Shotgun, holds V to ready Blood Punch, and releases it to strike. A white skull and red energy identify a stunned 10%-health Fatality target; Doom Guy has 15 seconds to reach it and press V. Fatalities recharge in 180 seconds, with every ordinary kill removing five seconds. Rogue charges Shadow Veil by dealing weapon damage, then uses it to become untargetable until an ambush or the veil expires. Engineer places one persistent auto-turret that automatically attacks visible hostiles with physical 3D tracer rounds; press V near it to pack it without losing its remaining health or ammunition. If it breaks or empties, kills and ammo pickups rebuild its Fabrication meter. Its Ultimate unlocks a second independently maintained turret.
+## Compare loot
 
-## Weapon loot
+Rarity order: **Uncommon → Rare → Elite → Legendary → Mythic → Godly**.
+Rare/Elite weapons have one special trait, Legendary/Mythic two and Godly three.
 
-Enemies occasionally drop colored variants of weapons you already own. Look toward a drop to compare every bonus with your current weapon, then move close and press **E** to swap. Your old version drops onto the floor, and only one variant of each weapon type is equipped at a time.
+Look toward a drop to compare it, move close, and hold Use for three seconds.
+A replacement drops your old variant. Gear score is useful, but individual bonuses
+may matter more for your build.
 
-Press **Q** once for the paused weapon wheel. Move the mouse to select, then press Q again, left-click or Enter to equip; Escape or right-click cancels. Its ammo bars run from red (low), through yellow, to green (high), and it supports weapons supplied by replacement mods.
+- **Always active:** works from a selected variant of a weapon you own, even holstered.
+  Only the strongest copy of each passive applies.
+- **Equipped:** works with the relevant weapon; switching may reset accumulated bonuses.
 
-Ammo capacity and pickup amounts increase with player/map progression so high-level enemies do not exhaust the arsenal. Backpacks stack with the bonus; the curve can be changed under **Ammo progression**.
+Guard restores armor, Medic regenerates health, Hunter rewards opening hits and Survivor
+can save you from one fatal hit per map. Momentum grants **+2% damage per kill, up to
+50%**, decays after inactivity and resets on switching. Duelist rewards repeated hits
+against one target, resetting on a target/weapon change or three seconds without a hit.
 
-Choose **Easy, Normal, Hard, or Crazy** in Tuin RPG Options, available directly from the Escape menu. Hard is the original balance; Normal halves monster health gained per level. Difficulty also controls damage, rarity pressure, Boss strength, and the maximum number of monster buffs. Changing it immediately rebalances living monsters after the menu closes and reports the effective values.
+## Watch threats and explore
 
-Weapon bonuses include firing speed, damage, life leech, execution damage against enemies below 30% health, critical chance, and extra kill XP. Critical hits deal double damage. Item level improves the strength of these rolls. Finale Bosses and, very rarely, native boss monsters can drop named **Godly** weapons—the highest tier. Equipped Godly weapons emit an icy-white pulse.
+Rare monsters have additional power and affixes. Boss bars show health and traits;
+blue fill is remaining health and gold is recent damage. Read resistance labels.
 
-## Minimap, bosses and John
+Watch promotion announcements and minimap markers. Late-map Hunt reveals survivors.
+Bosses and chests reward loot, and John offers supplies and weapons for coins.
 
-The minimap tracks explored geometry, special monsters, exits and weapon drops. At 85% kills, Hunt activates and reveals every remaining enemy. Ordinary survivors pulse bright yellow, special enemies keep their rarity colors, and distant targets appear at the minimap edge. Near the end of a suitable map, one surviving monster becomes a powerful finale Boss and is marked on the map. Defeating it guarantees a high-quality weapon reward.
+Normal campaign play includes limited lives and revival. **Gambit has one life**:
+death finishes the run. Check its local top-ten scoreboard from the hub.
 
-John appears near the end of the level. Press **E** while facing him to buy health, armor, ammo, backpacks or weapons with coins dropped by monsters.
+## Settings and saves
 
-Ultimate Doom has special continuous finales:
+Normal-mode RPG difficulty asks for confirmation before changing. Advanced developer
+options are not needed to play. Back up saves before updates; start a fresh game when
+moving from the old class edition.
 
-- **E1M8:** Defeat both Boss Barons, then use John to travel to E2M1.
-- **E2M8:** Defeat the Boss Cyberdemon, then use John to travel to E3M1.
-- **E3M8:** Defeat the Boss Spider Mastermind, then use John to travel to E4M1.
-- **E4M8:** Remains the true ending.
-
-John carries your health, weapons, variants, coins and RPG progress into the next episode.
-
-## Lives and mission ratings
-
-You begin with three lives. When lethal damage spends a life, a short red revival scene freezes the action while John appears with an encouragement line. You then return to the map start at full health with brief protection while keeping your weapons, progression, and completed map actions. Rare and stronger enemies can drop a floating red heart that grants one extra life, up to nine by default.
-
-The Mission Report scores kills, items, secrets, completion pace, and lives preserved. Avoiding deaths contributes up to 300 of the 1000 available points, so survival matters as much as clearing the map. The report also records damage, XP, coins, special enemies, Bosses, critical hits, class abilities, and John's verdict on the run.
-
-## Useful advice
-
-- Spend stat points regularly; late-map monsters become much stronger.
-- Compare individual bonuses, not only gear score—a lower score may suit your build better.
-- Legendary, Mythic and Boss glows reveal dangerous enemies before they attack.
-- TuinRPG options let you adjust monster scaling, rarity, loot frequency, HUD styles, minimap size and menu pause behavior.
-- Load TuinRPG after map and visual/content packs. Do not load the separate `ProjectSIDE_WeaponsEffects_Compat.pk3`; it is built into TuinRPG.
+See [README.md](README.md) for installation, compatibility, features and credits.
