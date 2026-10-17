@@ -2,8 +2,8 @@
 
 <p align="center"><img src="src/graphics/TuinMenuTitle.png" alt="TuinRPG for Doom" width="720"></p>
 
-**v0.8.1 is the current main edition.** Formerly called No Classes, TuinRPG adds
-loot-driven RPG progression to Doom without a starting class choice. Build around
+**v0.8.2 is the current main edition.** TuinRPG adds
+loot-driven RPG progression to Doom. Build around
 attributes, universal perks, permanent weapon specializations and weapon traits.
 
 [Download TuinRPG.pk3](https://github.com/tuin-boop/TuinRPG/releases/latest/download/TuinRPG.pk3)

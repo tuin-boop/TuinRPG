@@ -1,0 +1,15 @@
+TuinRPG v0.8.2 - Episode selection restored
+
+Choosing TuinRPG now offers the loaded game's episodes when more than one exists,
+restoring episode selection for Ultimate Doom and other episode-based campaigns.
+Escape returns to the mode menu. Ultra-Violence remains the fixed engine skill.
+
+Starting a campaign from the menu no longer grants console-warp catch-up rewards.
+Doom II still starts directly at MAP01. Hell's Gambit is unchanged.
+
+Validated with UZDoom 5.0.3: Freedoom Phase 1 episode selection, return navigation,
+E2M1 starting at player level 1 without catch-up weapons, and Doom II MAP01 on
+Ultra-Violence. Ultimate Doom itself was not available for this regression test.
+
+Download TuinRPG.pk3 and load only one TuinRPG package. Restart the engine after
+updating. Back up saves before updating. Older releases remain available.

@@ -1,0 +1,31 @@
+version "4.10"
+class TuinEpisodeAuto : TuinRunMenu
+{
+    bool Started;
+    override void Drawer()
+    {
+        if(Started)return;
+        Started=true;
+        Selected=0;
+        Choose();
+        Console.Printf("EPISODE TEST: chooser=%d request=%d",Episodes,TuinRun.StartRequest());
+        if(Episodes)
+        {
+            MenuEvent(MKEY_Back,false);
+            Console.Printf("EPISODE TEST: back=%d",!Episodes);
+            Choose();
+            MenuEvent(MKEY_Down,false);
+            Console.Printf("EPISODE TEST: selected=%d map=%s",SelectedEpisode,AllEpisodes[SelectedEpisode].mEpisodeMap);
+            Choose();
+        }
+    }
+}
+class TuinEpisodeRegression : EventHandler
+{
+    override void WorldTick()
+    {
+        if(level.time!=70)return;
+        let data=TuinRPGHandler.GetPlayerData(players[0].mo);
+        Console.Printf("EPISODE TEST: loaded=%s skill=%s playerlevel=%d variants=%d",level.MapName,G_SkillName(),data.PlayerLevel,data.WeaponVariantCount);
+    }
+}

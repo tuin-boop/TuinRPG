@@ -3,6 +3,7 @@ class TuinRun : Object play
 {
     bool Bootstrapping, ResolvingReplacement, EndScreenShown;
     int StartSettleTicks;
+    bool FreshCampaignStart;
     clearscope static int StartRequest()
     { return TuinRPGHandler.CVInt('tuin_run_request',0); }
     clearscope static bool Active()
@@ -12,6 +13,7 @@ class TuinRun : Object play
     void Loaded(WorldEvent e)
     {
         if(e.IsSaveGame){CVar.FindCVar('tuin_run_request').SetInt(0);return;}
+        FreshCampaignStart=StartRequest()==2;
         if(StartRequest()==0)return;
         bool run=StartRequest()==1;
         // Server CVars are queued: do not apply the previous run's death flag
@@ -259,6 +261,8 @@ class TuinRunMenu : OptionMenu
 {
     int Selected;
     bool Scores;
+    bool Episodes;
+    int SelectedEpisode;
     String Notice;
     double OpenMS,FrameMS,Focus[3];
     override void Init(Menu parent,OptionMenuDescriptor desc)
@@ -269,6 +273,8 @@ class TuinRunMenu : OptionMenu
         if(Selected==2){Scores=true;return;}
         if(netgame){Notice="START A SINGLE-PLAYER GAME FIRST";return;}
         bool run=Selected==1;
+        if(!run && !Episodes && AllEpisodes.Size()>1)
+        {Episodes=true;SelectedEpisode=0;return;}
         CVar.FindCVar('tuin_run_request').SetInt(run?1:2);
         if(run)
         {
@@ -276,10 +282,18 @@ class TuinRunMenu : OptionMenu
             CVar.FindCVar('tuin_difficulty').SetInt(2);
             TuinRPGOptionsMenu.ApplyVisibleProfile(2);TuinRPGOptionsMenu.MarkProfileApplied(2);
         }
-        Menu.StartGameDirect(false,false,null,0,3);
+        Menu.StartGameDirect(false,false,null,Episodes?SelectedEpisode:0,3);
     }
     override bool MenuEvent(int key,bool fromcontroller)
     {
+        if(Episodes)
+        {
+            if(key==MKEY_Back){Episodes=false;return true;}
+            if(key==MKEY_Up || key==MKEY_Down)
+            {SelectedEpisode=(SelectedEpisode+int(AllEpisodes.Size())+(key==MKEY_Up?-1:1))%int(AllEpisodes.Size());return true;}
+            if(key==MKEY_Enter){Choose();return true;}
+            return Super.MenuEvent(key,fromcontroller);
+        }
         if(key==MKEY_Back && Scores){Scores=false;return true;}
         if(key==MKEY_Up || key==MKEY_Down){Selected=(Selected+3+(key==MKEY_Up?-1:1))%3;return true;}
         if(key==MKEY_Enter){Choose();return true;}
@@ -291,6 +305,14 @@ class TuinRunMenu : OptionMenu
         {
             if(Scores){Scores=false;return true;}
             double w=Screen.GetWidth(),h=Screen.GetHeight();
+            if(Episodes)
+            {
+                double step=h*min(.11,.46/max(1,int(AllEpisodes.Size())));
+                int episode=int((ev.MouseY-h*.30)/step);
+                if(ev.MouseX>=w*.21 && ev.MouseX<=w*.79 && ev.MouseY>=h*.30 && episode>=0 && episode<int(AllEpisodes.Size()))
+                {SelectedEpisode=episode;Choose();}
+                return true;
+            }
             int hit=int((ev.MouseY-h*.30)/(h*.13));
             if(ev.MouseX>=w*.21 && ev.MouseX<=w*.79 && ev.MouseY>=h*.30 && hit>=0 && hit<3)
             {Selected=hit;Choose();}
@@ -314,7 +336,21 @@ class TuinRunMenu : OptionMenu
             double sy=h*(.85-((t*.025+spark*.037)% .68));
             Screen.Dim(Color(75,160+spark%70,255),(.15+.18*sin(t*90+spark*53))*enter,int(sx+sin(t*45+spark*33)*7*s),int(sy),max(1,int(2*s)),max(1,int(3*s)));
         }
-        TuinRunArt.Title(Scores?"THE FALLEN / HIGH SCORES":"CHOOSE YOUR FATE",Font.CR_RED,w*.21+(1-enter)*35*s,h*.205,2.2*s,-4,enter,t);
+        TuinRunArt.Title(Episodes?"CHOOSE YOUR EPISODE":Scores?"THE FALLEN / HIGH SCORES":"CHOOSE YOUR FATE",Font.CR_RED,w*.21+(1-enter)*35*s,h*.205,2.2*s,-4,enter,t);
+        if(Episodes)
+        {
+            double step=h*min(.11,.46/max(1,int(AllEpisodes.Size())));
+            for(int i=0;i<int(AllEpisodes.Size());i++)
+            {
+                double y=h*.30+i*step;
+                Screen.Dim(i==SelectedEpisode?Color(22,57,85):Color(8,25,42),enter,int(w*.21),int(y),int(w*.58),int(step*.9));
+                String title=Stringtable.Localize(AllEpisodes[i].mEpisodeName);
+                if(title.Length()==0)title=AllEpisodes[i].mEpisodeMap;
+                Screen.DrawText(SmallFont,i==SelectedEpisode?Font.CR_GOLD:Font.CR_WHITE,w*.23,y+step*.22,title,DTA_ScaleX,s,DTA_ScaleY,s,DTA_Alpha,enter);
+            }
+            Screen.DrawText(f,Font.CR_TAN,w*.21,h*.80,"ULTRA-VIOLENCE / ENTER OR CLICK: START / ESC: BACK",DTA_ScaleX,s,DTA_ScaleY,s);
+            return;
+        }
         if(Scores)
         {
             Array<String> entries;CVar.FindCVar('tuin_run_scores').GetString().Split(entries,";");

@@ -1,7 +1,6 @@
-# TuinRPG v0.8.1 — Quick Guide
+# TuinRPG v0.8.2 — Quick Guide
 
-The current edition is classless. There is no class selection, class ability key,
-or bundled quick-grenade system.
+Build your marine through attributes, perks and powerful weapon loot.
 
 ## Start playing
 
@@ -12,6 +11,10 @@ Choose **TuinRPG** for a normal campaign, or **Hell's Gambit** for a one-life ru
 with random loaded MAP01–MAP29 maps, three Mythic-or-Godly starting weapons and full ammo.
 Gambit locks RPG difficulty to Hard and becomes harder after each map.
 Both modes use Ultra-Violence engine skill.
+
+For episode-based games such as Ultimate Doom, choosing **TuinRPG** opens an
+episode selector. Choose your episode to start a fresh campaign without console
+commands or late-start catch-up rewards. Press Escape to return to the mode menu.
 
 ## Essential controls
 

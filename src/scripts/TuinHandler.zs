@@ -3951,6 +3951,8 @@ class TuinRPGHandler : EventHandler
 		if (previousMap <= 0 && data.LastCampaignMapNumber > 0 && data.LastCampaignMapNumber != mapNumber)
 			previousMap = data.LastCampaignMapNumber;
 		data.LastCampaignMapNumber = mapNumber;
+		// A menu-selected episode is a fresh campaign, not a late console warp.
+		if (Run && Run.FreshCampaignStart) return;
 		// John's episode bridge is continuous campaign progression, not a fresh
 		// late start or console warp. Preserve the build without awarding levels,
 		// stat/perk points, reward weapons, or their accompanying ammo refill.
