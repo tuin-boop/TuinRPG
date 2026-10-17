@@ -163,6 +163,7 @@ class TuinRPGHandler : EventHandler
 	int PressureNextTime;
 	Actor PressureReinforcement;
 	int MapsVisited;
+	int CampaignLevelOffset;
 	int PreviousLoadedCampaignMap;
 	int CurrentLoadedCampaignMap;
 	bool CatchupHandled[TUIN_MAX_PLAYERS];
@@ -550,7 +551,7 @@ class TuinRPGHandler : EventHandler
 	clearscope static int DifficultyMode()
 	{
 		if(TuinRun.Active())return 2;
-		return clamp(CVInt('tuin_difficulty', 2), 0, 3);
+		return clamp(CVInt('tuin_difficulty', 1), 0, 3);
 	}
 
 	clearscope static double DifficultyHealthLevelFactor()
@@ -3066,6 +3067,16 @@ class TuinRPGHandler : EventHandler
 	{
         if(TuinRun.Active())return 1+TuinRun.Stage()*2;
 		int mapIndex = level.LevelNum;
+		// Episode starts must scale from their own first map, not E1M1.
+		// Spawn callbacks can run before WorldLoaded consumes the start request.
+		if (TuinRun.StartRequest() == 2) CampaignLevelOffset = max(0, mapIndex - 1);
+		else for (int i=0;i<TUIN_MAX_PLAYERS;i++)
+		{
+			let data=playerInGame[i]?GetPlayerData(players[i].mo):null;
+			if(data && data.CampaignStartMap > 0)
+			{CampaignLevelOffset=data.CampaignStartMap-1;break;}
+		}
+		if (mapIndex > 0) mapIndex = max(1, mapIndex - CampaignLevelOffset);
 		if (mapIndex <= 0) mapIndex = max(1, MapsVisited + 1);
 		return 1 + int(max(0, mapIndex - 1) * 0.9);
 	}
@@ -6297,6 +6308,7 @@ class TuinRPGHandler : EventHandler
 	{
 		PreviousLoadedCampaignMap = 0;
 		CurrentLoadedCampaignMap = 0;
+		CampaignLevelOffset = 0;
 		MonsterLevelsSynchronized = false;
 		DirectorCheckpoint = 0;
 		for (int family = 0; family < 4; family++) DirectorEmergencyAmmoUsed[family] = false;
@@ -6327,6 +6339,8 @@ class TuinRPGHandler : EventHandler
 	}
 	override void WorldLoaded(WorldEvent e)
 	{
+        if (!e.IsSaveGame && TuinRun.StartRequest() == 2)
+            CampaignLevelOffset = max(0, level.LevelNum - 1);
         EnsureRun();
         if(Run && !e.IsSaveGame)Run.Bootstrapping=false;
         if(Run)Run.Loaded(e);
@@ -6381,6 +6395,8 @@ class TuinRPGHandler : EventHandler
 				if (!playerInGame[i] || !players[i].mo) continue;
 				let levelData = EnsurePlayerData(i);
 				if (!levelData) continue;
+				if (Run && Run.FreshCampaignStart)
+					levelData.CampaignStartMap = CampaignLevelOffset + 1;
 				levelData.LevelDamageDealt = 0;
 				levelData.LevelDamageTaken = 0;
 				levelData.LevelXPEarned = 0;

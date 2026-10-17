@@ -11,6 +11,7 @@ Choose **TuinRPG** for a normal campaign, or **Hell's Gambit** for a one-life ru
 with random loaded MAP01–MAP29 maps, three Mythic-or-Godly starting weapons and full ammo.
 Gambit locks RPG difficulty to Hard and becomes harder after each map.
 Both modes use Ultra-Violence engine skill.
+New TuinRPG campaigns start on Normal RPG difficulty; Hell's Gambit uses Hard.
 
 For episode-based games such as Ultimate Doom, choosing **TuinRPG** opens an
 episode selector. Choose your episode to start a fresh campaign without console

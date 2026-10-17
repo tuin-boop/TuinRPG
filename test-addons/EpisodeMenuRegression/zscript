@@ -26,6 +26,18 @@ class TuinEpisodeRegression : EventHandler
     {
         if(level.time!=70)return;
         let data=TuinRPGHandler.GetPlayerData(players[0].mo);
+        let handler=TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
+        Console.Printf("EPISODE TEST: base=%d difficulty=%d offset=%d",handler.ProgressiveBaseLevel(),TuinRPGHandler.DifficultyMode(),handler.CampaignLevelOffset);
         Console.Printf("EPISODE TEST: loaded=%s skill=%s playerlevel=%d variants=%d",level.MapName,G_SkillName(),data.PlayerLevel,data.WeaponVariantCount);
+        int count=0,highest=0,total=0;
+        let it=ThinkerIterator.Create('Actor');Actor monster;
+        while((monster=Actor(it.Next()))!=null)
+        {
+            let md=TuinRPGHandler.GetMonsterData(monster);
+            if(!md)continue;
+            count++;total+=md.MonsterLevel;highest=max(highest,md.MonsterLevel);
+        }
+        Console.Printf("EPISODE TEST: monsters=%d average=%.1f highest=%d",count,double(total)/max(1,count),highest);
+        if(level.MapName~=="E2M1")level.ChangeLevel("E2M2",0,CHANGELEVEL_NOINTERMISSION);
     }
 }

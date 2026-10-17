@@ -276,11 +276,13 @@ class TuinRunMenu : OptionMenu
         if(!run && !Episodes && AllEpisodes.Size()>1)
         {Episodes=true;SelectedEpisode=0;return;}
         CVar.FindCVar('tuin_run_request').SetInt(run?1:2);
+        int difficulty=run?2:1;
+        CVar.FindCVar('tuin_difficulty').SetInt(difficulty);
+        TuinRPGOptionsMenu.ApplyVisibleProfile(difficulty);
+        TuinRPGOptionsMenu.MarkProfileApplied(difficulty);
         if(run)
         {
             CVar.FindCVar('tuin_enabled').SetBool(true);
-            CVar.FindCVar('tuin_difficulty').SetInt(2);
-            TuinRPGOptionsMenu.ApplyVisibleProfile(2);TuinRPGOptionsMenu.MarkProfileApplied(2);
         }
         Menu.StartGameDirect(false,false,null,Episodes?SelectedEpisode:0,3);
     }
