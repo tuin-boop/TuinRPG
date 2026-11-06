@@ -51,7 +51,9 @@ class TuinAmmoWaveRegression : EventHandler
             Console.Printf("AMMO WAVE: wave=%d members=%d",waves.Wave,waves.Members.Size());
             for(int i=0;i<int(waves.Members.Size());i++)
             {
-                Check("safe distance",pawn.Distance3D(waves.Members[i])>=256);
+                // SpawnMember checks distance at placement. Enemies can already
+                // have walked toward the player by the time the wave fills.
+                Check("hostile living wave member",!waves.Members[i].bFRIENDLY && waves.Members[i].Health>0);
                 waves.Members[i].A_Die();
             }
             Check("reinforcement kills excluded from checkpoint count",level.killed_monsters==KillsBefore);
