@@ -1,0 +1,62 @@
+version "4.10"
+class TuinAmmoWaveRegression : EventHandler
+{
+    int LastWave,TotalBefore,KillsBefore;
+    void Check(String label,bool ok){Console.Printf("AMMO WAVE %s: %s",ok?"PASS":"FAIL",label);}
+    override void WorldTick()
+    {
+        let h=TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
+        let pawn=players[0].mo;
+        if(!h || !pawn)return;
+        if(level.time==35)
+        {
+            pawn.bINVULNERABLE=true;
+            pawn.GiveInventoryType('Chaingun');pawn.GiveInventoryType('Shotgun');pawn.GiveInventoryType('SuperShotgun');
+            for(Inventory a=pawn.Inv;a;a=a.Inv)if(a is 'Ammo')a.Amount=0;
+            Check("empty pools",TuinAmmoWaves.FullPools(pawn)==0);
+            int boundaries[3]={25,50,75};
+            for(int c=0;c<3;c++)Check(String.Format("checkpoint %d exact boundary",boundaries[c]),
+                !TuinAmmoWaves.Reached(c,boundaries[c]-1,100) && TuinAmmoWaves.Reached(c,boundaries[c],100));
+            Check("no 90 percent checkpoint or empty-map waves",!TuinAmmoWaves.Reached(3,90,100) && !TuinAmmoWaves.Reached(3,100,100) && !TuinAmmoWaves.Reached(0,0,0));
+            let bullets=pawn.FindInventory('Clip');bullets.Amount=bullets.MaxAmount;
+            Check("pistol and chaingun count once",TuinAmmoWaves.FullPools(pawn)==1);
+            let shells=pawn.FindInventory('Shell');shells.Amount=shells.MaxAmount;
+            Check("two shotguns count once",TuinAmmoWaves.FullPools(pawn)==2);
+            shells.Amount--;
+            Check("only completely full pools count",TuinAmmoWaves.FullPools(pawn)==1);
+            shells.Amount=shells.MaxAmount;
+            Check("SSG campaign gate",TuinRPGHandler.LootWeaponAllowed('SuperShotgun')!=TuinRPGHandler.DoomOneCampaign());
+            bool legal=true;
+            for(int i=0;i<1000;i++)if(!TuinRPGHandler.LootWeaponAllowed(h.PickDropWeapon(pawn)))legal=false;
+            Check("1000 loot rolls respect campaign gate",legal);
+            let waves=h.AmmoWaves;
+            // Explicit queue isolates spawn/clear logic from natural map kills.
+            waves.Checkpoint=4;waves.Pending.Push(2);waves.PendingOwners.Push(0);
+            for(int i=0;i<64;i++)
+            {
+                double angle=i*360./64;
+                waves.Trail[i]=(pawn.Pos.X+cos(angle)*400,pawn.Pos.Y+sin(angle)*400,pawn.Pos.Z);
+                waves.TrailOwner[i]=0;
+            }
+            waves.TrailCount=64;
+            TotalBefore=level.total_monsters;KillsBefore=level.killed_monsters;
+        }
+        if(level.time<=35 || !h.AmmoWaves)return;
+        let waves=h.AmmoWaves;
+        if(!waves.Spawning && waves.Wave>LastWave && waves.Members.Size()>0)
+        {
+            LastWave=waves.Wave;
+            Check("spawns up to ten legal monsters",waves.Members.Size()>0 && waves.Members.Size()<=10);
+            Check("reinforcements excluded from map total",level.total_monsters==TotalBefore);
+            Console.Printf("AMMO WAVE: wave=%d members=%d",waves.Wave,waves.Members.Size());
+            for(int i=0;i<int(waves.Members.Size());i++)
+            {
+                Check("safe distance",pawn.Distance3D(waves.Members[i])>=256);
+                waves.Members[i].A_Die();
+            }
+            Check("reinforcement kills excluded from checkpoint count",level.killed_monsters==KillsBefore);
+        }
+        if(LastWave==2 && waves.WaveCount==0)
+        {Check("two waves complete and stop",true);LastWave=3;}
+    }
+}

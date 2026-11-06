@@ -2,6 +2,23 @@ class TuinRPGHandler : EventHandler
 {
     TuinLocatorHandler Locator;
     TuinRun Run;
+    TuinAmmoWaves AmmoWaves;
+    int WaveBannerStart;
+    string WaveBannerDetail;
+    static bool DoomOneCampaign()
+    {
+        // Find the earliest map lumps (the IWAD), not replacement weapon sprites
+        // or the current PWAD's map naming convention.
+        int episode=Wads.FindLump("E1M1");
+        int sequel=Wads.FindLump("MAP01");
+        return episode>=0 && (sequel<0 || episode<sequel);
+    }
+    static bool LootWeaponAllowed(class<Weapon> type)
+    {
+        if(!type)return false;
+        if(!DoomOneCampaign())return true;
+        return !(type is 'SuperShotgun') && type!=(class<Weapon>)(Actor.GetReplacement('SuperShotgun'));
+    }
     void EnsureRun() { if(!Run && !ClassesEnabled()) Run=new('TuinRun'); }
     int FullHealthCheckTime;
     bool FullHealthCheckDone;
@@ -276,6 +293,7 @@ class TuinRPGHandler : EventHandler
 		if (JohnBannerStart > 0) start = max(start, JohnBannerStart + 112);
 		if (BossArrivalBannerStart > 0) start = max(start, BossArrivalBannerStart + 168);
 		if (PromotionBannerStart > 0) start = max(start, PromotionBannerStart + 168);
+		if (WaveBannerStart > 0) start = max(start, WaveBannerStart + 168);
 		for (int i = 0; i < TUIN_MAX_PLAYERS; i++)
 			if (HeavyBannerStart[i] > 0) start = max(start, HeavyBannerStart[i] + 168);
 		return start;
@@ -3755,9 +3773,9 @@ class TuinRPGHandler : EventHandler
 		for(int i=0;i<9;i++)
 		{
 			// Check actual resources, not the map name: Doom II maps can be named E1M1 too.
-			if(baseTypes[i]=='SuperShotgun' && !TexMan.CheckForTexture("SHT2A0",TexMan.Type_Any).IsValid()) continue;
+			if(baseTypes[i]=='SuperShotgun' && (DoomOneCampaign() || !TexMan.CheckForTexture("SHT2A0",TexMan.Type_Any).IsValid())) continue;
 			class<Weapon> candidate=(class<Weapon>)(Actor.GetReplacement(baseTypes[i]));
-			if(!candidate) continue; // Never bypass a mod's non-weapon replacement.
+			if(!LootWeaponAllowed(candidate)) continue; // Also excludes non-weapon replacements.
 			readonly<Weapon> def=GetDefaultByType(candidate);
 			if(def.bPowered_Up) continue;
 			bool duplicate=false;
@@ -3770,6 +3788,7 @@ class TuinRPGHandler : EventHandler
 			let weapon=Weapon(item);
 			if(!weapon || weapon.Amount<=0 || weapon.bPowered_Up) continue;
 			class<Weapon> candidate=(class<Weapon>)(weapon.GetClass());
+			if(!LootWeaponAllowed(candidate))continue;
 			bool duplicate=false;
 			for(int j=0;j<choices.Size();j++) if(choices[j]==candidate) duplicate=true;
 			if(!duplicate) choices.Push(candidate);
@@ -3792,6 +3811,7 @@ class TuinRPGHandler : EventHandler
 	TuinWeaponDrop SpawnRolledWeaponDrop(Vector3 position, class<Weapon> weaponType, int itemLevel, int quality)
 	{
 		weaponType = TuinRustSupport.Resolve(weaponType);
+		if (!LootWeaponAllowed(weaponType)) return null;
 		if (!weaponType) return null;
 		class<Weapon> shotgunType = (class<Weapon>)(Actor.GetReplacement('Shotgun'));
 		if (ClassesEnabled() && (weaponType == 'Shotgun' || weaponType == shotgunType) &&
@@ -3882,7 +3902,7 @@ class TuinRPGHandler : EventHandler
 		Array<class<Weapon> > baseChoices;
 		baseChoices.Push('Shotgun');
 		// Episode-style Doom/Chex maps do not contain Doom II's Super Shotgun.
-		if (level.MapName.Left(1) != "E") baseChoices.Push('SuperShotgun');
+		if (!DoomOneCampaign()) baseChoices.Push('SuperShotgun');
 		baseChoices.Push('Chaingun');
 		baseChoices.Push('RocketLauncher');
 		baseChoices.Push('PlasmaRifle');
@@ -3892,6 +3912,7 @@ class TuinRPGHandler : EventHandler
 		{
 			class<Weapon> resolved = (class<Weapon>)(Actor.GetReplacement(baseChoices[i]));
 			if (!resolved) resolved = baseChoices[i];
+			if (!LootWeaponAllowed(resolved)) continue;
 			bool duplicate = false;
 			for (int j = 0; j < candidates.Size(); j++)
 				if (candidates[j] == resolved) { duplicate = true; break; }
@@ -6347,6 +6368,7 @@ class TuinRPGHandler : EventHandler
         if(!e.IsSaveGame)
         {
             FullHealthCheckTime=0;FullHealthCheckDone=false;FullHealthReinforcement=null;
+            AmmoWaves=null;WaveBannerStart=0;WaveBannerDetail="";
         }
         ScheduleFullHealthCheck();
         EnsureLocator();
@@ -8177,6 +8199,11 @@ class TuinRPGHandler : EventHandler
 		}
 		UpdateHellDirector();
         UpdateAmmoPressureDirector();
+        if(!ClassesEnabled())
+        {
+            if(!AmmoWaves)AmmoWaves=new('TuinAmmoWaves');
+            AmmoWaves.Tick(self);
+        }
         UpdateFullHealthDirector();
 		UpdateCompletionMilestones();
 	}

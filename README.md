@@ -2,7 +2,7 @@
 
 <p align="center"><img src="src/graphics/TuinMenuTitle.png" alt="TuinRPG for Doom" width="720"></p>
 
-**v0.8.2 is the current main edition.** TuinRPG adds
+**v0.8.3 is the current main edition.** TuinRPG adds
 loot-driven RPG progression to Doom. Build around
 attributes, universal perks, permanent weapon specializations and weapon traits.
 

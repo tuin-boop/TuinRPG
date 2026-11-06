@@ -93,6 +93,7 @@ class TuinRun : Object play
         Array<class<Weapon> > pool;
         for(int i=0;i<9;i++)
         {
+            if(!TuinRPGHandler.LootWeaponAllowed(bases[i]))continue;
             if(i>=7 && !TuinRustSupport.Available(i+2)) continue;
             class<Weapon> type=(class<Weapon>)(Actor.GetReplacement(bases[i]));
             if(!type || GetDefaultByType(type).bPowered_Up)continue;

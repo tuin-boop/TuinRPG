@@ -402,10 +402,10 @@ class TuinCombatHUD : DoomStatusBar
         if(!TuinRPGHandler.CVInt('tuin_combat_bonus_hud',1)) return;
         let handler=TuinRPGHandler(EventHandler.Find('TuinRPGHandler'));
         if(!handler) return;
-        for(int event=0;event<9;event++)
+        for(int event=0;event<10;event++)
         {
             int viewer=CPlayer.mo.PlayerNumber();
-            int start=event==0?handler.BossBannerStart:event==1?handler.JohnBannerStart:
+            int start=event==9?handler.WaveBannerStart:event==0?handler.BossBannerStart:event==1?handler.JohnBannerStart:
                 event==2?handler.BossArrivalBannerStart:event==3?handler.PromotionBannerStart:
                 event==4?(viewer>=0 && viewer<8?handler.HeavyBannerStart[viewer]:0):
                 event<8?handler.CompletionBannerStart[event-5]:
@@ -418,14 +418,14 @@ class TuinCombatHUD : DoomStatusBar
             double ease=1-(1-entrance)*(1-entrance)*(1-entrance);
             double fade=exit*exit*(3-2*exit);
             double alpha=ease*(1-fade);
-            string title=event==0?"BOSS DEFEATED":event==1?"JOHN ROMERO HAS ARRIVED":
+            string title=event==9?"INCOMING WAVE":event==0?"BOSS DEFEATED":event==1?"JOHN ROMERO HAS ARRIVED":
                 event==2?"BOSS HAS ARRIVED":event==3?handler.PromotionBannerTitle:event==4?"HELL SENDS ITS HEAVYWEIGHTS":
                 event==5?"HELL HAS BEEN SILENCED":event==6?"NOTHING LEFT BEHIND":event==7?"NO SECRET STAYS HIDDEN":
                 String.Format("%d COINS COLLECTED",handler.CoinBannerAmount[viewer]);
             int milestoneColor=event==0 || event==4?Font.CR_GOLD:event==1?Font.CR_CYAN:event==3?Font.CR_PURPLE:Font.CR_RED;
             if(event>=5) milestoneColor=event==5?Font.CR_RED:event==6?Font.CR_GREEN:event==7?Font.CR_CYAN:Font.CR_GOLD;
             Font font=SmallFont;
-            double scale=min(2.8*s,Screen.GetWidth()*.66/max(1,font.StringWidth(title)));
+            double scale=min((event==9?3.3:2.8)*s,Screen.GetWidth()*.66/max(1,font.StringWidth(title)));
             double bounce=sin(entrance*180)*.12;
             scale*=1+bounce-.08*fade;
             double angle=-8+5*(1-ease)-4*fade;
@@ -456,7 +456,7 @@ class TuinCombatHUD : DoomStatusBar
             }
             else if(event>=3)
             {
-                string detail=event==3?handler.PromotionBannerDetail:
+                string detail=event==9?handler.WaveBannerDetail:event==3?handler.PromotionBannerDetail:
                     event==4?"LEVEL 15 - STRONGER MONSTERS NOW TAKE PROMOTION PRIORITY":
                     event==5?"100% KILLS - ALL MONSTERS DEFEATED":event==6?"100% ITEMS - EVERY PICKUP FOUND":
                     event==7?"100% SECRETS - EVERY HIDDEN PLACE UNCOVERED":"YOUR FORTUNE GROWS";

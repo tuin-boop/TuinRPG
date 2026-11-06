@@ -1,4 +1,4 @@
-# TuinRPG v0.8.2 — Quick Guide
+# TuinRPG v0.8.3 — Quick Guide
 
 Build your marine through attributes, perks and powerful weapon loot.
 
@@ -16,6 +16,16 @@ New TuinRPG campaigns start on Normal RPG difficulty; Hell's Gambit uses Hard.
 For episode-based games such as Ultimate Doom, choosing **TuinRPG** opens an
 episode selector. Choose your episode to start a fresh campaign without console
 commands or late-start catch-up rewards. Press Escape to return to the mode menu.
+
+## Ammo-pressure waves
+
+The adaptive director also checks full ammunition at 25%, 50% and 75% map
+kills. Each distinct full ammo pool used by an owned weapon adds one wave of about
+10 enemies, capped at five waves per checkpoint. Shared ammo counts once. Clear
+each wave before the next arrives; an animated INCOMING WAVE warning precedes it.
+Enemies appear near your recent route only where they fit safely. Tight spaces
+may produce fewer enemies or skip a wave. Reinforcement kills do not advance these
+checkpoints. This follows the Adaptive Hell Director setting.
 
 ## Essential controls
 

@@ -1,0 +1,16 @@
+TuinRPG v0.8.3 - Ammo-pressure waves and Doom 1 loot fix
+
+The adaptive director checks full ammunition at 25%, 50% and 75% map kills only.
+Each distinct full ammo pool used by an owned weapon triggers one wave of about
+10 monsters, capped at five waves per checkpoint. Shared ammunition counts once.
+Clear a wave before the next starts. Reinforcement kills do not advance checkpoints.
+
+Waves use nearby positions along your recent route, with collision, visibility
+and player-distance checks. Tight spaces can reduce or skip spawns. A larger,
+tilted, animated INCOMING WAVE warning announces each wave.
+
+Super Shotguns are excluded from Doom 1 RPG loot even when weapon mods supply
+their graphics. Doom II keeps its Super Shotgun loot support.
+
+Load only TuinRPG.pk3. Restart the engine after updating and back up your saves.
+Previous releases remain available. Tested with UZDoom 5.0.3.
